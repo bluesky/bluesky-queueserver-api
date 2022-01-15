@@ -22,3 +22,4 @@ class REManagerAPI(ReManagerComm_Threads_ZMQ, API_Threads_Mixin):
             timeout_exceptions=timeout_exceptions,
             request_fail_exceptions=request_fail_exceptions,
         )
+        API_Threads_Mixin.__init__(self)

@@ -22,3 +22,4 @@ class REManagerAPI(ReManagerComm_Asyncio_ZMQ, API_Asyncio_Mixin):
             timeout_exceptions=timeout_exceptions,
             request_fail_exceptions=request_fail_exceptions,
         )
+        API_Asyncio_Mixin.__init__(self)
