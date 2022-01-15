@@ -8,5 +8,7 @@ Bluesky Queue Server API
 
 Python API for Bluesky Queue Server
 
+The project is currently containing a prototype of the API, which can change at any moment.
+
 * Free software: 3-clause BSD license
 * Documentation: (COMING SOON!) https://bluesky.github.io/bluesky-queueserver-api.
