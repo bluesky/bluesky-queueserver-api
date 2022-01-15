@@ -259,7 +259,7 @@ class BPlan(BItem):
     def item_type(self, item_type):
         if item_type != self._class_item_type:
             raise ValueError(f"Failed to set item {self._class_item_type} type to {item_type!r}")
-        BItem.item_type = item_type
+        BItem.item_type.fset(self, item_type)
 
     def from_dict(self, item_dict):
         """
@@ -289,7 +289,7 @@ class BInst(BItem):
     def item_type(self, item_type):
         if item_type != self._class_item_type:
             raise ValueError(f"Failed to set item {self._class_item_type} type to {item_type!r}")
-        BItem.item_type = item_type
+        BItem.item_type.fset(self, item_type)
 
     def from_dict(self, item_dict):
         """
@@ -319,7 +319,7 @@ class BFunc(BItem):
     def item_type(self, item_type):
         if item_type != self._class_item_type:
             raise ValueError(f"Failed to set item {self._class_item_type} type to {item_type!r}")
-        BItem.item_type = item_type
+        BItem.item_type.fset(self, item_type)
 
     def from_dict(self, item_dict):
         """
