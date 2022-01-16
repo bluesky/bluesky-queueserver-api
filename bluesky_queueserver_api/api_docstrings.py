@@ -44,14 +44,14 @@ _doc_send_request = """
         status = RM.send_request(method="status")
         RM.close()
 
-        # QMQ, asyncio
-        from bluesky_queueserver_api.zmq.asyncio import REManagerAPI
+        # QMQ, async
+        from bluesky_queueserver_api.zmq.async import REManagerAPI
         RM = REManagerAPI()
         status = await RM.send_request(method="status")
         await RM.close()
 
-        # HTTP, asyncio
-        from bluesky_queueserver_api.http.asyncio import REManagerAPI
+        # HTTP, async
+        from bluesky_queueserver_api.http.async import REManagerAPI
         RM = REManagerAPI()
         status = await RM.send_request(method="status")
         await RM.close()
