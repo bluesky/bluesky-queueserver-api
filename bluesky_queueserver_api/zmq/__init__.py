@@ -1,5 +1,11 @@
-from ..comm_threads import ReManagerComm_ZMQ_Thread
 from ..api_threads import API_Threads_Mixin
+from ..comm_threads import ReManagerComm_ZMQ_Thread
+from .._defaults import (
+    default_allow_request_timeout_exceptions,
+    default_allow_request_fail_exceptions,
+    default_zmq_request_timeout_recv,
+    default_zmq_request_timeout_send,
+)
 
 
 class REManagerAPI(ReManagerComm_ZMQ_Thread, API_Threads_Mixin):
@@ -7,11 +13,11 @@ class REManagerAPI(ReManagerComm_ZMQ_Thread, API_Threads_Mixin):
         self,
         *,
         zmq_server_address=None,
-        timeout_recv=2000,
-        timeout_send=500,
+        timeout_recv=default_zmq_request_timeout_recv,
+        timeout_send=default_zmq_request_timeout_send,
         server_public_key=None,
-        timeout_exceptions=True,
-        request_fail_exceptions=True,
+        timeout_exceptions=default_allow_request_timeout_exceptions,
+        request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
         ReManagerComm_ZMQ_Thread.__init__(
             self,

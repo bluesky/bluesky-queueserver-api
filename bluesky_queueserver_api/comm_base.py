@@ -2,15 +2,15 @@ from bluesky_queueserver import CommTimeoutError
 from collections.abc import Mapping
 import httpx
 
+from ._defaults import (
+    default_allow_request_timeout_exceptions,
+    default_allow_request_fail_exceptions,
+    default_zmq_request_timeout_recv,
+    default_zmq_request_timeout_send,
+    default_http_request_timeout,
+    default_http_server_uri,
+)
 
-default_allow_request_timeout_exceptions = True
-default_allow_request_fail_exceptions = True
-
-default_zmq_request_timeout_recv = 2000  # ms
-default_zmq_request_timeout_send = 500  # ms
-
-default_http_request_timeout = 5000  # ms
-default_http_server_uri = "http://localhost:60610"  # Default URI (for testing and evaluation)
 
 rest_api_method_map = {
     "status": ("GET", "/status"),
@@ -102,13 +102,6 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
             server_public_key=server_public_key,
             loop=loop,
         )
-        # self._comm = ZMQCommSendThreads(
-        #     zmq_server_address=zmq_server_address,
-        #     timeout_recv=timeout_recv,
-        #     timeout_send=timeout_send,
-        #     raise_exceptions=timeout_exceptions,
-        #     server_public_key=server_public_key,
-        # )
 
     def _create_client(
         self,
@@ -127,39 +120,6 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
             raise
         except CommTimeoutError as ex:
             raise self.RequestTimeoutError(ex, {"method": method, "params": params}) from ex
-
-    def send_request(self, *, method, params=None):
-        """
-        Send message to RE Manager and return the response. This function allows calls
-        to low level Re Manager API. The function may raise exceptions in case of request
-        timeout or failure.
-
-        Parameters
-        ----------
-        method: str
-            Name of the API method
-        params: dict or None
-            Dictionary of API parameters or ``None`` if no parameters are passed.
-
-        Returns
-        -------
-        dict
-            Dictionary which contains returned results
-
-        Raises
-        ------
-        RequestTimeoutError
-            Request timed out.
-        RequestFailedError
-            Request failed.
-        """
-        try:
-            response = self._client.send_message(method=method, params=params)
-        except Exception:
-            self._process_comm_exception(method=method, params=params)
-        self._check_response(response=response)
-
-        return response
 
 
 class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
