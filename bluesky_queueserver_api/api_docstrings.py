@@ -32,7 +32,7 @@ _doc_send_request = """
 
     .. code-block:: python
 
-        # QMQ, blocking
+        # 0MQ, blocking
         from bluesky_queueserver_api.zmq import REManagerAPI
         RM = REManagerAPI()
         status = RM.send_request(method="status")
@@ -44,7 +44,7 @@ _doc_send_request = """
         status = RM.send_request(method="status")
         RM.close()
 
-        # QMQ, async
+        # 0MQ, async
         from bluesky_queueserver_api.zmq.aio import REManagerAPI
         RM = REManagerAPI()
         status = await RM.send_request(method="status")

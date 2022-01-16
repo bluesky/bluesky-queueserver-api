@@ -22,7 +22,7 @@ Asynchronous Communication with 0MQ Server
    :nosignatures:
    :toctree: generated
 
-    zmq.async.REManagerAPI
+    zmq.aio.REManagerAPI
 
 Synchronous Communication with HTTP Server
 ------------------------------------------
@@ -40,4 +40,4 @@ ASynchronous Communication with HTTP Server
    :nosignatures:
    :toctree: generated
 
-    http.async.REManagerAPI
+    http.aio.REManagerAPI
