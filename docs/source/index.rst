@@ -11,5 +11,5 @@ Bluesky Queue Server API Documentation
 
    installation
    usage
+   api-reference
    release-history
-   min_versions
