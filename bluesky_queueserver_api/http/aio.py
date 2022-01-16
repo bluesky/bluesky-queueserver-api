@@ -17,7 +17,7 @@ class REManagerAPI(ReManagerComm_HTTP_Async, API_Async_Mixin):
         timeout=default_http_request_timeout,
         timeout_exceptions=default_allow_request_timeout_exceptions,
         request_fail_exceptions=default_allow_request_fail_exceptions,
-        loop=None,
+        loop=None,  # Ignored, used here for compatibility with 0MQ asyncio API
     ):
         ReManagerComm_HTTP_Async.__init__(
             self,
@@ -25,6 +25,5 @@ class REManagerAPI(ReManagerComm_HTTP_Async, API_Async_Mixin):
             timeout=timeout,
             timeout_exceptions=timeout_exceptions,
             request_fail_exceptions=request_fail_exceptions,
-            loop=loop,
         )
         API_Async_Mixin.__init__(self)

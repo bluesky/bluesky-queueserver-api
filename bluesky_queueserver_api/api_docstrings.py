@@ -45,13 +45,13 @@ _doc_send_request = """
         RM.close()
 
         # QMQ, async
-        from bluesky_queueserver_api.zmq.async import REManagerAPI
+        from bluesky_queueserver_api.zmq.aio import REManagerAPI
         RM = REManagerAPI()
         status = await RM.send_request(method="status")
         await RM.close()
 
         # HTTP, async
-        from bluesky_queueserver_api.http.async import REManagerAPI
+        from bluesky_queueserver_api.http.aio import REManagerAPI
         RM = REManagerAPI()
         status = await RM.send_request(method="status")
         await RM.close()
