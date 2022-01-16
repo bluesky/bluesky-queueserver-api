@@ -1,10 +1,10 @@
+from .api_base import API_Base
 from .item import BItem
 
 
-class API_Threads_Mixin:
+class API_Threads_Mixin(API_Base):
     def __init__(self):
-        self._user = "Python API User"
-        self._user_group = "admin"
+        super().__init__()
 
     def status(self):
         """
