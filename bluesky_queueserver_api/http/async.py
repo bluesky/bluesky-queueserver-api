@@ -1,5 +1,5 @@
-from ..comm_asyncio import ReManagerComm_HTTP_Asyncio
-from ..api_asyncio import API_Asyncio_Mixin
+from ..comm_async import ReManagerComm_HTTP_Async
+from ..api_async import API_Async_Mixin
 
 from .._defaults import (
     default_allow_request_timeout_exceptions,
@@ -9,7 +9,7 @@ from .._defaults import (
 )
 
 
-class REManagerAPI(ReManagerComm_HTTP_Asyncio, API_Asyncio_Mixin):
+class REManagerAPI(ReManagerComm_HTTP_Async, API_Async_Mixin):
     def __init__(
         self,
         *,
@@ -19,7 +19,7 @@ class REManagerAPI(ReManagerComm_HTTP_Asyncio, API_Asyncio_Mixin):
         request_fail_exceptions=default_allow_request_fail_exceptions,
         loop=None,
     ):
-        ReManagerComm_HTTP_Asyncio.__init__(
+        ReManagerComm_HTTP_Async.__init__(
             self,
             http_server_uri=http_server_uri,
             timeout=timeout,
@@ -27,4 +27,4 @@ class REManagerAPI(ReManagerComm_HTTP_Asyncio, API_Asyncio_Mixin):
             request_fail_exceptions=request_fail_exceptions,
             loop=loop,
         )
-        API_Asyncio_Mixin.__init__(self)
+        API_Async_Mixin.__init__(self)

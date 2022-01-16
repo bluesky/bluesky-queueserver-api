@@ -1,5 +1,5 @@
-from ..api_asyncio import API_Asyncio_Mixin
-from ..comm_asyncio import ReManagerComm_ZMQ_Asyncio
+from ..api_async import API_Async_Mixin
+from ..comm_async import ReManagerComm_ZMQ_Async
 from .._defaults import (
     default_allow_request_timeout_exceptions,
     default_allow_request_fail_exceptions,
@@ -8,7 +8,7 @@ from .._defaults import (
 )
 
 
-class REManagerAPI(ReManagerComm_ZMQ_Asyncio, API_Asyncio_Mixin):
+class REManagerAPI(ReManagerComm_ZMQ_Async, API_Async_Mixin):
     def __init__(
         self,
         *,
@@ -20,7 +20,7 @@ class REManagerAPI(ReManagerComm_ZMQ_Asyncio, API_Asyncio_Mixin):
         request_fail_exceptions=default_allow_request_fail_exceptions,
         loop=None,
     ):
-        ReManagerComm_ZMQ_Asyncio.__init__(
+        ReManagerComm_ZMQ_Async.__init__(
             self,
             zmq_server_address=zmq_server_address,
             timeout_recv=timeout_recv,
@@ -30,4 +30,4 @@ class REManagerAPI(ReManagerComm_ZMQ_Asyncio, API_Asyncio_Mixin):
             request_fail_exceptions=request_fail_exceptions,
             loop=loop,
         )
-        API_Asyncio_Mixin.__init__(self)
+        API_Async_Mixin.__init__(self)

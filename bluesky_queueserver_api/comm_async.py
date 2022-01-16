@@ -6,7 +6,7 @@ from bluesky_queueserver import ZMQCommSendAsync
 from .api_docstrings import _doc_send_request, _doc_close
 
 
-class ReManagerComm_ZMQ_Asyncio(ReManagerAPI_ZMQ_Base):
+class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
     def _create_client(
         self,
         *,
@@ -39,7 +39,7 @@ class ReManagerComm_ZMQ_Asyncio(ReManagerAPI_ZMQ_Base):
         self._client.close()
 
 
-class ReManagerComm_HTTP_Asyncio(ReManagerAPI_HTTP_Base):
+class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
     def _create_client(self, http_server_uri, timeout):
         return httpx.AsyncClient(base_url=http_server_uri, timeout=timeout / 1000)
 
@@ -61,7 +61,7 @@ class ReManagerComm_HTTP_Asyncio(ReManagerAPI_HTTP_Base):
         await self._client.aclose()
 
 
-ReManagerComm_ZMQ_Asyncio.send_request.__doc__ = _doc_send_request
-ReManagerComm_HTTP_Asyncio.send_request.__doc__ = _doc_send_request
-ReManagerComm_ZMQ_Asyncio.close.__doc__ = _doc_close
-ReManagerComm_HTTP_Asyncio.close.__doc__ = _doc_close
+ReManagerComm_ZMQ_Async.send_request.__doc__ = _doc_send_request
+ReManagerComm_HTTP_Async.send_request.__doc__ = _doc_send_request
+ReManagerComm_ZMQ_Async.close.__doc__ = _doc_close
+ReManagerComm_HTTP_Async.close.__doc__ = _doc_close
