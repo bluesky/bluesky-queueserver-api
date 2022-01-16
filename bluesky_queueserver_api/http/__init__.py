@@ -1,8 +1,8 @@
-from ..rm_comm import ReManagerComm_Threads_HTTP
-from ..rm_api import API_Threads_Mixin
+from ..comm_threads import ReManagerComm_HTTP_Threads
+from ..api_threads import API_Threads_Mixin
 
 
-class REManagerAPI(ReManagerComm_Threads_HTTP, API_Threads_Mixin):
+class REManagerAPI(ReManagerComm_HTTP_Threads, API_Threads_Mixin):
     def __init__(
         self,
         *,
@@ -11,7 +11,7 @@ class REManagerAPI(ReManagerComm_Threads_HTTP, API_Threads_Mixin):
         timeout_exceptions=True,
         request_fail_exceptions=True,
     ):
-        ReManagerComm_Threads_HTTP.__init__(
+        ReManagerComm_HTTP_Threads.__init__(
             self,
             http_server_uri=http_server_uri,
             timeout=timeout,

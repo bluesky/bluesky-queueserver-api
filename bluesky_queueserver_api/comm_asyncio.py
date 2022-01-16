@@ -1,0 +1,107 @@
+import httpx
+
+from .comm_base import ReManagerAPI_ZMQ_Base, ReManagerAPI_HTTP_Base
+from bluesky_queueserver import ZMQCommSendAsync
+
+
+class ReManagerComm_ZMQ_Asyncio(ReManagerAPI_ZMQ_Base):
+    def _create_client(
+        self,
+        *,
+        zmq_server_address,
+        timeout_recv,
+        timeout_send,
+        timeout_exceptions,
+        server_public_key,
+        loop,
+    ):
+        return ZMQCommSendAsync(
+            loop=loop,
+            zmq_server_address=zmq_server_address,
+            timeout_recv=timeout_recv,
+            timeout_send=timeout_send,
+            raise_exceptions=timeout_exceptions,
+            server_public_key=server_public_key,
+        )
+
+    async def send_request(self, *, method, params=None):
+        """
+        Send message to RE Manager and return the response. This function allows calls
+        to low level Re Manager API. The function may raise exceptions in case of request
+        timeout or failure.
+
+        Parameters
+        ----------
+        method: str
+            Name of the API method
+        params: dict or None
+            Dictionary of API parameters or ``None`` if no parameters are passed.
+
+        Returns
+        -------
+        dict
+            Dictionary which contains returned results
+
+        Raises
+        ------
+        RequestTimeoutError
+            Request timed out.
+        RequestFailedError
+            Request failed.
+        """
+        try:
+            response = await self._client.send_message(method=method, params=params)
+        except Exception:
+            self._process_comm_exception(method=method, params=params)
+        self._check_response(response=response)
+
+        return response
+
+    async def close(self):
+        self._client.close()
+
+
+class ReManagerComm_HTTP_Asyncio(ReManagerAPI_HTTP_Base):
+    def _create_client(self, http_server_uri, timeout):
+        return httpx.AsyncClient(base_url=http_server_uri, timeout=timeout / 1000)
+
+    async def send_request(self, *, method, params=None):
+        """
+        Send message to RE Manager and return the response. This function allows calls
+        to low level Re Manager API. The function may raise exceptions in case of request
+        timeout or failure.
+
+        Parameters
+        ----------
+        method: str
+            Name of the API method
+        params: dict or None
+            Dictionary of API parameters or ``None`` if no parameters are passed.
+
+        Returns
+        -------
+        dict
+            Dictionary which contains returned results
+
+        Raises
+        ------
+        RequestTimeoutError
+            Request timed out.
+        RequestFailedError
+            Request failed.
+        """
+        try:
+            client_response = None
+            request_method, endpoint, payload = self._prepare_request(method=method, params=params)
+            client_response = await self._client.request(request_method, endpoint, json=payload)
+            response = self._process_response(client_response=client_response)
+
+        except Exception:
+            response = self._process_comm_exception(method=method, params=params, client_response=client_response)
+
+        self._check_response(response=response)
+
+        return response
+
+    async def close(self):
+        await self._client.aclose()

@@ -1,8 +1,8 @@
-from ..rm_comm_asyncio import ReManagerComm_Asyncio_HTTP
-from ..rm_api_asyncio import API_Asyncio_Mixin
+from ..comm_asyncio import ReManagerComm_HTTP_Asyncio
+from ..api_asyncio import API_Asyncio_Mixin
 
 
-class REManagerAPI(ReManagerComm_Asyncio_HTTP, API_Asyncio_Mixin):
+class REManagerAPI(ReManagerComm_HTTP_Asyncio, API_Asyncio_Mixin):
     def __init__(
         self,
         *,
@@ -11,7 +11,7 @@ class REManagerAPI(ReManagerComm_Asyncio_HTTP, API_Asyncio_Mixin):
         timeout_exceptions=True,
         request_fail_exceptions=True,
     ):
-        ReManagerComm_Asyncio_HTTP.__init__(
+        ReManagerComm_HTTP_Asyncio.__init__(
             self,
             http_server_uri=http_server_uri,
             timeout=timeout,

@@ -1,8 +1,8 @@
-from ..rm_comm import ReManagerComm_Threads_ZMQ
-from ..rm_api import API_Threads_Mixin
+from ..comm_threads import ReManagerComm_ZMQ_Thread
+from ..api_threads import API_Threads_Mixin
 
 
-class REManagerAPI(ReManagerComm_Threads_ZMQ, API_Threads_Mixin):
+class REManagerAPI(ReManagerComm_ZMQ_Thread, API_Threads_Mixin):
     def __init__(
         self,
         *,
@@ -13,7 +13,7 @@ class REManagerAPI(ReManagerComm_Threads_ZMQ, API_Threads_Mixin):
         timeout_exceptions=True,
         request_fail_exceptions=True,
     ):
-        ReManagerComm_Threads_ZMQ.__init__(
+        ReManagerComm_ZMQ_Thread.__init__(
             self,
             zmq_server_address=zmq_server_address,
             timeout_recv=timeout_recv,
