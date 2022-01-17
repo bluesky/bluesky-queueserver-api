@@ -1,4 +1,5 @@
 from .api_base import API_Base, QueueBase, HistoryBase, ManagerBase, EnvironmentBase, RunEngineBase
+import copy
 import time as ttime
 import threading
 
@@ -15,7 +16,27 @@ class HistoryThreads(HistoryBase):
 
 class ManagerThreads(ManagerBase):
     def status(self, *, reload=False):
-        return self._rm._status(reload=reload)
+        """
+        Load status of RE Manager. The function returns status or raises exception if
+        operation failed (e.g. timeout occurred).
+
+        Parameters
+        ----------
+        reload: boolean
+            Immediately reload status (``True``) or return cached status if it
+            is not expired (``False``).
+
+        Returns
+        -------
+        dict
+            Copy of the dictionary with RE Manager status.
+
+        Raises
+        ------
+            Reraises the exceptions raised by ``send_request`` API.
+        """
+        status = self._rm._status(reload=reload)
+        return copy.deepcopy(status)  # Return copy
 
     def wait_for_idle(self, *, timeout=600):
         """
@@ -181,6 +202,25 @@ class API_Threads_Mixin(API_Base):
             raise self.WaitTimeoutError("Timeout while waiting for condition")
 
     def _status(self, *, reload=False):
+        """
+        Load status of RE Manager. The function returns status or raises exception if
+        operation failed (e.g. timeout occurred). This is not part of API.
+
+        Parameters
+        ----------
+        reload: boolean
+            Immediately reload status (``True``) or return cached status if it
+            is not expired (``False``).
+
+        Returns
+        -------
+        dict
+            Reference to the dictionary with RE Manager status
+
+        Raises
+        ------
+            Reraises the exceptions raised by ``send_request`` API.
+        """
         _status, _ex = None, None
         event = threading.Event()
 
