@@ -75,20 +75,35 @@ class API_Base:
 
     @property
     def q(self):
+        """
+        API for management of plan queue.
+        """
         return self._q
 
     @property
     def h(self):
+        """
+        API for management of plan history.
+        """
         return self._h
 
     @property
     def m(self):
+        """
+        API for controlling RE Manager.
+        """
         return self._m
 
     @property
     def e(self):
+        """
+        API for monitoring and controlling RE Environment.
+        """
         return self._e
 
     @property
     def r(self):
+        """
+        API for monitoring and controlling Run Engine.
+        """
         return self._r
