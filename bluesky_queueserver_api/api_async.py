@@ -1,4 +1,4 @@
-from .api_base import API_Base, QueueBase, HistoryBase
+from .api_base import API_Base, QueueBase, HistoryBase, ManagerBase, EnvironmentBase, RunEngineBase
 
 
 class QueueAsync(QueueBase):
@@ -11,9 +11,27 @@ class HistoryAsync(HistoryBase):
     ...
 
 
+class ManagerAsync(ManagerBase):
+    ...
+
+
+class EnvironmentAsync(EnvironmentBase):
+    ...
+
+
+class RunEngineAsync(RunEngineBase):
+    ...
+
+
 class API_Async_Mixin(API_Base):
     def __init__(self):
-        super().__init__(queue_type=QueueAsync, history_type=HistoryAsync)
+        super().__init__(
+            queue_type=QueueAsync,
+            history_type=HistoryAsync,
+            manager_type=ManagerAsync,
+            environment_type=EnvironmentAsync,
+            run_engine_type=RunEngineAsync,
+        )
 
     async def status(self):
         """

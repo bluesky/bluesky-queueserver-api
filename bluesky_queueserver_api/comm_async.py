@@ -20,8 +20,8 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
         return ZMQCommSendAsync(
             loop=loop,
             zmq_server_address=zmq_server_address,
-            timeout_recv=timeout_recv,
-            timeout_send=timeout_send,
+            timeout_recv=int(timeout_recv * 1000),  # Convert to ms
+            timeout_send=int(timeout_send * 1000),  # Convert to ms
             raise_exceptions=timeout_exceptions,
             server_public_key=server_public_key,
         )
@@ -41,7 +41,7 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
 
 class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
     def _create_client(self, http_server_uri, timeout):
-        return httpx.AsyncClient(base_url=http_server_uri, timeout=timeout / 1000)
+        return httpx.AsyncClient(base_url=http_server_uri, timeout=timeout)
 
     async def send_request(self, *, method, params=None):
         try:

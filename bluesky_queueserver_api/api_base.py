@@ -2,6 +2,10 @@ from .item import BItem
 from collections.abc import Mapping
 
 
+class WaitTimeoutError(TimeoutError):
+    ...
+
+
 class QueueBase:
     def __init__(self, *, rm):
         self._rm = rm
@@ -41,13 +45,33 @@ class HistoryBase:
         self._current_history_uid = None
 
 
+class ManagerBase:
+    def __init__(self, *, rm):
+        self._rm = rm
+
+
+class EnvironmentBase:
+    def __init__(self, *, rm):
+        self._rm = rm
+
+
+class RunEngineBase:
+    def __init__(self, *, rm):
+        self._rm = rm
+
+
 class API_Base:
-    def __init__(self, *, queue_type, history_type):
+    WaitTimeoutError = WaitTimeoutError
+
+    def __init__(self, *, queue_type, history_type, manager_type, environment_type, run_engine_type):
         self._user = "Python API User"
         self._user_group = "admin"
 
         self._q = queue_type(rm=self)
         self._h = history_type(rm=self)
+        self._m = manager_type(rm=self)
+        self._e = environment_type(rm=self)
+        self._r = run_engine_type(rm=self)
 
     @property
     def q(self):
@@ -56,3 +80,15 @@ class API_Base:
     @property
     def h(self):
         return self._h
+
+    @property
+    def m(self):
+        return self._m
+
+    @property
+    def e(self):
+        return self._e
+
+    @property
+    def r(self):
+        return self._r
