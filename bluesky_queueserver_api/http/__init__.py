@@ -1,5 +1,6 @@
-from ..comm_threads import ReManagerComm_HTTP_Threads
 from ..api_threads import API_Threads_Mixin
+from ..comm_threads import ReManagerComm_HTTP_Threads
+
 
 from .._defaults import (
     default_allow_request_timeout_exceptions,

@@ -1,72 +1,14 @@
-from .api_base import API_Base, QueueBase, HistoryBase, ManagerBase, EnvironmentBase, RunEngineBase
+from .api_base import API_Base
 import copy
 import time as ttime
 import threading
 
 
-class QueueThreads(QueueBase):
-    def add_item(self, item, *, pos=None, before_uid=None, after_uid=None):
-        request_params = self._prepare_add_item(item=item, pos=pos, before_uid=before_uid, after_uid=after_uid)
-        return self._rm.send_request(method="queue_item_add", params=request_params)
-
-
-class HistoryThreads(HistoryBase):
-    ...
-
-
-class ManagerThreads(ManagerBase):
-    def status(self, *, reload=False):
-        """
-        Load status of RE Manager. The function returns status or raises exception if
-        operation failed (e.g. timeout occurred).
-
-        Parameters
-        ----------
-        reload: boolean
-            Immediately reload status (``True``) or return cached status if it
-            is not expired (``False``).
-
-        Returns
-        -------
-        dict
-            Copy of the dictionary with RE Manager status.
-
-        Raises
-        ------
-            Reraises the exceptions raised by ``send_request`` API.
-        """
-        status = self._rm._status(reload=reload)
-        return copy.deepcopy(status)  # Return copy
-
-    def wait_for_idle(self, *, timeout=600):
-        """
-        The function raises ``WaitTimeoutError`` if timeout occurs.
-        """
-
-        def condition(status):
-            return status["manager_state"] == "idle"
-
-        self._rm._wait_for_condition(condition=condition, timeout=timeout)
-
-
-class EnvironmentThreads(EnvironmentBase):
-    ...
-
-
-class RunEngineThreads(RunEngineBase):
-    ...
-
-
 class API_Threads_Mixin(API_Base):
     def __init__(self):
-        super().__init__(
-            queue_type=QueueThreads,
-            history_type=HistoryThreads,
-            manager_type=ManagerThreads,
-            environment_type=EnvironmentThreads,
-            run_engine_type=RunEngineThreads,
-        )
+        super().__init__()
 
+        # TODO: make those values parameers of API_Base
         self._status_min_period = 0.5  # s
         self._status_poll_period = 1.0  # s
 
@@ -244,3 +186,46 @@ class API_Threads_Mixin(API_Base):
 
     def __del__(self):
         self._close_api()
+
+    # =====================================================================================
+    #                 API for monitoring and control of RE Manager
+
+    def status(self, *, reload=False):
+        """
+        Load status of RE Manager. The function returns status or raises exception if
+        operation failed (e.g. timeout occurred).
+
+        Parameters
+        ----------
+        reload: boolean
+            Immediately reload status (``True``) or return cached status if it
+            is not expired (``False``).
+
+        Returns
+        -------
+        dict
+            Copy of the dictionary with RE Manager status.
+
+        Raises
+        ------
+            Reraises the exceptions raised by ``send_request`` API.
+        """
+        status = self._status(reload=reload)
+        return copy.deepcopy(status)  # Return copy
+
+    def wait_for_idle(self, *, timeout=600):
+        """
+        The function raises ``WaitTimeoutError`` if timeout occurs.
+        """
+
+        def condition(status):
+            return status["manager_state"] == "idle"
+
+        self._wait_for_condition(condition=condition, timeout=timeout)
+
+    # =====================================================================================
+    #                 API for monitoring and control of Queue
+
+    def add_item(self, item, *, pos=None, before_uid=None, after_uid=None):
+        request_params = self._prepare_add_item(item=item, pos=pos, before_uid=before_uid, after_uid=after_uid)
+        return self.send_request(method="queue_item_add", params=request_params)

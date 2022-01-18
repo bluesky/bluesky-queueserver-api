@@ -1,5 +1,6 @@
-from ..comm_async import ReManagerComm_HTTP_Async
 from ..api_async import API_Async_Mixin
+from ..comm_async import ReManagerComm_HTTP_Async
+
 
 from .._defaults import (
     default_allow_request_timeout_exceptions,

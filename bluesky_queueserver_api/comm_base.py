@@ -54,19 +54,16 @@ class ReManagerAPI_Base:
         self._pass_user_info = True
 
     @property
-    def pass_user_info(self):
-        return self._pass_user_info
-
-    @property
-    def request_failed_exception(self):
+    def request_failed_exceptions_enabled(self):
         """
-        Property values ``True`` and ``False`` enable and disable ``RequestFailedError``
-        exceptions raised when request fails, i.e. the response contains ``'success'==False``.
+        Enable or disable ``RequestFailedError`` exceptions (*boolean*). The exceptions are
+        raised when the request fails, i.e. the response received from the server contains
+        ``'success'==False``. The property does not influence timeout errors.
         """
         return self._request_failed_exception
 
-    @request_failed_exception.setter
-    def request_failed_exception(self, v):
+    @request_failed_exceptions_enabled.setter
+    def request_failed_exceptions_enabled(self, v):
         self._request_failed_exceptions = bool(v)
 
     def _check_response(self, *, response):
