@@ -1,16 +1,16 @@
-from .api_base import API_Base
 import copy
 import time as ttime
 import threading
 
+from .api_base import API_Base, WaitMonitor
+from ._defaults import default_wait_timeout
+
+from .api_docstrings import _doc_api_status
+
 
 class API_Threads_Mixin(API_Base):
-    def __init__(self):
-        super().__init__()
-
-        # TODO: make those values parameers of API_Base
-        self._status_min_period = 0.5  # s
-        self._status_poll_period = 1.0  # s
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         self._is_closing = False
 
@@ -19,20 +19,25 @@ class API_Threads_Mixin(API_Base):
         self._status_exception = None
 
         self._event_status_get = threading.Event()
-        self._status_get_cb = []  # A list of callbacks
+        self._status_get_cb = []  # A list of callbacks for requests to get status
+        self._wait_cb = []  # A list of callbacks for 'wait' API
+
         self._status_get_cb_lock = threading.Lock()
         self._thread_status_get = threading.Thread(
             name="RM API: status get", target=self._thread_status_get_func, daemon=True
         )
         self._thread_status_get.start()
 
-        self._wait_cb = []  #
         self._thread_status_poll = threading.Thread(
             name="RE API: status poll", target=self._thread_status_poll_func, daemon=True
         )
         self._thread_status_poll.start()
 
     def _thread_status_get_func(self):
+        """
+        The function is run in a separate thread. It periodically checks if ``self._event_status_get``
+        is set. If the event is set, then the function loads (if needed) and processes RE Manager status.
+        """
         while True:
             load_status = self._event_status_get.wait(timeout=0.1)
             if load_status:
@@ -54,25 +59,28 @@ class API_Threads_Mixin(API_Base):
                     self._status_exception = raised_exception
 
                 with self._status_get_cb_lock:
+                    # Call each 'status_get' callback with current status/exception
                     for cb in self._status_get_cb:
                         cb(self._status_current, self._status_exception)
                     self._status_get_cb.clear()
 
-                    n_cb = 0
+                    # Update 'wait' callbacks. Even if the status is not reloaded,
+                    #   the callbacks still check if there are timeouts.
+                    n_cb = 0  # The number of wait callbacks
                     for cb in self._wait_cb.copy():
                         if cb(self._status_current):
                             self._wait_cb.pop(n_cb)
                         else:
                             n_cb += 1
 
-                    self._event_status_get.clear()
+                self._event_status_get.clear()
 
             if self._is_closing:
                 break
 
     def _thread_status_poll_func(self):
         while True:
-            ttime.sleep(self._status_poll_period)
+            ttime.sleep(self._status_polling_period)
 
             with self._status_get_cb_lock:
                 if len(self._wait_cb):
@@ -87,7 +95,7 @@ class API_Threads_Mixin(API_Base):
         """
         return self.send_request(method="status")
 
-    def _wait_for_condition(self, *, condition, timeout):
+    def _wait_for_condition(self, *, condition, timeout, monitor):
         """
         Blocking function, which is waiting for the returned status to satisfy
         the specified conditions. The function is raises ``WaitTimeoutError``
@@ -111,18 +119,30 @@ class API_Threads_Mixin(API_Base):
         """
 
         timeout_occurred = False
+        wait_cancelled = False
         t_started = ttime.time()
+
+        monitor = monitor or WaitMonitor()
+        monitor.set_time_start(t_started)
+        monitor.set_timeout_period(timeout)
 
         event = threading.Event()
 
         def cb(status):
-            nonlocal timeout_occurred, event, t_started
+            nonlocal timeout_occurred, wait_cancelled, event, monitor
             result = condition(status) if status else False
-            if not result and (ttime.time() - t_started > timeout):
+            monitor.set_time_elapsed(ttime.time() - monitor.time_start)
+
+            if not result and (monitor.time_elapsed > monitor.timeout_period):
                 timeout_occurred = True
                 result = True
+            elif monitor.is_cancelled:
+                wait_cancelled = True
+                result = True
+
             if result:
                 event.set()
+
             return result
 
         try:
@@ -142,11 +162,19 @@ class API_Threads_Mixin(API_Base):
 
         if timeout_occurred:
             raise self.WaitTimeoutError("Timeout while waiting for condition")
+        if wait_cancelled:
+            raise self.WaitCancelError("Wait for condition was cancelled")
 
     def _status(self, *, reload=False):
         """
         Load status of RE Manager. The function returns status or raises exception if
         operation failed (e.g. timeout occurred). This is not part of API.
+
+        The function is thread-safe. It is assumed that status may be simultaneously
+        requested from multiple threads. The mechanism for loading and updating
+        status information is designed to reuse previously loaded data whenever possible
+        prevents communication channel and the server from overload in case
+        many requests are sent in rapid sequence.
 
         Parameters
         ----------
@@ -173,6 +201,8 @@ class API_Threads_Mixin(API_Base):
 
         with self._status_get_cb_lock:
             self._status_get_cb.append(cb)
+            if reload:
+                self._status_timestamp = None
             self._event_status_get.set()
 
         event.wait()
@@ -191,37 +221,19 @@ class API_Threads_Mixin(API_Base):
     #                 API for monitoring and control of RE Manager
 
     def status(self, *, reload=False):
-        """
-        Load status of RE Manager. The function returns status or raises exception if
-        operation failed (e.g. timeout occurred).
-
-        Parameters
-        ----------
-        reload: boolean
-            Immediately reload status (``True``) or return cached status if it
-            is not expired (``False``).
-
-        Returns
-        -------
-        dict
-            Copy of the dictionary with RE Manager status.
-
-        Raises
-        ------
-            Reraises the exceptions raised by ``send_request`` API.
-        """
         status = self._status(reload=reload)
-        return copy.deepcopy(status)  # Return copy
+        return copy.deepcopy(status)  # Returns copy
 
-    def wait_for_idle(self, *, timeout=600):
+    def wait_for_idle(self, *, timeout=default_wait_timeout, monitor=None):
         """
-        The function raises ``WaitTimeoutError`` if timeout occurs.
+        The function raises ``WaitTimeoutError`` if timeout occurs or
+        ``WaitCancelError`` if wait operation was cancelled by ``monitor.cancel()``.
         """
 
         def condition(status):
             return status["manager_state"] == "idle"
 
-        self._wait_for_condition(condition=condition, timeout=timeout)
+        self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
 
     # =====================================================================================
     #                 API for monitoring and control of Queue
@@ -229,3 +241,6 @@ class API_Threads_Mixin(API_Base):
     def add_item(self, item, *, pos=None, before_uid=None, after_uid=None):
         request_params = self._prepare_add_item(item=item, pos=pos, before_uid=before_uid, after_uid=after_uid)
         return self.send_request(method="queue_item_add", params=request_params)
+
+
+API_Threads_Mixin.status.__doc__ = _doc_api_status

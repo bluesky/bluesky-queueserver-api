@@ -71,3 +71,37 @@ _doc_close = """
         # Asynchronous code (0MQ and HTTP)
         await RM.close()
 """
+
+_doc_api_status = """
+    Load status of RE Manager. The function returns status or raises exception if
+    operation failed (e.g. timeout occurred).
+
+    Parameters
+    ----------
+    reload: boolean
+        Immediately reload status (``True``) or return cached status if it
+        is not expired (``False``). Calling the API with ``reload=True`` always
+        initiates communication with the server.
+
+    Returns
+    -------
+    dict
+        Copy of the dictionary with RE Manager status.
+
+    Raises
+    ------
+        Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ and HTTP)
+        status = RM.status()
+        status = RM.status(reload=True)
+
+        # Asynchronous code (0MQ and HTTP)
+        status = await RM.status()
+        status = await RM.status(reload=True)
+"""

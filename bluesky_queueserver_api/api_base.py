@@ -6,10 +6,67 @@ class WaitTimeoutError(TimeoutError):
     ...
 
 
+class WaitCancelError(TimeoutError):
+    ...
+
+
+class WaitMonitor:
+    def __init__(self):
+        self._time_start = 0
+        self._time_elapsed = 0
+        self._timeout_period = 0
+        self._cancel_callbacks = []
+
+        self._wait_cancelled = False
+
+    @property
+    def time_start(self):
+        return self._time_start
+
+    @property
+    def time_elapsed(self):
+        return self._time_elapsed
+
+    @property
+    def timeout_period(self):
+        return self._timeout_period
+
+    def set_time_start(self, time_start):
+        self._time_start = time_start
+
+    def set_time_elapsed(self, time_elapsed):
+        self._time_elapsed = time_elapsed
+
+    def set_timeout_period(self, timeout_period):
+        self._timeout_period = timeout_period
+
+    def add_cancel_callback(self, cancel_callback):
+        self._cancel_callbacks.append(cancel_callback)
+
+    def cancel(self):
+        for cb in self._cancel_callbacks:
+            try:
+                cb()
+            except Exception:
+                pass
+
+        self._cancel_callbacks = []
+        self._wait_cancelled = True
+
+    @property
+    def is_cancelled(self):
+        return self._wait_cancelled
+
+
 class API_Base:
     WaitTimeoutError = WaitTimeoutError
+    WaitCancelError = WaitCancelError
 
-    def __init__(self):
+    def __init__(self, *, status_min_period=0.5, status_polling_period=1.0):
+
+        self._status_min_period = status_min_period  # seconds
+        self._status_polling_period = status_polling_period  # seconds
+
         self._user = "Python API User"
         self._user_group = "admin"
 
