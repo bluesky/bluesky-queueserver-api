@@ -132,7 +132,7 @@ class BItem:
         """
         if not isinstance(item_type, str):
             raise TypeError(f"Item type {item_type!r} is not a string: ({type(item_type)!r})")
-        if item_type not in self.recognized_item_types:
+        if item_type not in list(self.recognized_item_types):  # list() needed in Python 3.7, 3.8
             raise ValueError(
                 f"Unsupported item type: {item_type!r}. Supported types: {self.recognized_item_types}"
             )

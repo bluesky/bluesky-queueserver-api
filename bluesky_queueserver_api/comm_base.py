@@ -36,6 +36,7 @@ class RequestTimeoutError(TimeoutError):
 class RequestFailedError(Exception):
     def __init__(self, response):
         msg = response.get("msg", "") if isinstance(response, Mapping) else str(response)
+        msg = msg or "(no error message)"
         msg = f"Request failed: {msg}"
         self.response = response
         super().__init__(msg)
@@ -50,24 +51,24 @@ class ReManagerAPI_Base:
 
     def __init__(self, *, request_fail_exceptions=True):
         # Raise exceptions if request fails (success=False)
-        self._request_failed_exceptions = request_fail_exceptions
+        self._request_fail_exceptions = request_fail_exceptions
         self._pass_user_info = True
 
     @property
-    def request_failed_exceptions_enabled(self):
+    def request_fail_exceptions_enabled(self):
         """
         Enable or disable ``RequestFailedError`` exceptions (*boolean*). The exceptions are
         raised when the request fails, i.e. the response received from the server contains
         ``'success'==False``. The property does not influence timeout errors.
         """
-        return self._request_failed_exception
+        return self._request_fail_exceptions
 
-    @request_failed_exceptions_enabled.setter
-    def request_failed_exceptions_enabled(self, v):
-        self._request_failed_exceptions = bool(v)
+    @request_fail_exceptions_enabled.setter
+    def request_fail_exceptions_enabled(self, v):
+        self._request_fail_exceptions = bool(v)
 
     def _check_response(self, *, response):
-        if self._request_failed_exceptions:
+        if self._request_fail_exceptions:
             # If the response is mapping, but it does not have 'success' field,
             #   then consider the request successful (this only happens for 'status' requests).
             if not isinstance(response, Mapping) or not response.get("success", True):
@@ -132,7 +133,8 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
         # TODO: check env. variable for 'http_server_uri'
 
-        # Do not pass user info with request (HTTP Server will assign user name and user group)
+        # Do not pass user info with request (e.g. user info is not required in REST API requests,
+        #   because HTTP Server assigns user name and user group based on login information)
         self._pass_user_info = False
 
         http_server_uri = http_server_uri or default_http_server_uri
