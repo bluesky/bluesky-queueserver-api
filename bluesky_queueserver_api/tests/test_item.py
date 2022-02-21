@@ -3,7 +3,7 @@ import pprint
 import pytest
 import re
 
-from bluesky_queueserver_api import BItem  # , BPlan, BFunc, BInst
+from bluesky_queueserver_api import BItem, BPlan, BFunc, BInst
 
 
 # ======================================================================================
@@ -237,3 +237,108 @@ def test_BItem_07_failing(item_type, name, args, kwargs, meta, item_uid, error_t
         #   initialization of 'BItem'. So we just raise exceptions so that the test works.
         if ("Required 'item_type' key is not found" in msg) or ("Required 'name' key is not found" in msg):
             raise error_type(msg)
+
+
+def test_BPlan_BInst_BFunc_01():
+    """
+    Tests for BPlan, BInst and BFunc: ``recognized_item_types`` property
+    """
+    assert BPlan.recognized_item_types == ["plan"]
+    assert BInst.recognized_item_types == ["instruction"]
+    assert BFunc.recognized_item_types == ["function"]
+
+    bp = BPlan("plan", "count")
+    assert bp.recognized_item_types == ["plan"]
+
+    bi = BInst("instruction", "queue_stop")
+    assert bi.recognized_item_types == ["instruction"]
+
+    bf = BFunc("function", "test_func")
+    assert bf.recognized_item_types == ["function"]
+
+
+# fmt: off
+@pytest.mark.parametrize("object_type, item_args, item_kwargs", [
+    (BPlan, ["count", ["det1", "det2"]], {}),
+    (BPlan, ["count", ["det1", "det2"]], {"num": 10, "delay": 1}),
+    (BPlan, ["count"], {"detectors": ["det1", "det2"], "num": 10, "delay": 1}),
+    (BPlan, ["count"], {}),
+    (BInst, ["queue_stop"], {}),
+    (BInst, ["test_func"], {}),
+])
+# fmt: on
+def test_BPlan_BInst_BFunc_02(object_type, item_args, item_kwargs):
+    """
+    Tests for BPlan, BInst and BFunc: initialization and copying
+    """
+    item_type = {BPlan: "plan", BInst: "instruction", BFunc: "function"}[object_type]
+    item_dict = {
+        "item_type": item_type,
+        "name": item_args[0],
+        "args": item_args[1:],
+        "kwargs": item_kwargs,
+    }
+    for k in ("args", "kwargs"):
+        if not item_dict[k]:
+            del item_dict[k]
+
+    # Instantiate from parameters
+    item = object_type(*item_args, **item_kwargs)
+    assert item.to_dict() == item_dict, pprint.pformat(item.to_dict())
+
+    assert item.item_type == item_dict["item_type"]
+    assert item.name == item_dict["name"]
+    assert item.args == item_dict.get("args", [])
+    assert item.kwargs == item_dict.get("kwargs", {})
+    assert item.meta == item_dict.get("meta", {})
+    assert item.item_uid is None
+
+    # Instantiate from another item
+    item_copy = object_type(item)
+    assert item_copy.to_dict() == item_dict, pprint.pformat(item.to_dict())
+
+    # Instantiate from dictionary
+    item_copy2 = object_type(item.to_dict())
+    assert item_copy2.to_dict() == item_dict, pprint.pformat(item.to_dict())
+
+
+# fmt: off
+@pytest.mark.parametrize("object_type, item_type, name, error_type, msg1, msg2", [
+    (BPlan, "instruction", "queue_stop", ValueError,
+     "Item 'plan' can not be initialized from a dictionary which represents 'instruction'",
+     "Unsupported item type: 'instruction'. Supported types: ['plan']"),
+    (BFunc, "instruction", "queue_stop", ValueError,
+     "Item 'function' can not be initialized from a dictionary which represents 'instruction'",
+     "Unsupported item type: 'instruction'. Supported types: ['function']"),
+    (BInst, "plan", "count", ValueError,
+     "Item 'instruction' can not be initialized from a dictionary which represents 'plan'",
+     "Unsupported item type: 'plan'. Supported types: ['instruction']"),
+])
+# fmt: on
+def test_BPlan_BInst_BFunc_03_failing(object_type, item_type, name, error_type, msg1, msg2):
+    """
+    Tests for BPlan, BInst and BFunc: failing cases of initialization.
+    """
+    item_dict = {}
+    if item_type is not None:
+        item_dict["item_type"] = item_type
+    if name is not None:
+        item_dict["name"] = name
+
+    with pytest.raises(error_type, match=re.escape(msg1)):
+        object_type(item_dict)
+
+    with pytest.raises(error_type, match=re.escape(msg1.replace("dictionary", "class object"))):
+        object_type(BItem(item_dict))
+
+    with pytest.raises(error_type, match=re.escape(msg2)):
+        b = object_type("some_name")
+        b.from_dict(item_dict)
+
+    with pytest.raises(error_type, match=re.escape(msg2)):
+        b = object_type("some_name")
+        for k, v in item_dict.items():
+            if k == "item_type":
+                b.item_type = v
+            if k == "name":
+                b.name = v
