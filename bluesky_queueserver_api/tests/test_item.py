@@ -84,7 +84,6 @@ def test_BItem_03():
     """
     Test that ``recognized_item_types`` property works as expected.
     """
-    assert BItem.recognized_item_types == ("plan", "instruction", "function")
     b = BItem("plan", "count")
     assert b.recognized_item_types == ("plan", "instruction", "function")
 
@@ -243,10 +242,6 @@ def test_BPlan_BInst_BFunc_01():
     """
     Tests for BPlan, BInst and BFunc: ``recognized_item_types`` property
     """
-    assert BPlan.recognized_item_types == ["plan"]
-    assert BInst.recognized_item_types == ["instruction"]
-    assert BFunc.recognized_item_types == ["function"]
-
     bp = BPlan("plan", "count")
     assert bp.recognized_item_types == ["plan"]
 

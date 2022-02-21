@@ -1,4 +1,3 @@
-default_allow_request_timeout_exceptions = True
 default_allow_request_fail_exceptions = True
 
 default_zmq_request_timeout_recv = 2.0  # s

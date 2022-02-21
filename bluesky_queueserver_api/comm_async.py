@@ -13,7 +13,6 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
         zmq_server_address,
         timeout_recv,
         timeout_send,
-        timeout_exceptions,
         server_public_key,
         loop,
     ):
@@ -22,7 +21,7 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
             zmq_server_address=zmq_server_address,
             timeout_recv=int(timeout_recv * 1000),  # Convert to ms
             timeout_send=int(timeout_send * 1000),  # Convert to ms
-            raise_exceptions=timeout_exceptions,
+            raise_exceptions=True,
             server_public_key=server_public_key,
         )
 

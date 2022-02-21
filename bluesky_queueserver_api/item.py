@@ -132,7 +132,8 @@ class BItem:
         """
         if not isinstance(item_type, str):
             raise TypeError(f"Item type {item_type!r} is not a string: ({type(item_type)!r})")
-        if item_type not in list(self.recognized_item_types):  # list() needed in Python 3.7, 3.8
+
+        if item_type not in self.recognized_item_types:
             raise ValueError(
                 f"Unsupported item type: {item_type!r}. Supported types: {self.recognized_item_types}"
             )
@@ -189,15 +190,13 @@ class BItem:
             raise TypeError(f"Item metadata {item_meta!r} must be a mapping or an iterable: ({type(item_meta)!r})")
         return item_meta
 
-    @classmethod
     @property
-    def recognized_item_types(cls):
+    def recognized_item_types(self):
         """
         The read-only property returns the list of item types recognized by the queue
-        server. Item types include ``plan``, ``instruction`` and ``function``. This is a class
-        property, which could be accessed as ``BItem.recognized_item_types``.
+        server. Item types include ``plan``, ``instruction`` and ``function``.
         """
-        return cls._recognized_item_types
+        return self._recognized_item_types
 
     @property
     def item_type(self):

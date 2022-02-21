@@ -3,7 +3,6 @@ from collections.abc import Mapping
 import httpx
 
 from ._defaults import (
-    default_allow_request_timeout_exceptions,
     default_allow_request_fail_exceptions,
     default_zmq_request_timeout_recv,
     default_zmq_request_timeout_send,
@@ -68,6 +67,11 @@ class ReManagerAPI_Base:
         self._request_fail_exceptions = bool(v)
 
     def _check_response(self, *, response):
+        """
+        Check if response is a dictionary and has ``"success": True``. Raise an exception
+        if the request is considered failed and exceptions are allowed. If response is
+        a dictionary and contains no ``"success"``, then it is considered successful.
+        """
         if self._request_fail_exceptions:
             # If the response is mapping, but it does not have 'success' field,
             #   then consider the request successful (this only happens for 'status' requests).
@@ -83,7 +87,6 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         timeout_recv=default_zmq_request_timeout_recv,
         timeout_send=default_zmq_request_timeout_send,
         server_public_key=None,
-        timeout_exceptions=default_allow_request_timeout_exceptions,
         request_fail_exceptions=default_allow_request_fail_exceptions,
         loop=None,
     ):
@@ -96,7 +99,6 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
             zmq_server_address=zmq_server_address,
             timeout_recv=timeout_recv,
             timeout_send=timeout_send,
-            timeout_exceptions=timeout_exceptions,
             server_public_key=server_public_key,
             loop=loop,
         )
@@ -107,7 +109,6 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         zmq_server_address,
         timeout_recv,
         timeout_send,
-        timeout_exceptions,
         server_public_key,
         loop,
     ):
@@ -126,7 +127,6 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         *,
         http_server_uri=None,
         timeout=default_http_request_timeout,
-        timeout_exceptions=default_allow_request_timeout_exceptions,
         request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
@@ -140,7 +140,6 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         http_server_uri = http_server_uri or default_http_server_uri
 
         self._timeout = timeout
-        self._timeout_exceptions = timeout_exceptions
         self._request_fail_exceptions = request_fail_exceptions
 
         self._rest_api_method_map = rest_api_method_map
@@ -152,7 +151,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
     def _prepare_request(self, *, method, params=None):
         if method not in self._rest_api_method_map:
-            raise IndexError(f"Unknown method {method!r}")
+            raise KeyError(f"Unknown method {method!r}")
         request_method, endpoint = rest_api_method_map[method]
         payload = params or {}
         return request_method, endpoint, payload
@@ -169,11 +168,9 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         """
         try:
             raise
+
         except httpx.TimeoutException as ex:
-            if self._timeout_exceptions:
-                raise self.RequestTimeoutError(ex, {"method": method, "params": params}) from ex
-            else:
-                return {"status": False, "msg": "Timeout occurred while communicating with HTTP Server"}
+            raise self.RequestTimeoutError(ex, {"method": method, "params": params}) from ex
 
         except httpx.RequestError as ex:
             raise self.RequestError from ex
