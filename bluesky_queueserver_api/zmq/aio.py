@@ -1,7 +1,6 @@
 from ..api_async import API_Async_Mixin
 from ..comm_async import ReManagerComm_ZMQ_Async
 from .._defaults import (
-    default_allow_request_timeout_exceptions,
     default_allow_request_fail_exceptions,
     default_zmq_request_timeout_recv,
     default_zmq_request_timeout_send,
@@ -16,7 +15,6 @@ class REManagerAPI(ReManagerComm_ZMQ_Async, API_Async_Mixin):
         timeout_recv=default_zmq_request_timeout_recv,
         timeout_send=default_zmq_request_timeout_send,
         server_public_key=None,
-        timeout_exceptions=default_allow_request_timeout_exceptions,
         request_fail_exceptions=default_allow_request_fail_exceptions,
         loop=None,
     ):
@@ -26,7 +24,6 @@ class REManagerAPI(ReManagerComm_ZMQ_Async, API_Async_Mixin):
             timeout_recv=timeout_recv,
             timeout_send=timeout_send,
             server_public_key=server_public_key,
-            timeout_exceptions=timeout_exceptions,
             request_fail_exceptions=request_fail_exceptions,
             loop=loop,
         )

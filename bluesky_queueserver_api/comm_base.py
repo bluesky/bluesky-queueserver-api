@@ -173,7 +173,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             raise self.RequestTimeoutError(ex, {"method": method, "params": params}) from ex
 
         except httpx.RequestError as ex:
-            raise self.RequestError from ex
+            raise self.RequestError(f"HTTP request error: {ex}") from ex
 
         except httpx.HTTPStatusError as exc:
             if client_response and (client_response.status_code < 500):
