@@ -67,6 +67,10 @@ class API_Base:
         self._status_min_period = status_min_period  # seconds
         self._status_polling_period = status_polling_period  # seconds
 
+        self._status_timestamp = None
+        self._status_current = None
+        self._status_exception = None
+
         self._user = "Python API User"
         self._user_group = "admin"
 
@@ -74,6 +78,12 @@ class API_Base:
         self._current_queue_uid = None
         self._current_history = []
         self._current_history_uid = None
+
+    def _clear_status_timestamp(self):
+        """
+        Clearing status timestamp causes status to be reloaded from the server next time it is requested.
+        """
+        self._status_timestamp = None
 
     def _prepare_add_item(self, *, item, pos, before_uid, after_uid):
         """

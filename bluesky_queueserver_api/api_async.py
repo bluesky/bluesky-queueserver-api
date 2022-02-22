@@ -14,20 +14,16 @@ class API_Async_Mixin(API_Base):
 
         self._is_closing = False
 
-        self._status_timestamp = None
-        self._status_current = None
-        self._status_exception = None
-
         self._event_status_get = asyncio.Event()
         self._status_get_cb = []  # A list of callbacks
         self._status_get_cb_lock = asyncio.Lock()
         self._wait_cb = []
 
         # Use tasks instead of threads
-        self._task_status_get = asyncio.create_task(self._thread_status_get_func, name="RM API: status get")
-        self._task_status_get = asyncio.create_task(self._thread_status_poll_func, name="RE API: status poll")
+        self._task_status_get = asyncio.create_task(self._task_status_get_func(), name="RM API: status get")
+        self._task_status_get = asyncio.create_task(self._task_status_poll_func(), name="RE API: status poll")
 
-    async def _event_wait(event, timeout):
+    async def _event_wait(self, event, timeout):
         """
         Emulation of ``threading.Event.wait`` with timeout.
         """
@@ -44,21 +40,23 @@ class API_Async_Mixin(API_Base):
         (if needed) and processes RE Manager status.
         """
         while True:
-            load_status = self._event_wait(self._event_status_get, timeout=0.1)
+            load_status = await self._event_wait(self._event_status_get, timeout=0.1)
             if load_status:
-                dt = ttime.time() - self._status_timestamp if self._status_timestamp else 0
-                # Reload status from server only if it was not requested within some
-                #   preset minimum period or if it was not requested for a very long time.
-                #   The latter case may happen if system time is changed and should be
-                #   taken into account (otherwise API may get stuck).
-                if (dt < self._status_min_period) or (dt > 5):
+                if self._status_timestamp:
+                    dt = ttime.time() - self._status_timestamp
+                    dt = dt if (dt >= 0) else None
+                else:
+                    dt = None
+
+                if (dt is None) or (dt > self._status_min_period):
                     status, raised_exception = None, None
                     try:
                         status = await self._load_status()
                     except Exception as ex:
                         raised_exception = ex
 
-                    self._status_timestamp = ttime.time()
+                    if status is not None:
+                        self._status_timestamp = ttime.time()
 
                     self._status_current = status
                     self._status_exception = raised_exception
@@ -257,14 +255,31 @@ class API_Async_Mixin(API_Base):
         def condition(status):
             return status["manager_state"] == "idle"
 
-        self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
+        await self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
 
     # =====================================================================================
     #                 API for monitoring and control of Queue
 
     async def add_item(self, item, *, pos=None, before_uid=None, after_uid=None):
         request_params = self._prepare_add_item(item=item, pos=pos, before_uid=before_uid, after_uid=after_uid)
-        return await self._rm.send_request(method="queue_item_add", params=request_params)
+        self._clear_status_timestamp()
+        return await self.send_request(method="queue_item_add", params=request_params)
+
+    async def environment_open(self):
+        self._clear_status_timestamp()
+        return await self.send_request(method="environment_open")
+
+    async def environment_close(self):
+        self._clear_status_timestamp()
+        return await self.send_request(method="environment_close")
+
+    async def environment_destroy(self):
+        self._clear_status_timestamp()
+        return await self.send_request(method="environment_destroy")
+
+    async def queue_start(self):
+        self._clear_status_timestamp()
+        return await self.send_request(method="queue_start")
 
 
 API_Async_Mixin.status.__doc__ = _doc_api_status

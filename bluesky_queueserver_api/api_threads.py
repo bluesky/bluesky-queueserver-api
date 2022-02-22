@@ -14,10 +14,6 @@ class API_Threads_Mixin(API_Base):
 
         self._is_closing = False
 
-        self._status_timestamp = None
-        self._status_current = None
-        self._status_exception = None
-
         self._event_status_get = threading.Event()
         self._status_get_cb = []  # A list of callbacks for requests to get status
         self._wait_cb = []  # A list of callbacks for 'wait' API
@@ -41,19 +37,21 @@ class API_Threads_Mixin(API_Base):
         while True:
             load_status = self._event_status_get.wait(timeout=0.1)
             if load_status:
-                dt = ttime.time() - self._status_timestamp if self._status_timestamp else 0
-                # Reload status from server only if it was not requested within some
-                #   preset minimum period or if it was not requested for a very long time.
-                #   The latter case may happen if system time is changed and should be
-                #   taken into account (otherwise API may get stuck).
-                if (dt < self._status_min_period) or (dt > 5):
+                if self._status_timestamp:
+                    dt = ttime.time() - self._status_timestamp
+                    dt = dt if (dt >= 0) else None
+                else:
+                    dt = None
+
+                if (dt is None) or (dt > self._status_min_period):
                     status, raised_exception = None, None
                     try:
                         status = self._load_status()
                     except Exception as ex:
                         raised_exception = ex
 
-                    self._status_timestamp = ttime.time()
+                    if status is not None:
+                        self._status_timestamp = ttime.time()
 
                     self._status_current = status
                     self._status_exception = raised_exception
@@ -202,7 +200,7 @@ class API_Threads_Mixin(API_Base):
         with self._status_get_cb_lock:
             self._status_get_cb.append(cb)
             if reload:
-                self._status_timestamp = None
+                self._clear_status_timestamp()
             self._event_status_get.set()
 
         event.wait()
@@ -240,7 +238,24 @@ class API_Threads_Mixin(API_Base):
 
     def add_item(self, item, *, pos=None, before_uid=None, after_uid=None):
         request_params = self._prepare_add_item(item=item, pos=pos, before_uid=before_uid, after_uid=after_uid)
+        self._clear_status_timestamp()
         return self.send_request(method="queue_item_add", params=request_params)
+
+    def environment_open(self):
+        self._clear_status_timestamp()
+        return self.send_request(method="environment_open")
+
+    def environment_close(self):
+        self._clear_status_timestamp()
+        return self.send_request(method="environment_close")
+
+    def environment_destroy(self):
+        self._clear_status_timestamp()
+        return self.send_request(method="environment_destroy")
+
+    def queue_start(self):
+        self._clear_status_timestamp()
+        return self.send_request(method="queue_start")
 
 
 API_Threads_Mixin.status.__doc__ = _doc_api_status

@@ -14,6 +14,9 @@ from ._defaults import (
 rest_api_method_map = {
     "status": ("GET", "/status"),
     "queue_item_add": ("POST", "/queue/item/add"),
+    "environment_open": ("POST", "/environment/open"),
+    "environment_close": ("POST", "/environment/close"),
+    "environment_destroy": ("POST", "/environment/destroy"),
 }
 
 
