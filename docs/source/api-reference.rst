@@ -37,6 +37,15 @@ API for controlling RE Manager
 API for controlling RE Environment
 **********************************
 
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    zmq.REManagerAPI.environment_open
+    zmq.REManagerAPI.environment_close
+    zmq.REManagerAPI.environment_destroy
+
+
 API for management of RE Queue
 ******************************
 
@@ -44,7 +53,9 @@ API for management of RE Queue
    :nosignatures:
    :toctree: generated
 
-    zmq.REManagerAPI.add_item
+    zmq.REManagerAPI.item_add
+    zmq.REManagerAPI.item_get
+    zmq.REManagerAPI.queue_start
 
 
 API for controlling RE History

@@ -26,6 +26,21 @@ jobs:
         # installation problems if out of date.
         python -m pip install --upgrade pip setuptools numpy
 
+        mkdir repos
+        pushd repos
+
+        git clone https://github.com/bluesky/bluesky-queueserver.git
+        pushd bluesky-queueserver
+        pip install .
+        popd
+
+        git clone https://github.com/bluesky/bluesky-httpserver.git
+        pushd bluesky-queueserver
+        pip install .
+        popd
+
+        popd
+
         pip install .
         pip install -r requirements-dev.txt
         pip list
