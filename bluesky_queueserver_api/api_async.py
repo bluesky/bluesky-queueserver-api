@@ -20,8 +20,8 @@ class API_Async_Mixin(API_Base):
         self._wait_cb = []
 
         # Use tasks instead of threads
-        self._task_status_get = asyncio.create_task(self._task_status_get_func(), name="RM API: status get")
-        self._task_status_get = asyncio.create_task(self._task_status_poll_func(), name="RE API: status poll")
+        self._task_status_get = asyncio.create_task(self._task_status_get_func())
+        self._task_status_get = asyncio.create_task(self._task_status_poll_func())
 
     async def _event_wait(self, event, timeout):
         """
