@@ -260,10 +260,14 @@ class API_Async_Mixin(API_Base):
     # =====================================================================================
     #                 API for monitoring and control of Queue
 
-    async def add_item(self, item, *, pos=None, before_uid=None, after_uid=None):
-        request_params = self._prepare_add_item(item=item, pos=pos, before_uid=before_uid, after_uid=after_uid)
+    async def item_add(self, item, *, pos=None, before_uid=None, after_uid=None):
+        request_params = self._prepare_item_add(item=item, pos=pos, before_uid=before_uid, after_uid=after_uid)
         self._clear_status_timestamp()
         return await self.send_request(method="queue_item_add", params=request_params)
+
+    async def item_get(self, *, pos=None, uid=None):
+        request_params = self._prepare_item_get(pos=pos, uid=uid)
+        return await self.send_request(method="queue_item_get", params=request_params)
 
     async def environment_open(self):
         self._clear_status_timestamp()

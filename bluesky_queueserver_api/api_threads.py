@@ -158,6 +158,8 @@ class API_Threads_Mixin(API_Base):
                 except Exception:
                     pass
 
+        self._status(reload=True)  # Load the updated status
+
         if timeout_occurred:
             raise self.WaitTimeoutError("Timeout while waiting for condition")
         if wait_cancelled:
@@ -236,10 +238,14 @@ class API_Threads_Mixin(API_Base):
     # =====================================================================================
     #                 API for monitoring and control of Queue
 
-    def add_item(self, item, *, pos=None, before_uid=None, after_uid=None):
-        request_params = self._prepare_add_item(item=item, pos=pos, before_uid=before_uid, after_uid=after_uid)
+    def item_add(self, item, *, pos=None, before_uid=None, after_uid=None):
+        request_params = self._prepare_item_add(item=item, pos=pos, before_uid=before_uid, after_uid=after_uid)
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_add", params=request_params)
+
+    def item_get(self, *, pos=None, uid=None):
+        request_params = self._prepare_item_get(pos=pos, uid=uid)
+        return self.send_request(method="queue_item_get", params=request_params)
 
     def environment_open(self):
         self._clear_status_timestamp()

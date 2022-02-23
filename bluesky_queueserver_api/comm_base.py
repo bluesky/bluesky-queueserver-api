@@ -13,7 +13,9 @@ from ._defaults import (
 
 rest_api_method_map = {
     "status": ("GET", "/status"),
+    "queue_start": ("POST", "/queue/start"),
     "queue_item_add": ("POST", "/queue/item/add"),
+    "queue_item_get": ("POST", "/queue/item/get"),
     "environment_open": ("POST", "/environment/open"),
     "environment_close": ("POST", "/environment/close"),
     "environment_destroy": ("POST", "/environment/destroy"),
@@ -186,6 +188,6 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
                     f"{exc.response.json()['detail'] if client_response.content else ''} "
                     f"{exc.request.url}"
                 )
-                raise self.ClientError(message, exc.request, exc.response) from exc
+                raise self.ClientError(message, request=exc.request, response=exc.response) from exc
             else:
                 raise self.ClientError(exc) from exc

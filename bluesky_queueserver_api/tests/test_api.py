@@ -1,5 +1,7 @@
 import asyncio
 import pytest
+import threading
+import time as ttime
 
 from .common import re_manager  # noqa: F401
 from .common import fastapi_server  # noqa: F401
@@ -8,7 +10,7 @@ from bluesky_queueserver_api.zmq import REManagerAPI as REManagerAPI_zmq_threads
 from bluesky_queueserver_api.zmq.aio import REManagerAPI as REManagerAPI_zmq_async
 from bluesky_queueserver_api.http import REManagerAPI as REManagerAPI_http_threads
 from bluesky_queueserver_api.http.aio import REManagerAPI as REManagerAPI_http_async
-from bluesky_queueserver_api import BPlan
+from bluesky_queueserver_api import BPlan, WaitMonitor
 
 _plan1 = {"name": "count", "args": [["det1", "det2"]], "item_type": "plan"}
 _user = "Test User"
@@ -237,9 +239,62 @@ def test_environment_close_destroy_02(
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
-def test_add_item_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+def test_item_get_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
     """
     ``status``: basic test
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item1 = BPlan("count", ["det1", "det2"], num=1, delay=1)
+    item2 = BPlan("count", ["det1", "det2"], num=2, delay=1)
+
+    def check_status(status, items_in_queue):
+        assert status["items_in_queue"] == items_in_queue
+
+    def check_items(resp1, resp2, resp3, resp4):
+        assert resp1 == resp2
+        assert resp1 == resp3
+        assert resp1 == resp4
+        assert resp1["success"] is True
+        assert resp1["msg"] == ""
+        assert resp1["item"]["kwargs"]["num"] == 2
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        RM.item_add(item1)
+        RM.item_add(item2)
+        check_status(RM.status(), 2)
+
+        resp1 = RM.item_get()
+        resp2 = RM.item_get(pos=1)
+        resp3 = RM.item_get(pos=1)
+        resp4 = RM.item_get(uid=resp1["item"]["item_uid"])
+        check_items(resp1, resp2, resp3, resp4)
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            await RM.item_add(item1)
+            await RM.item_add(item2)
+            check_status(await RM.status(), 2)
+
+            resp1 = await RM.item_get()
+            resp2 = await RM.item_get(pos=1)
+            resp3 = await RM.item_get(pos=1)
+            resp4 = await RM.item_get(uid=resp1["item"]["item_uid"])
+            check_items(resp1, resp2, resp3, resp4)
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_item_add_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``item_add``: basic test
     """
     rm_api_class = _select_re_manager_api(protocol, library)
     item = BPlan("count", ["det1", "det2"], num=10, delay=1)
@@ -255,9 +310,9 @@ def test_add_item_01(re_manager, fastapi_server, protocol, library):  # noqa: F8
     if not _is_async(library):
         RM = rm_api_class()
         check_status(RM.status(), 0)
-        check_resp(RM.add_item(item))
+        check_resp(RM.item_add(item))
         check_status(RM.status(), 1)
-        check_resp(RM.add_item(item_dict))
+        check_resp(RM.item_add(item_dict))
         check_status(RM.status(), 2)
         RM.close()
     else:
@@ -265,10 +320,209 @@ def test_add_item_01(re_manager, fastapi_server, protocol, library):  # noqa: F8
         async def testing():
             RM = rm_api_class()
             check_status(await RM.status(), 0)
-            check_resp(await RM.add_item(item))
+            check_resp(await RM.item_add(item))
             check_status(await RM.status(), 1)
-            check_resp(await RM.add_item(item_dict))
+            check_resp(await RM.item_add(item_dict))
             check_status(await RM.status(), 2)
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_item_add_02(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``item_add``: check that the parameters ``pos``, ``before_uid`` and ``after_uid``
+    are passed correctly.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item1 = BPlan("count", ["det1", "det2"], num=1, delay=1)
+    item2 = BPlan("count", ["det1", "det2"], num=2, delay=1)
+    item3 = BPlan("count", ["det1", "det2"], num=3, delay=1)
+    item4 = BPlan("count", ["det1", "det2"], num=4, delay=1)
+    item5 = BPlan("count", ["det1", "det2"], num=5, delay=1)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue):
+        assert status["items_in_queue"] == items_in_queue
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        check_resp(RM.item_add(item1))
+        check_resp(RM.item_add(item2))
+        check_status(RM.status(), 2)
+
+        check_resp(RM.item_add(item3, pos=1))
+        resp3 = RM.item_get(pos=1)
+        assert resp3["item"]["kwargs"]["num"] == 3
+
+        check_resp(RM.item_add(item4, before_uid=resp3["item"]["item_uid"]))
+        resp4 = RM.item_get(pos=1)
+        assert resp4["item"]["kwargs"]["num"] == 4
+
+        check_resp(RM.item_add(item5, after_uid=resp3["item"]["item_uid"]))
+        resp5 = RM.item_get(pos=3)
+        assert resp5["item"]["kwargs"]["num"] == 5
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            check_resp(await RM.item_add(item1))
+            check_resp(await RM.item_add(item2))
+            check_status(await RM.status(), 2)
+
+            check_resp(await RM.item_add(item3, pos=1))
+            resp3 = await RM.item_get(pos=1)
+            assert resp3["item"]["kwargs"]["num"] == 3
+
+            check_resp(await RM.item_add(item4, before_uid=resp3["item"]["item_uid"]))
+            resp4 = await RM.item_get(pos=1)
+            assert resp4["item"]["kwargs"]["num"] == 4
+
+            check_resp(await RM.item_add(item5, after_uid=resp3["item"]["item_uid"]))
+            resp5 = await RM.item_get(pos=3)
+            assert resp5["item"]["kwargs"]["num"] == 5
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("timeout", [None, 2])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_wait_for_idle_01(re_manager, fastapi_server, protocol, library, timeout):  # noqa: F811
+    """
+    ``wait_for_idle``: basic test. Check if timeout parameter works as expected.
+    """
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item = BPlan("count", ["det1", "det2"], num=5, delay=1)
+
+    def check_status(status, manager_states):
+        assert status["manager_state"] in manager_states
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        RM.item_add(item)
+        RM.environment_open()
+        RM.wait_for_idle()
+        RM.queue_start()
+        check_status(RM.status(), ["starting_queue", "executing_queue"])
+        if timeout is None:
+            RM.wait_for_idle()
+            check_status(RM.status(), ["idle"])
+        else:
+            with pytest.raises(RM.WaitTimeoutError, match="Timeout while waiting for condition"):
+                RM.wait_for_idle(timeout=timeout)
+            check_status(RM.status(), ["executing_queue"])
+        RM.wait_for_idle()
+        check_status(RM.status(), ["idle"])
+        RM.environment_close()
+        RM.wait_for_idle()
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            await RM.item_add(item)
+            await RM.environment_open()
+            await RM.wait_for_idle()
+            await RM.queue_start()
+            check_status(await RM.status(), ["starting_queue", "executing_queue"])
+            if timeout is None:
+                await RM.wait_for_idle()
+                check_status(await RM.status(), ["idle"])
+            else:
+                with pytest.raises(RM.WaitTimeoutError, match="Timeout while waiting for condition"):
+                    await RM.wait_for_idle(timeout=timeout)
+                check_status(await RM.status(), ["executing_queue"])
+            await RM.wait_for_idle()
+            check_status(await RM.status(), ["idle"])
+            await RM.environment_close()
+            await RM.wait_for_idle()
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_wait_for_idle_02(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``wait_for_idle``: Check if ``WaitMonitor`` object may be used to cancel the wait.
+    """
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item = BPlan("count", ["det1", "det2"], num=5, delay=1)
+
+    def check_status(status, manager_states):
+        assert status["manager_state"] in manager_states
+
+    monitor = WaitMonitor()
+    timeout = 2
+
+    if not _is_async(library):
+
+        def cancel_wait():
+            ttime.sleep(timeout)
+            monitor.cancel()
+
+        RM = rm_api_class()
+        RM.item_add(item)
+        RM.environment_open()
+        RM.wait_for_idle()
+        RM.queue_start()
+        check_status(RM.status(), ["starting_queue", "executing_queue"])
+
+        thread = threading.Thread(target=cancel_wait)
+        thread.start()
+        with pytest.raises(RM.WaitCancelError, match="Wait for condition was cancelled"):
+            RM.wait_for_idle(monitor=monitor)
+        thread.join()
+        check_status(RM.status(), ["executing_queue"])
+
+        RM.wait_for_idle()
+        check_status(RM.status(), ["idle"])
+        RM.environment_close()
+        RM.wait_for_idle()
+        RM.close()
+
+    else:
+
+        async def testing():
+            async def cancel_wait():
+                asyncio.sleep(timeout)
+                monitor.cancel()
+
+            RM = rm_api_class()
+            await RM.item_add(item)
+            await RM.environment_open()
+            await RM.wait_for_idle()
+            await RM.queue_start()
+            check_status(await RM.status(), ["starting_queue", "executing_queue"])
+
+            asyncio.create_task(cancel_wait())
+            with pytest.raises(RM.WaitCancelError, match="Wait for condition was cancelled"):
+                await RM.wait_for_idle(monitor=monitor)
+            check_status(await RM.status(), ["executing_queue"])
+
+            await RM.wait_for_idle()
+            check_status(await RM.status(), ["idle"])
+            await RM.environment_close()
+            await RM.wait_for_idle()
             await RM.close()
 
         asyncio.run(testing())

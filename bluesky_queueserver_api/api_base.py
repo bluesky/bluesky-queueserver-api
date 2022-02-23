@@ -85,9 +85,9 @@ class API_Base:
         """
         self._status_timestamp = None
 
-    def _prepare_add_item(self, *, item, pos, before_uid, after_uid):
+    def _prepare_item_add(self, *, item, pos, before_uid, after_uid):
         """
-        Prepare parameters for 'add_item' operation.
+        Prepare parameters for ``item_add`` operation.
         """
         if not isinstance(item, BItem) and not isinstance(item, Mapping):
             raise TypeError(f"Incorrect item type {type(item)!r}. Expected type: 'BItem' or 'dict'")
@@ -106,4 +106,15 @@ class API_Base:
             request_params["user"] = self._user
             request_params["user_group"] = self._user_group
 
+        return request_params
+
+    def _prepare_item_get(self, *, pos, uid):
+        """
+        Prepare parameters for ``item_get`` operation
+        """
+        request_params = {}
+        if pos:
+            request_params["pos"] = pos
+        if uid:
+            request_params["uid"] = uid
         return request_params
