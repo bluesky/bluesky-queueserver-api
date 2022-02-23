@@ -1,76 +1,11 @@
 from collections.abc import Mapping, Iterable
 import copy
 
+from .api_docstrings import _doc_BItem, _doc_BPlan, _doc_BInst, _doc_BFunc
+
 
 class BItem:
-    """
-    A helper class that generates dictionary with queue item parameters. The class
-    performs validation of values to ensure that the dictionary is formatted correctly.
-    A queue item can be represented as a plain Python dictionary. Using this class
-    to represent is queue items is optional.
-
-    The item can be instantiated from a dictionary that contains valid item parameters
-    or by passing item type, item name, args and kwargs or from another ``BItem`` object.
-    The class implements public properties that allow to access all important item
-    parameters, such as ``item_type``, ``name``, ``args``, ``kwargs``, ``meta``
-    and ``item_uid``.
-
-    Parameters
-    ----------
-    *args: list
-        The first two arguments are required and should represent item type (allowed
-        values are ``'plan'``, ``'instruction'`` and ``'function`'') and item name
-        (name of the plan, instruction or function represented as a string). The remaining
-        arguments are optional and represent args of the plan or function. Alternatively,
-        an item may be instantiated from a valid dictionary of item parameters or another
-        item object. In this case the constructor should be passed a single argument that
-        contains the dictionary or the object and no keyword arguments.
-    **kwargs: dict
-        Keyword arguments of the plan or function.
-
-    Raises
-    ------
-    KeyError, ValueError, TypeError
-        Missing parameter or invalid parameter types or values
-
-    Examples
-    --------
-
-    .. code-block:: python
-
-        plan1 = BItem("plan", "count", ["det1", "det2"], num=10, delay=1)
-        plan2 = BItem(plan1)  # Creates a copy of a plan
-        plan3 = BItem({
-            "item_type": "plan",
-            "name": "count",
-            "args": [["det1", "det2]],
-            "kwargs": {"num": 10, "delay": 1}
-        })
-
-        item_type = plan1.item_type  # Require, always set
-        item_name = plan1.name  # Required, always set
-        item_args = plan1.args  # Optional, [] if not set
-        item_kwargs = plan1.kwargs  # Optional, {} if not set
-        item_uid = plan1.item_uid  # Usually set by the server, None if not set
-        item_meta = plan1.meta  # Optional, {} if not set
-
-        # Convert 'plan1' into 'queue_stop' instruction (properties are writable)
-        plan1.item_type = "instruction"
-        plan1.name = "queue_stop"
-        plan1.args = []
-        plan1.kwargs = {}
-        plan1.meta = {}
-
-        plan1_dict = plan1.to_dict()  # Returns a copy of the internal dictionary
-        plan2.from_dict(plan1_dict)  # Makes 'plan2' a copy of 'plan1'
-        plan2.from_dict(plan1)  # Works exactly the same
-
-        # Access to internal dictionary
-        dict_ref = plan3.dict_ref
-        dict_ref["args"] = [["det1"]]
-
-    """
-
+    # docstring is stored separately
     _recognized_item_types = ("plan", "instruction", "function")
 
     def __init__(self, *args, **kwargs):
@@ -351,52 +286,8 @@ class BItem:
 
 class _BItemSpecialized(BItem):
     """
-    The helper class for creating and maintaining a dictionary with the description of an item
-    that represents a plan (``BPlan``), instruction (``BInst``) or function (``BFunc``).
-    The class functionality is similar to ``BItems``, but specified for operations with
-    particular type of items.
-
-    Parameters
-    ----------
-    *args: list
-        (name of the plan, instruction or function represented as a string). The remaining
-        arguments are optional and represent args of the plan or function. Alternatively,
-        an item may be instantiated from a valid dictionary of item parameters or another
-        object that represent an item of matching type. Then the constructor receive a single
-        argument that contains the dictionary or the item object and no keyword arguments.
-    **kwargs: dict
-        Keyword arguments of the plan or function.
-
-    Raises
-    ------
-    KeyError, ValueError, TypeError
-        Missing parameter or invalid parameter types or values
-
-    Examples
-    --------
-
-    .. code-block:: python
-
-        plan1 = BPlan("count", ["det1", "det2"], num=10, delay=1)
-        inst1 = BInst("queue_stop")
-        func1 = BFunc("custom_func", 10)
-
-        plan2 = BPlan(plan1.to_dict())  # Copy of 'plan'
-        plan2 = BPlan(plan1)  # Works exactly the same
-
-        # Initialization from items of another type always fails
-        BPlan(func1.to_dict())  # Fails
-        BPlan(inst1)  # Fails
-        plan1.from_dict(func1.to_dict())  # Fails
-        plan1.from_dict(inst1)  # Fails
-
-        # BItem can be initialized from specialized item objects
-        item = BItem(inst1.to_dict)  # Works
-        item = BItem(inst1)  # Works
-
-        # The following sequence works, because item type is correct
-        item1 = BItem(plan1)  # 'item1' is still a plan
-        plan3 = BPlan(item1)  # Initialize a plan object with another plan object
+    The class implements functionality for ``BPlan``, ``BInst`` and ``BFunc``.
+    It is not part of the API.
     """
 
     def __init__(self, *args, **kwargs):
@@ -430,18 +321,27 @@ class _BItemSpecialized(BItem):
 
 
 class BPlan(_BItemSpecialized):
+    # docstring is stored separately
     _class_item_type = "plan"
     _recognized_item_types = [_class_item_type]
     __doc__ = _BItemSpecialized.__doc__
 
 
 class BInst(_BItemSpecialized):
+    # docstring is stored separately
     _class_item_type = "instruction"
     _recognized_item_types = [_class_item_type]
     __doc__ = _BItemSpecialized.__doc__
 
 
 class BFunc(_BItemSpecialized):
+    # docstring is stored separately
     _class_item_type = "function"
     _recognized_item_types = [_class_item_type]
     __doc__ = _BItemSpecialized.__doc__
+
+
+BItem.__doc__ = _doc_BItem
+BPlan.__doc__ = _doc_BPlan
+BInst.__doc__ = _doc_BInst
+BFunc.__doc__ = _doc_BFunc

@@ -4,6 +4,39 @@ API Reference
 
 .. currentmodule:: bluesky_queueserver_api
 
+Generation of Queue Items
+-------------------------
+
+Generic Queue Item
+******************
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    BItem
+    BItem.to_dict
+    BItem.from_dict
+    BItem.item_type
+    BItem.name
+    BItem.args
+    BItem.kwargs
+    BItem.meta
+    BItem.item_uid
+    BItem.dict_ref
+    BItem.recognized_item_types
+
+Type-Specific Queue Items
+*************************
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    BPlan
+    BInst
+    BFunc
+
 Synchronous Communication with 0MQ Server
 -----------------------------------------
 

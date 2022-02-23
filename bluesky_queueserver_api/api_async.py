@@ -126,7 +126,7 @@ class API_Async_Mixin(API_Base):
         t_started = ttime.time()
 
         monitor = monitor or WaitMonitor()
-        monitor.set_time_start(t_started)
+        monitor._time_start = t_started
         monitor.set_timeout_period(timeout)
 
         event = asyncio.Event()
@@ -134,7 +134,7 @@ class API_Async_Mixin(API_Base):
         def cb(status):
             nonlocal timeout_occurred, wait_cancelled, event, monitor
             result = condition(status) if status else False
-            monitor.set_time_elapsed(ttime.time() - monitor.time_start)
+            monitor._time_elapsed = ttime.time() - monitor.time_start
 
             if not result and (monitor.time_elapsed > monitor.timeout_period):
                 timeout_occurred = True
