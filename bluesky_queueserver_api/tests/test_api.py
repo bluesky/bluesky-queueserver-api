@@ -112,9 +112,9 @@ def test_status_02(re_manager, fastapi_server, protocol, library, reload):  # no
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
-def test_environment_close_01(re_manager, fastapi_server, protocol, library, destroy):  # noqa: F811
+def test_environment_close_destroy_01(re_manager, fastapi_server, protocol, library, destroy):  # noqa: F811
     """
-    ``environment_open`` and ``environment_close``: basic test
+    ``environment_open``, ``environment_close`` and ``enviroment_destroy``: basic test
     """
     rm_api_class = _select_re_manager_api(protocol, library)
 
@@ -141,7 +141,6 @@ def test_environment_close_01(re_manager, fastapi_server, protocol, library, des
         check_status(RM.status(), "idle", False)
         RM.close()
     else:
-        pass
 
         async def testing():
             RM = rm_api_class()
@@ -156,6 +155,79 @@ def test_environment_close_01(re_manager, fastapi_server, protocol, library, des
                 check_resp(await RM.environment_destroy())
             await RM.wait_for_idle()
             check_status(await RM.status(), "idle", False)
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("request_fail_exceptions", [None, True, False])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_environment_close_destroy_02(
+    re_manager, fastapi_server, protocol, library, request_fail_exceptions  # noqa: F811
+):
+    """
+    ``environment_open``, ``environment_close``: test that ``environment_open`` is raising an exception or
+    returning error message based on the value of ``request_fail_exception`` parameter.
+
+    This test is not only related to ``environment_open``, but test functionality used with any request
+    to RE Manager which may be rejected (``'success': False``). This test does not need to be repeated
+    for other API, because it is expect to work the same.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    params = {"request_fail_exceptions": request_fail_exceptions} if (request_fail_exceptions is not None) else {}
+    err_msg = "Request failed: RE Worker environment already exists."
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    if not _is_async(library):
+        RM = rm_api_class(**params)
+        check_resp(RM.environment_open())
+        RM.wait_for_idle()
+        if request_fail_exceptions in (True, None):
+            with pytest.raises(RM.RequestFailedError, match=err_msg):
+                RM.environment_open()
+            # Try again, capture the exception and check that parameters are correct
+            try:
+                RM.environment_open()
+            except RM.RequestFailedError as ex:
+                assert str(ex) == err_msg
+                assert ex.response["msg"] in err_msg
+                assert ex.response["success"] is False
+        else:
+            resp = RM.environment_open()
+            assert resp["msg"] in err_msg
+            assert resp["success"] is False
+        check_resp(RM.environment_close())
+        RM.wait_for_idle()
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class(**params)
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle()
+            if request_fail_exceptions in (True, None):
+                with pytest.raises(RM.RequestFailedError, match=err_msg):
+                    await RM.environment_open()
+                # Try again, capture the exception and check that parameters are correct
+                try:
+                    await RM.environment_open()
+                except RM.RequestFailedError as ex:
+                    assert str(ex) == err_msg
+                    assert ex.response["msg"] in err_msg
+                    assert ex.response["success"] is False
+            else:
+                resp = await RM.environment_open()
+                assert resp["msg"] in err_msg
+                assert resp["success"] is False
+
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle()
             await RM.close()
 
         asyncio.run(testing())
