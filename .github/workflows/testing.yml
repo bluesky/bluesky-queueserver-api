@@ -35,7 +35,7 @@ jobs:
         popd
 
         git clone https://github.com/bluesky/bluesky-httpserver.git
-        pushd bluesky-queueserver
+        pushd bluesky-httpserver
         pip install .
         popd
 
