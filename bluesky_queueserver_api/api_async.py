@@ -5,7 +5,16 @@ import time as ttime
 from .api_base import API_Base, WaitMonitor
 from ._defaults import default_wait_timeout
 
-from .api_docstrings import _doc_api_status, _doc_api_wait_for_idle, _doc_api_item_add
+from .api_docstrings import (
+    _doc_api_status,
+    _doc_api_wait_for_idle,
+    _doc_api_item_add,
+    _doc_api_item_get,
+    _doc_api_queue_start,
+    _doc_api_environment_open,
+    _doc_api_environment_close,
+    _doc_api_environment_destroy,
+)
 
 
 class API_Async_Mixin(API_Base):
@@ -242,6 +251,7 @@ class API_Async_Mixin(API_Base):
     #                 API for monitoring and control of Queue
 
     async def item_add(self, item, *, pos=None, before_uid=None, after_uid=None):
+        # Docstring is maintained separately
         request_params = self._prepare_item_add(item=item, pos=pos, before_uid=before_uid, after_uid=after_uid)
         self._clear_status_timestamp()
         return await self.send_request(method="queue_item_add", params=request_params)
@@ -270,3 +280,8 @@ class API_Async_Mixin(API_Base):
 API_Async_Mixin.status.__doc__ = _doc_api_status
 API_Async_Mixin.wait_for_idle.__doc__ = _doc_api_wait_for_idle
 API_Async_Mixin.item_add.__doc__ = _doc_api_item_add
+API_Async_Mixin.item_get.__doc__ = _doc_api_item_get
+API_Async_Mixin.queue_start.__doc__ = _doc_api_queue_start
+API_Async_Mixin.environment_open.__doc__ = _doc_api_environment_open
+API_Async_Mixin.environment_close.__doc__ = _doc_api_environment_close
+API_Async_Mixin.environment_destroy.__doc__ = _doc_api_environment_destroy

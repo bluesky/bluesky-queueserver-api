@@ -333,9 +333,11 @@ _doc_api_status = """
 
         # Synchronous code (0MQ and HTTP)
         status = RM.status()
+        assert status["manager_state"] == "idle"
 
         # Asynchronous code (0MQ and HTTP)
         status = await RM.status()
+        assert status["manager_state"] == "idle"
 """
 
 _doc_api_wait_for_idle = """
@@ -348,8 +350,9 @@ _doc_api_wait_for_idle = """
     cancelling wait operations (from a different thread or task), modify timeout
     and monitoring the progress.
 
-    ``wait_for_idle`` is threadsafe and could be run simultanously from multiple
-    threads with polled RE Manager status shared between multiple instances.
+    Synchronous version of ``wait_for_idle`` is threadsafe. Multiple instances
+    may run simultanously in multiple threads (sync) or tasks (async). Results
+    of polling RE Manager status are shared between multiple running instances.
 
     Parameters
     ----------
@@ -358,6 +361,14 @@ _doc_api_wait_for_idle = """
     monitor: bluesky_queueserver_api.WaitMonitor or None
         Instance of ``WaitMonitor`` object. The object is created internally if
         the parameter is ``None``.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    REManagerAPI.WaitTimeoutError, REManagerAPI.WaitCancelError
 
     Examples
     --------
@@ -405,6 +416,20 @@ _doc_api_item_add = """
         Insert the item before or after the item with the given item UID. If ``None``
         (default), then the parameters are not specified.
 
+    Returns
+    -------
+    dict
+        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
+        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
+        ``qsize`` (*int* or *None*) - new size of the queue or *None* if operation
+        failed, ``item`` (*dict* or *None*) - inserted item with assigned UID.
+        If the request is rejected, ``item`` may contain the copy of the submitted
+        item (with assigned UID), *None* or be missing depending on the failure.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
     Examples
     --------
 
@@ -421,6 +446,22 @@ _doc_api_item_add = """
         # Insert an item before the last item
         RM.item_add(BPlan("count", ["det1"], num=10, delay=1), pos=-1)
 
+        try:
+            response = RM.item_add(BPlan("count", ["det1"], num=10, delay=1))
+            # No exception was raised, so the request was successful
+            assert response["success"] == True
+            assert response["msg"] == ""
+            # Print some parameters
+            print(f"qsize = {response['qsize']}")
+            print(f"item = {response['item']}")
+
+            # Insert another plan before the plan that was just inserted
+            item_uid = response["item"]["item_uid"]
+            RM.item_add(BPlan("count", ["det1"], num=10, delay=1), before_uid=item_uid)
+        except RM.RequestFailedError as ex:
+            print(f"Request was rejected: {ex}")
+            # < code that processes the error >
+
         # Asynchronous code (0MQ, HTTP)
         # Add an item to the back of the queue
         await RM.item_add({"item_type": "plan", "name": "count", "args": [["det1"]]})
@@ -431,4 +472,168 @@ _doc_api_item_add = """
         await RM.item_add(BPlan("count", ["det1"], num=10, delay=1), pos=5)
         # Insert an item before the last item
         await RM.item_add(BPlan("count", ["det1"], num=10, delay=1), pos=-1)
+"""
+
+
+_doc_api_item_get = """
+    Load an existing queue item. Items may be addressed by position or UID.
+    Bu default, the API returns the item at the back of the queue.
+
+    Parameters
+    ----------
+    pos: str, int or None
+        Position of the item in the queue. The position may be positive or negative
+        (counted from the back of the queue) integer. If ``pos`` value is a string
+        ``"front"`` or ``"back"``, then the item at the front or the back of the queue
+        is returned. If the value is ``None`` (default), then the position is not specified.
+    uid: str or None
+        UID of the item. If ``None`` (default), then the parameter are not specified.
+
+    Returns
+    -------
+    dict
+        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
+        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
+        ``item`` (*dict*) - the dictionary of item parameters, which is ``{}`` if
+        the operation fails.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.item_get()
+        RM.item_get(pos="front")
+        RM.item_get(pos=-2)
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.item_get()
+        await RM.item_get(pos="front")
+        await RM.item_get(pos=-2)
+"""
+
+_doc_api_queue_start = """
+    Start execution of the queue. If the request is accepted, the ``manager_state``
+    status parameter is expected to change to ``starting_queue``, then ``executing_queue``
+    and change back to ``idle`` when the queue is completed or stopped.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager, ``item`` (*dict*) - the dictionary
+        of item parameters, which is ``{}`` if the operation fails.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.queue_start()
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.queue_start()
+"""
+
+_doc_api_environment_open = """
+    Open RE Worker environment. The API request only initiates the operation of
+    opening an environment. If the request is accepted, the ``manager_state``
+    status parameter is expected to change to ``creating_environment`` and then
+    changed back to ``idle`` when the operation is completed. Check
+    ``worker_environment_exists`` to see if the environment was opened successfully.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.environment_open()
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.environment_open()
+"""
+
+_doc_api_environment_close = """
+    Close RE Worker environment. The API request only initiates the operation of
+    opening an environment. The environment can not be closed if any plans or
+    foreground tasks are running. If the request is accepted, the ``manager_state``
+    status parameter is expected to change to ``closing_environment`` and then
+    back to ``idle`` when the operation is completed. Check ``worker_environment_exists``
+    status flag to see if the environment was closed.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.environment_close()
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.environment_close()
+"""
+
+_doc_api_environment_destroy = """
+    Destroy RE Worker environment. This is the last-resort operation that allows to
+    recover the Queue Server if RE Worker environment becomes unresponsive and needs
+    to be shut down. The operation kills RE Worker process, therefore it can be executed
+    with the environment in any state. The operation may be dangerous, since it kills any
+    running plans or tasks. After the operation is completed, a new environment
+    may be opened and operations countinued. The API request only initiates the operation
+    of destroying an environment. If the request is accepted, the ``manager_state``
+    status parameter is expected to change to ``destroying_environment`` and then
+    back to ``idle`` when the operation is completed. Check ``worker_environment_exists``
+    status flag to see if the environment was destroyed.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.environment_destroy()
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.environment_destroy()
 """
