@@ -37,6 +37,22 @@ Type-Specific Queue Items
     BInst
     BFunc
 
+Miscellaneous API
+-----------------
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    WaitMonitor
+    WaitMonitor.cancel
+    WaitMonitor.is_cancelled
+    WaitMonitor.time_start
+    WaitMonitor.time_elapsed
+    WaitMonitor.timeout
+    WaitMonitor.set_timeout
+    WaitMonitor.add_cancel_callback
+
 Synchronous Communication with 0MQ Server
 -----------------------------------------
 

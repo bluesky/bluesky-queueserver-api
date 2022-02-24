@@ -12,13 +12,38 @@ from ._defaults import (
 
 
 rest_api_method_map = {
+    "ping": ("GET", "/ping"),
     "status": ("GET", "/status"),
     "queue_start": ("POST", "/queue/start"),
+    "queue_stop": ("POST", "/queue/stop"),
+    "queue_stop_cancel": ("POST", "/queue/stop/cancel"),
+    "queue_get": ("GET", "/queue/get"),
+    "queue_clear": ("POST", "/queue/clear"),
+    "queue_mode_set": ("POST", "/queue/mode/set"),
     "queue_item_add": ("POST", "/queue/item/add"),
+    "queue_item_add_batch": ("POST", "/queue/item/add/batch"),
     "queue_item_get": ("POST", "/queue/item/get"),
+    "queue_item_update": ("POST", "/queue/item/update"),
+    "queue_item_remove": ("POST", "/queue/item/remove"),
+    "queue_item_remove_batch": ("POST", "/queue/item/remove/batch"),
+    "queue_item_move": ("POST", "/queue/item/move"),
+    "queue_item_move_batch": ("POST", "/queue/item/move/batch"),
+    "queue_item_execute": ("POST", "/queue/item/execute"),
+    "history_get": ("GET", "/history/get"),
+    "history_clear": ("POST", "/history/clear"),
     "environment_open": ("POST", "/environment/open"),
     "environment_close": ("POST", "/environment/close"),
     "environment_destroy": ("POST", "/environment/destroy"),
+    "re_pause": ("POST", "/re/pause"),
+    "re_resume": ("POST", "/re/resume"),
+    "re_stop": ("POST", "/re/stop"),
+    "re_abort": ("POST", "/re/abort"),
+    "re_halt": ("POST", "/re/halt"),
+    "plans_allowed": ("GET", "/plans/allowed"),
+    "devices_allowed": ("GET", "/devices/allowed"),
+    "permissions_reload": ("POST", "/permissions/reload"),
+    "manager_stop": ("POST", "/manager/stop"),
+    "manager_kill": ("POST", "/test/manager/kill"),
 }
 
 
