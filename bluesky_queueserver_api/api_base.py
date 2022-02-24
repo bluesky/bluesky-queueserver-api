@@ -13,11 +13,16 @@ class WaitCancelError(TimeoutError):
 class WaitMonitor:
     """
     Creates ``monitor`` object for 'wait' operations, such as ``wait_for_idle``.
+    The object may be used to stop the operation from another thread or
+    asynchronous task.
 
     Examples
     --------
 
-    .. code-block: python
+    The examples illustrate how to use ``WaitMonitor`` object to cancel
+    wait operations. Synchronous code (0MQ or HTTP):
+
+    .. code-block:: python
 
         # Synchronous code
         from bluesky_queueserver_api import Wait Monitor
@@ -28,7 +33,7 @@ class WaitMonitor:
         RM = REManagerAPI()
         monitor = WaitMonitor()
 
-        def wait_until_idle():
+        def wait_re_manager_idle():
             try:
                 print("Waiting ...")
                 RM.wait_for_idle(monitor=monitor)
@@ -39,7 +44,7 @@ class WaitMonitor:
             print("RE Manager is idle")
 
         # Wait until RE Manager is in 'idle' state in a background thread
-        thread = threading.Thread(target=wait_until_idle)
+        thread = threading.Thread(target=wait_re_manager_idle)
         thread.start()
         # Cancel wait after 2 seconds from main thread
         time.sleep(2)
@@ -47,6 +52,10 @@ class WaitMonitor:
 
         thread.join()
         RM.close()
+
+    Asynchronous code example (0MQ or HTTP):
+
+    .. code-block:: python
 
         # Asynchronous code
         import asyncio
@@ -59,7 +68,7 @@ class WaitMonitor:
             RM = REManagerAPI()
             monitor = WaitMonitor()
 
-            async def wait_until_idle():
+            async def wait_re_manager_idle():
                 try:
                     print("Waiting ...")
                     await RM.wait_for_idle(monitor=monitor)
@@ -70,21 +79,20 @@ class WaitMonitor:
                 print("RE Manager is idle")
 
             # Wait until RE Manager is in 'idle' state in a background task
-            asyncio.create_task(testing())
+            asyncio.create_task(wait_re_manager_idle())
             # Cancel wait after 2 seconds from main thread
             await asyncio.sleep(2)
             monitor.cancel()
-            await asyncio.sleep(0.5)  # Let the task complete
+            await asyncio.sleep(0.5)  # Let the task to complete
             await RM.close()
 
         asyncio.run(testing())
-
     """
 
     def __init__(self):
         self._time_start = 0
         self._time_elapsed = 0
-        self._timeout_period = 0
+        self._timeout = 0
         self._cancel_callbacks = []
 
         self._wait_cancelled = False
@@ -104,17 +112,17 @@ class WaitMonitor:
         return self._time_elapsed
 
     @property
-    def timeout_period(self):
+    def timeout(self):
         """
         Timeout (seconds).
         """
-        return self._timeout_period
+        return self._timeout
 
-    def set_timeout_period(self, timeout_period):
+    def set_timeout(self, timeout):
         """
         Modify timeout for the current operation (seconds).
         """
-        self._timeout_period = timeout_period
+        self._timeout = timeout
 
     def add_cancel_callback(self, cancel_callback):
         """
@@ -150,9 +158,9 @@ class API_Base:
     WaitTimeoutError = WaitTimeoutError
     WaitCancelError = WaitCancelError
 
-    def __init__(self, *, status_min_period=0.5, status_polling_period=1.0):
+    def __init__(self, *, status_expiration_period, status_polling_period):
 
-        self._status_min_period = status_min_period  # seconds
+        self._status_expiration_period = status_expiration_period  # seconds
         self._status_polling_period = status_polling_period  # seconds
 
         self._status_timestamp = None

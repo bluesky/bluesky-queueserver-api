@@ -1,5 +1,8 @@
 default_allow_request_fail_exceptions = True
 
+default_status_expiration_period = 0.5  # s
+default_status_polling_period = 1.0  # s
+
 default_zmq_request_timeout_recv = 2.0  # s
 default_zmq_request_timeout_send = 0.5  # s
 

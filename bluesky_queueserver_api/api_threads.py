@@ -5,12 +5,14 @@ import threading
 from .api_base import API_Base, WaitMonitor
 from ._defaults import default_wait_timeout
 
-from .api_docstrings import _doc_api_status
+from .api_docstrings import _doc_api_status, _doc_api_wait_for_idle, _doc_api_item_add
 
 
 class API_Threads_Mixin(API_Base):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, *, status_expiration_period, status_polling_period):
+        super().__init__(
+            status_expiration_period=status_expiration_period, status_polling_period=status_polling_period
+        )
 
         self._is_closing = False
 
@@ -43,7 +45,7 @@ class API_Threads_Mixin(API_Base):
                 else:
                     dt = None
 
-                if (dt is None) or (dt > self._status_min_period):
+                if (dt is None) or (dt > self._status_expiration_period):
                     status, raised_exception = None, None
                     try:
                         status = self._load_status()
@@ -122,7 +124,7 @@ class API_Threads_Mixin(API_Base):
 
         monitor = monitor or WaitMonitor()
         monitor._time_start = t_started
-        monitor.set_timeout_period(timeout)
+        monitor.set_timeout(timeout)
 
         event = threading.Event()
 
@@ -131,7 +133,7 @@ class API_Threads_Mixin(API_Base):
             result = condition(status) if status else False
             monitor._time_elapsed = ttime.time() - monitor.time_start
 
-            if not result and (monitor.time_elapsed > monitor.timeout_period):
+            if not result and (monitor.time_elapsed > monitor.timeout):
                 timeout_occurred = True
                 result = True
             elif monitor.is_cancelled:
@@ -221,15 +223,12 @@ class API_Threads_Mixin(API_Base):
     #                 API for monitoring and control of RE Manager
 
     def status(self, *, reload=False):
+        # Docstring is maintained separately
         status = self._status(reload=reload)
         return copy.deepcopy(status)  # Returns copy
 
     def wait_for_idle(self, *, timeout=default_wait_timeout, monitor=None):
-        """
-        The function raises ``WaitTimeoutError`` if timeout occurs or
-        ``WaitCancelError`` if wait operation was cancelled by ``monitor.cancel()``.
-        """
-
+        # Docstring is maintained separately
         def condition(status):
             return status["manager_state"] == "idle"
 
@@ -239,6 +238,7 @@ class API_Threads_Mixin(API_Base):
     #                 API for monitoring and control of Queue
 
     def item_add(self, item, *, pos=None, before_uid=None, after_uid=None):
+        # Docstring is maintained separately
         request_params = self._prepare_item_add(item=item, pos=pos, before_uid=before_uid, after_uid=after_uid)
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_add", params=request_params)
@@ -265,3 +265,5 @@ class API_Threads_Mixin(API_Base):
 
 
 API_Threads_Mixin.status.__doc__ = _doc_api_status
+API_Threads_Mixin.wait_for_idle.__doc__ = _doc_api_wait_for_idle
+API_Threads_Mixin.item_add.__doc__ = _doc_api_item_add

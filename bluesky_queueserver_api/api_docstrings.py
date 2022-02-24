@@ -120,6 +120,118 @@ _doc_BInst = _doc_BPlan_BInst_BFunc_common.replace("--ITEM--", "an instruction")
 _doc_BFunc = _doc_BPlan_BInst_BFunc_common.replace("--ITEM--", "a function").replace("--ITEMS--", "functions")
 
 
+_doc_REManagerAPI_ZMQ = """
+    API for communication with RE Manager using 0MQ protocol.
+
+    Parameters
+    ----------
+    zmq_server_address: str or None
+        Address of control 0MQ socket of RE Manager. If ``None``,
+        then the default address ``"tcp://localhost:60615"`` is used.
+    timeout_recv: float
+        ``recv`` timeout for 0MQ socket. Default value is 2.0 seconds.
+    timeout_send: float
+        ``send`` timeout for 0MQ socket. Default value is 0.5 seconds.
+    server_public_key: str or None
+        Public key of RE Manager if the encryption is enabled. Set to ``None``
+        if encryption is not enabled
+    request_fail_exceptions: boolean
+        If ``True`` (default) then API functions that communicate with
+        RE Manager are raising the ``RequestFailError`` exception if
+        the request is rejected (the response contains ``"success": False``,
+        e.g. if a submitted plan is rejected). If ``False``, then API
+        functions are always returning the response and user code is
+        responsible for checking and processing the ``success`` flag.
+    status_expiration_period: float
+        Expiration period for cached RE Manager status,
+        default value: 0.5 seconds
+    status_polling_period: float
+        Polling period for RE Manager status used by 'wait' operations,
+        default value: 1 second
+    loop: asyncio.Loop
+        ``asyncio`` event loop (use only with Async version of the API).
+
+    Examples
+    --------
+
+    Synchronous API:
+
+    .. code-block:: python
+
+        from bluesky_queueserver_api.zmq import REManagerAPI
+        RM = REManagerAPI()
+        # < some useful code >
+        RE.close()
+
+    Asynchronous API:
+
+    .. code-block:: python
+
+        from bluesky_queueserver_api.zmq.aio import REManagerAPI
+
+        async def testing():
+            RM = REManagerAPI()
+            # < some useful code >
+            await RE.close()
+
+        asyncio.run(testing())
+"""
+
+_doc_REManagerAPI_HTTP = """
+    API for communication with RE Manager using HTTP (RESTful API) protocol.
+
+    Parameters
+    ----------
+    http_server_uri: str or None
+        URI of Bluesky HTTP Server. If ``None``, then the default URI
+        `"http://localhost:60610"`` is used.
+    timeout: float
+        Request timeout. Default value is 5.0 seconds.
+    request_fail_exceptions: boolean
+        If ``True`` (default) then API functions that communicate with
+        RE Manager are raising the ``RequestFailError`` exception if
+        the request is rejected (the response contains ``"success": False``,
+        e.g. if a submitted plan is rejected). If ``False``, then API
+        functions are always returning the response and user code is
+        responsible for checking and processing the ``success`` flag.
+    status_expiration_period: float
+        Expiration period for cached RE Manager status,
+        default value: 0.5 seconds
+    status_polling_period: float
+        Polling period for RE Manager status used by 'wait' operations,
+        default value: 1 second
+    loop: asyncio.Loop
+        ``asyncio`` event loop (use only with Async version of the API).
+        The parameter is included only for compatibility with 0MQ version
+        of the API and is ignored in HTTP version.
+
+    Examples
+    --------
+
+    Synchronous API:
+
+    .. code-block:: python
+
+        from bluesky_queueserver_api.http import REManagerAPI
+        RM = REManagerAPI()
+        # < some useful code >
+        RE.close()
+
+    Asynchronous API:
+
+    .. code-block:: python
+
+        from bluesky_queueserver_api.http.aio import REManagerAPI
+
+        async def testing():
+            RM = REManagerAPI()
+            # < some useful code >
+            await RE.close()
+
+        asyncio.run(testing())
+"""
+
+
 _doc_send_request = """
     Send request to RE Manager and receive the response. The function directly passes
     the request to low-level Queue Server API. The detailed description of available
@@ -154,25 +266,25 @@ _doc_send_request = """
 
     .. code-block:: python
 
-        # 0MQ, blocking
+        # Synchronous code (0MQ)
         from bluesky_queueserver_api.zmq import REManagerAPI
         RM = REManagerAPI()
         status = RM.send_request(method="status")
         RM.close()
 
-        # HTTP, blocking
+        # Synchronous code (HTTP)
         from bluesky_queueserver_api.http import REManagerAPI
         RM = REManagerAPI()
         status = RM.send_request(method="status")
         RM.close()
 
-        # 0MQ, async
+        # Asynchronous code (0MQ)
         from bluesky_queueserver_api.zmq.aio import REManagerAPI
         RM = REManagerAPI()
         status = await RM.send_request(method="status")
         await RM.close()
 
-        # HTTP, async
+        # Asynchronous code, (HTTP)
         from bluesky_queueserver_api.http.aio import REManagerAPI
         RM = REManagerAPI()
         status = await RM.send_request(method="status")
@@ -221,9 +333,102 @@ _doc_api_status = """
 
         # Synchronous code (0MQ and HTTP)
         status = RM.status()
-        status = RM.status(reload=True)
 
         # Asynchronous code (0MQ and HTTP)
         status = await RM.status()
-        status = await RM.status(reload=True)
+"""
+
+_doc_api_wait_for_idle = """
+    Wait for RE Manager to return to ``idle`` state. The function performs
+    periodic polling of RE Manager status and returns when ``manager_state``
+    status flag is ``idle``. Polling period is determined by ``status_polling_period``
+    parameter of ``REManagerAPI`` class. The function raises ``WaitTimeoutError``
+    if timeout occurs or ``WaitCancelError`` if wait operation was cancelled by
+    ``monitor.cancel()``. See instructions on ``WaitMonitor`` class, which allows
+    cancelling wait operations (from a different thread or task), modify timeout
+    and monitoring the progress.
+
+    ``wait_for_idle`` is threadsafe and could be run simultanously from multiple
+    threads with polled RE Manager status shared between multiple instances.
+
+    Parameters
+    ----------
+    timeout: float
+        Timeout for the wait operation. Default timeout: 60 seconds.
+    monitor: bluesky_queueserver_api.WaitMonitor or None
+        Instance of ``WaitMonitor`` object. The object is created internally if
+        the parameter is ``None``.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.queue_start()
+        try:
+            RM.wait_for_idle(timeout=120)  # Wait for 2 minutes
+            # < queue is completed or stopped, RE Manager is idle >
+        except RM.WaitTimeoutError:
+            # < process timeout error, RE Manager is probably not idle >
+
+        # Aynchronous code (0MQ, HTTP)
+        await RM.queue_start()
+        try:
+            await RM.wait_for_idle(timeout=120)  # Wait for 2 minutes
+            # < queue is completed or stopped, RE Manager is idle >
+        except RM.WaitTimeoutError:
+            # < process timeout error, RE Manager is probably not idle >
+"""
+
+_doc_api_item_add = """
+    Add item to the queue. The item may be a plan or an instruction represented
+    as a dictionary or as an instance of ``BItem``, ``BPlan`` or ``BInst`` classes.
+    By default the item is added to the back of the queue. Alternatively
+    the item can be placed at the desired position in the queue or before
+    or after one of the existing items. The parameters ``pos``, ``before_uid`` and
+    ``after_uid`` are mutually exclusive, i.e. only one of the parameters may
+    have a value different from ``None``.
+
+    Parameters
+    ----------
+    item: dict, BItem, BPlan or BInst
+        Dictionary or an instance of ``BItem``, ``BPlan`` or ``BInst`` representing
+        a plan or an instruction.
+    pos: str, int or None
+        Position of the item in the queue. RE Manager will attempt to insert the
+        item at the specified position. The position may be positive or negative
+        (counted from the back of the queue) integer. If ``pos`` value is a string
+        ``"front"`` or ``"back"``, then the item is inserted at the front or the back
+        of the queue. If the value is ``None``, then the position is not specified.
+    before_uid, after_uid: str or None
+        Insert the item before or after the item with the given item UID. If ``None``
+        (default), then the parameters are not specified.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        # Add an item to the back of the queue
+        RM.item_add({"item_type": "plan", "name": "count", "args": [["det1"]]})
+        # Add an item to the front of the queue
+        RM.item_add(BItem("plan", "count", ["det1"], num=10, delay=1), pos="front")
+        RM.item_add(BItem("plan", "count", ["det1"], num=10, delay=1), pos=0)
+        # Insert an item to the position #5 (numbers start from 0)
+        RM.item_add(BPlan("count", ["det1"], num=10, delay=1), pos=5)
+        # Insert an item before the last item
+        RM.item_add(BPlan("count", ["det1"], num=10, delay=1), pos=-1)
+
+        # Asynchronous code (0MQ, HTTP)
+        # Add an item to the back of the queue
+        await RM.item_add({"item_type": "plan", "name": "count", "args": [["det1"]]})
+        # Add an item to the front of the queue
+        await RM.item_add(BItem("plan", "count", ["det1"], num=10, delay=1), pos="front")
+        await RM.item_add(BItem("plan", "count", ["det1"], num=10, delay=1), pos=0)
+        # Insert an item to the position #5 (numbers start from 0)
+        await RM.item_add(BPlan("count", ["det1"], num=10, delay=1), pos=5)
+        # Insert an item before the last item
+        await RM.item_add(BPlan("count", ["det1"], num=10, delay=1), pos=-1)
 """

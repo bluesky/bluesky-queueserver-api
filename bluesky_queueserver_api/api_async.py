@@ -5,12 +5,14 @@ import time as ttime
 from .api_base import API_Base, WaitMonitor
 from ._defaults import default_wait_timeout
 
-from .api_docstrings import _doc_api_status
+from .api_docstrings import _doc_api_status, _doc_api_wait_for_idle, _doc_api_item_add
 
 
 class API_Async_Mixin(API_Base):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, *, status_expiration_period, status_polling_period):
+        super().__init__(
+            status_expiration_period=status_expiration_period, status_polling_period=status_polling_period
+        )
 
         self._is_closing = False
 
@@ -48,7 +50,7 @@ class API_Async_Mixin(API_Base):
                 else:
                     dt = None
 
-                if (dt is None) or (dt > self._status_min_period):
+                if (dt is None) or (dt > self._status_expiration_period):
                     status, raised_exception = None, None
                     try:
                         status = await self._load_status()
@@ -127,7 +129,7 @@ class API_Async_Mixin(API_Base):
 
         monitor = monitor or WaitMonitor()
         monitor._time_start = t_started
-        monitor.set_timeout_period(timeout)
+        monitor.set_timeout(timeout)
 
         event = asyncio.Event()
 
@@ -136,7 +138,7 @@ class API_Async_Mixin(API_Base):
             result = condition(status) if status else False
             monitor._time_elapsed = ttime.time() - monitor.time_start
 
-            if not result and (monitor.time_elapsed > monitor.timeout_period):
+            if not result and (monitor.time_elapsed > monitor.timeout):
                 timeout_occurred = True
                 result = True
             elif monitor.is_cancelled:
@@ -224,33 +226,12 @@ class API_Async_Mixin(API_Base):
     #                 API for monitoring and control of RE Manager
 
     async def status(self, *, reload=False):
-        """
-        Load status of RE Manager. The function returns status or raises exception if
-        operation failed (e.g. timeout occurred).
-
-        Parameters
-        ----------
-        reload: boolean
-            Immediately reload status (``True``) or return cached status if it
-            is not expired (``False``).
-
-        Returns
-        -------
-        dict
-            Copy of the dictionary with RE Manager status.
-
-        Raises
-        ------
-            Reraises the exceptions raised by ``send_request`` API.
-        """
+        # Docstring is maintained separately
         status = await self._status(reload=reload)
         return copy.deepcopy(status)  # Returns copy
 
     async def wait_for_idle(self, *, timeout=default_wait_timeout, monitor=None):
-        """
-        The function raises ``WaitTimeoutError`` if timeout occurs or
-        ``WaitCancelError`` if wait operation was cancelled by ``monitor.cancel()``.
-        """
+        # Docstring is maintained separately
 
         def condition(status):
             return status["manager_state"] == "idle"
@@ -287,3 +268,5 @@ class API_Async_Mixin(API_Base):
 
 
 API_Async_Mixin.status.__doc__ = _doc_api_status
+API_Async_Mixin.wait_for_idle.__doc__ = _doc_api_wait_for_idle
+API_Async_Mixin.item_add.__doc__ = _doc_api_item_add
