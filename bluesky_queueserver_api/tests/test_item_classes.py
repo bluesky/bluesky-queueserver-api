@@ -49,6 +49,17 @@ def test_BItem_01(item_args, item_kwargs):
     item_copy2 = BItem(item.to_dict())
     assert item_copy2.to_dict() == item_dict, pprint.pformat(item.to_dict())
 
+    item2 = BItem("plan", "count")
+    assert item2.args == []
+    assert item2.kwargs == {}
+    assert item2.meta == {}
+    assert item2.dict_ref["args"] == []
+    assert item2.dict_ref["kwargs"] == {}
+    assert item2.dict_ref["meta"] == {}
+    assert "args" not in item2.to_dict()
+    assert "kwargs" not in item2.to_dict()
+    assert "meta" not in item2.to_dict()
+
 
 # fmt: off
 @pytest.mark.parametrize("meta, item_uid", [
@@ -116,19 +127,37 @@ def test_BItem_05():
     b1_dict_copy["args"] == [["det1"]]
     assert b1.to_dict() == b1_dict
 
-    # Verify that 'args', 'kwargs' and 'meta' return copies
+    # Verify that 'args', 'kwargs' and 'meta' return references
     b1_args = b1.args
-    b1_args[0] == ["det1"]
-    assert b1.to_dict() == b1_dict
+    b1_args[0] = ["det1"]
+    assert b1.to_dict() != b1_dict
+
     b1_kwargs = b1.kwargs
-    b1_kwargs["num"] == 50
-    assert b1.to_dict() == b1_dict
+    b1_kwargs["num"] = 50
+    assert b1.to_dict() != b1_dict
+
     b1_meta = b1.meta
-    b1_meta["some"] == "new_parameter"
-    assert b1.to_dict() == b1_dict
+    b1_meta["some"] = "new_parameter"
+    assert b1.to_dict() != b1_dict
+
+    # Verify that setting 'args', 'kwargs' and 'meta' include copying the data
+    b1_args = [["det4"]]
+    b1.args = b1_args
+    b1.args[0] = [["det1"]]
+    assert b1_args == [["det4"]]
+
+    b1_kwargs = {"num": 7}
+    b1.kwargs = b1_kwargs
+    b1.kwargs["num"] = 5
+    assert b1_kwargs == {"num": 7}
+
+    b1_meta = {"num": 7}
+    b1.meta = b1_meta
+    b1.meta["num"] = 5
+    assert b1_meta == {"num": 7}
 
     # Verify that 'dict_ref' allows access to the internal dictionary
-    b1.dict_ref["args"] = [["det1"]]
+    b1.dict_ref["args"] = [["det2"]]
     assert b1.to_dict() != b1_dict
 
 

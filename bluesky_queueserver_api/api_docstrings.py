@@ -534,6 +534,61 @@ _doc_api_item_add_batch = """
         await RM.item_add_batch([plan1, plan2])
 """
 
+_doc_api_item_update = """
+    Update the existing item in the queue. The method is intended for editing queue
+    items, but may be used for replacing the existing items with completely different
+    ones. The updated item may be a plan or an instruction. The item parameter
+    ``item_uid`` must be set to a UID of an existing queue item that is expected
+    to be replaced. The method fails if the item UID is not found. By default,
+    the UID of the updated item is not changed and ``user`` and ``user_group``
+    parameters are set to the values provided in the request. The ``user_group``
+    is also used for validation of submitted item. If it is preferable to replace
+    the item UID with a new random UID (e.g. if the item is replaced with completely
+    different item), the method should be called with the optional parameter
+    ``replace=True``.
+
+    Parameters
+    ----------
+    item: dict, BItem, BPlan or BInst
+        Dictionary or an instance of ``BItem``, ``BPlan`` or ``BInst`` representing
+        a plan or an instruction.
+    replace: boolean
+        Replace the updated item UID with the new random UID (``True``) or keep
+        the original UID (``False``). Default value is (``False``).
+
+    Returns
+    -------
+    dict
+        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
+        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
+        ``qsize`` (*int* or *None*) - the size of the queue or *None* if operation
+        failed, ``item`` (*dict* or *None*) - inserted item with assigned UID.
+        If the request is rejected, ``item`` may contain the copy of the submitted
+        item (with assigned UID), *None* or be missing depending on the failure.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.item_add(BPlan("count", ["det1"], num=10, delay=1), pos="back")
+        response = RM.item_get(pos="back")
+        item = BItem(response["item"])
+        item.kwargs["num"] = 50
+        RM.item_update(item)
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.item_add(BPlan("count", ["det1"], num=10, delay=1), pos="back")
+        response = await RM.item_get(pos="back")
+        item = BItem(response["item"])
+        item.kwargs["num"] = 50
+        await RM.item_update(item)
+"""
 
 _doc_api_item_get = """
     Load an existing queue item. Items may be addressed by position or UID.

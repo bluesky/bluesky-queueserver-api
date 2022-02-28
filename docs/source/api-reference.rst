@@ -104,6 +104,8 @@ API for management of RE Queue
    :toctree: generated
 
     zmq.REManagerAPI.item_add
+    zmq.REManagerAPI.item_add_batch
+    zmq.REManagerAPI.item_update
     zmq.REManagerAPI.item_get
     zmq.REManagerAPI.queue_start
 

@@ -204,7 +204,6 @@ class API_Base:
             request_params["after_uid"] = after_uid
 
         self._request_params_add_user_info(request_params)
-
         return request_params
 
     def _prepare_item_add_batch(self, *, items, pos, before_uid, after_uid):
@@ -231,7 +230,22 @@ class API_Base:
             request_params["after_uid"] = after_uid
 
         self._request_params_add_user_info(request_params)
+        return request_params
 
+    def _prepare_item_update(self, *, item, replace):
+        """
+        Prepare parameters for ``item_update`` operation.
+        """
+        if not isinstance(item, BItem) and not isinstance(item, Mapping):
+            raise TypeError(f"Incorrect item type {type(item)!r}. Expected type: 'BItem' or 'dict'")
+
+        item = item.to_dict() if isinstance(item, BItem) else dict(item).copy()
+
+        request_params = {"item": item}
+        if replace is not None:
+            request_params["replace"] = replace
+
+        self._request_params_add_user_info(request_params)
         return request_params
 
     def _prepare_item_get(self, *, pos, uid):

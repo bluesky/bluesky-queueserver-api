@@ -11,6 +11,7 @@ from .api_docstrings import (
     _doc_api_wait_for_idle,
     _doc_api_item_add,
     _doc_api_item_add_batch,
+    _doc_api_item_update,
     _doc_api_item_get,
     _doc_api_queue_start,
     _doc_api_environment_open,
@@ -270,6 +271,12 @@ class API_Async_Mixin(API_Base):
         self._clear_status_timestamp()
         return await self.send_request(method="queue_item_add_batch", params=request_params)
 
+    async def item_update(self, item, *, replace=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_item_update(item=item, replace=replace)
+        self._clear_status_timestamp()
+        return await self.send_request(method="queue_item_update", params=request_params)
+
     async def item_get(self, *, pos=None, uid=None):
         request_params = self._prepare_item_get(pos=pos, uid=uid)
         return await self.send_request(method="queue_item_get", params=request_params)
@@ -296,6 +303,7 @@ API_Async_Mixin.status.__doc__ = _doc_api_ping
 API_Async_Mixin.wait_for_idle.__doc__ = _doc_api_wait_for_idle
 API_Async_Mixin.item_add.__doc__ = _doc_api_item_add
 API_Async_Mixin.item_add_batch.__doc__ = _doc_api_item_add_batch
+API_Async_Mixin.item_update.__doc__ = _doc_api_item_update
 API_Async_Mixin.item_get.__doc__ = _doc_api_item_get
 API_Async_Mixin.queue_start.__doc__ = _doc_api_queue_start
 API_Async_Mixin.environment_open.__doc__ = _doc_api_environment_open
