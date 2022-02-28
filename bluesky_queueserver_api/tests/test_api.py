@@ -36,27 +36,38 @@ def _select_re_manager_api(protocol, library):
 
 
 # fmt: off
+@pytest.mark.parametrize("api", ["status", "ping"])
 @pytest.mark.parametrize("reload", [None, False, True])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
-def test_status_01(re_manager, fastapi_server, protocol, library, reload):  # noqa: F811
+def test_status_01(re_manager, fastapi_server, protocol, library, reload, api):  # noqa: F811
     """
-    ``status``: basic test
+    ``status`` and ``ping``: basic test
     """
     rm_api_class = _select_re_manager_api(protocol, library)
     params = {"reload": reload} if (reload is not None) else {}
 
     if not _is_async(library):
         RM = rm_api_class()
-        status = RM.status(**params)
+        if api == "status":
+            status = RM.status(**params)
+        elif api == "ping":
+            status = RM.ping(**params)
+        else:
+            assert False, f"Unknown api: {api}"
         assert status["manager_state"] == "idle"
         RM.close()
     else:
 
         async def testing():
             RM = rm_api_class()
-            status = await RM.status(**params)
+            if api == "status":
+                status = await RM.status(**params)
+            elif api == "ping":
+                status = await RM.ping(**params)
+            else:
+                assert False, f"Unknown api: {api}"
             assert status["manager_state"] == "idle"
             await RM.close()
 

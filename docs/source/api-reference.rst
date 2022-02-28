@@ -80,6 +80,7 @@ API for controlling RE Manager
    :toctree: generated
 
     zmq.REManagerAPI.status
+    zmq.REManagerAPI.ping
     zmq.REManagerAPI.wait_for_idle
 
 

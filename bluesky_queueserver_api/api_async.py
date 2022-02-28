@@ -7,6 +7,7 @@ from ._defaults import default_wait_timeout
 
 from .api_docstrings import (
     _doc_api_status,
+    _doc_api_ping,
     _doc_api_wait_for_idle,
     _doc_api_item_add,
     _doc_api_item_get,
@@ -239,6 +240,10 @@ class API_Async_Mixin(API_Base):
         status = await self._status(reload=reload)
         return copy.deepcopy(status)  # Returns copy
 
+    async def ping(self, *, reload=False):
+        # Docstring is maintained separately
+        return await self.status(reload=reload)
+
     async def wait_for_idle(self, *, timeout=default_wait_timeout, monitor=None):
         # Docstring is maintained separately
 
@@ -278,6 +283,7 @@ class API_Async_Mixin(API_Base):
 
 
 API_Async_Mixin.status.__doc__ = _doc_api_status
+API_Async_Mixin.status.__doc__ = _doc_api_ping
 API_Async_Mixin.wait_for_idle.__doc__ = _doc_api_wait_for_idle
 API_Async_Mixin.item_add.__doc__ = _doc_api_item_add
 API_Async_Mixin.item_get.__doc__ = _doc_api_item_get

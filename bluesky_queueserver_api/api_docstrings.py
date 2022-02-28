@@ -340,6 +340,12 @@ _doc_api_status = """
         assert status["manager_state"] == "idle"
 """
 
+_doc_api_ping = """
+    Current implementation of the API loads status of RE Manager, but this may change
+    in future releases. The function returns status or raises exception if operation
+    failed (e.g. timeout occurred). See documentation for ``status`` API.
+"""
+
 _doc_api_wait_for_idle = """
     Wait for RE Manager to return to ``idle`` state. The function performs
     periodic polling of RE Manager status and returns when ``manager_state``
