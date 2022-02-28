@@ -480,6 +480,60 @@ _doc_api_item_add = """
         await RM.item_add(BPlan("count", ["det1"], num=10, delay=1), pos=-1)
 """
 
+_doc_api_item_add_batch = """
+    Add a batch of items to the queue. The batch is represented as a list of items.
+    Each item may be a plan or an instruction represented as a dictionary or as an
+    instance of ``BItem``, ``BPlan`` or ``BInst`` classes. If one of plans in
+    the batch can not be added to the queue (e.g. it does not pass validation),
+    then the whole batch is rejected. See documentation for ``item_add`` API
+    for more detailed information.
+
+    Parameters
+    ----------
+    items: list(dict), list(BItem), list(BPlan) or list(BInst)
+        A list of dictionary or instances of ``BItem``, ``BPlan`` or ``BInst``
+        representing a plan or an instruction.
+    pos: str, int or None
+        Position of the first item of the batch in the queue. RE Manager will attempt
+        to insert the batch so that the first item is at the specified position.
+        The position may be positive or negative (counted from the back of the queue)
+        integer. If ``pos`` value is a string ``"front"`` or ``"back"``, then the item
+        is inserted at the front or the back of the queue. If the value is ``None``,
+        then the position is not specified.
+    before_uid, after_uid: str or None
+        Insert the batch of items before or after the item with the given item UID.
+        If ``None`` (default), then the parameters are not specified.
+
+    Returns
+    -------
+    dict
+        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
+        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
+        ``qsize`` (*int* or *None*) - new size of the queue or *None* if operation
+        failed, ``items`` (*list(dict)* or *None*) - the list of inserted item with
+        assigned UID. If the request is rejected, ``item`` may contain the copy of
+        the list of submitted items (with assigned UID), *None* or be missing depending
+        on the failure.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        plan1 = BPlan("count", ["det1"], num=10, delay=1)
+        plan2 = BPlan("count", ["det1"], num=15, delay=1)
+
+        # Synchronous code (0MQ, HTTP)
+        RM.item_add_batch([plan1, plan2])
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.item_add_batch([plan1, plan2])
+"""
+
 
 _doc_api_item_get = """
     Load an existing queue item. Items may be addressed by position or UID.

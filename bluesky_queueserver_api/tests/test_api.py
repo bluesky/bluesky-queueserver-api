@@ -407,6 +407,121 @@ def test_item_add_02(re_manager, fastapi_server, protocol, library):  # noqa: F8
 
 
 # fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_item_add_batch_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``item_add_batch``: basic test
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item = BPlan("count", ["det1", "det2"], num=10, delay=1)
+    item_dict = item.to_dict()
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue):
+        assert status["items_in_queue"] == items_in_queue
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        check_status(RM.status(), 0)
+        check_resp(RM.item_add_batch([item]))
+        check_status(RM.status(), 1)
+        check_resp(RM.item_add_batch([item, item]))
+        check_status(RM.status(), 3)
+        check_resp(RM.item_add_batch([item_dict]))
+        check_status(RM.status(), 4)
+        check_resp(RM.item_add_batch([item_dict, item_dict]))
+        check_status(RM.status(), 6)
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            check_status(await RM.status(), 0)
+            check_resp(await RM.item_add_batch([item]))
+            check_status(await RM.status(), 1)
+            check_resp(await RM.item_add_batch([item, item]))
+            check_status(await RM.status(), 3)
+            check_resp(await RM.item_add_batch([item_dict]))
+            check_status(await RM.status(), 4)
+            check_resp(await RM.item_add_batch([item_dict, item_dict]))
+            check_status(await RM.status(), 6)
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_item_add_batch_02(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``item_add_batch``: check that the parameters ``pos``, ``before_uid`` and ``after_uid``
+    are passed correctly.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item1 = BPlan("count", ["det1", "det2"], num=1, delay=1)
+    item2 = BPlan("count", ["det1", "det2"], num=2, delay=1)
+    item3 = BPlan("count", ["det1", "det2"], num=3, delay=1)
+    item4 = BPlan("count", ["det1", "det2"], num=4, delay=1)
+    item5 = BPlan("count", ["det1", "det2"], num=5, delay=1)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue):
+        assert status["items_in_queue"] == items_in_queue
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        check_resp(RM.item_add_batch([item1]))
+        check_resp(RM.item_add_batch([item2]))
+        check_status(RM.status(), 2)
+
+        check_resp(RM.item_add_batch([item3], pos=1))
+        resp3 = RM.item_get(pos=1)
+        assert resp3["item"]["kwargs"]["num"] == 3
+
+        check_resp(RM.item_add_batch([item4], before_uid=resp3["item"]["item_uid"]))
+        resp4 = RM.item_get(pos=1)
+        assert resp4["item"]["kwargs"]["num"] == 4
+
+        check_resp(RM.item_add_batch([item5], after_uid=resp3["item"]["item_uid"]))
+        resp5 = RM.item_get(pos=3)
+        assert resp5["item"]["kwargs"]["num"] == 5
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            check_resp(await RM.item_add_batch([item1]))
+            check_resp(await RM.item_add_batch([item2]))
+            check_status(await RM.status(), 2)
+
+            check_resp(await RM.item_add_batch([item3], pos=1))
+            resp3 = await RM.item_get(pos=1)
+            assert resp3["item"]["kwargs"]["num"] == 3
+
+            check_resp(await RM.item_add_batch([item4], before_uid=resp3["item"]["item_uid"]))
+            resp4 = await RM.item_get(pos=1)
+            assert resp4["item"]["kwargs"]["num"] == 4
+
+            check_resp(await RM.item_add_batch([item5], after_uid=resp3["item"]["item_uid"]))
+            resp5 = await RM.item_get(pos=3)
+            assert resp5["item"]["kwargs"]["num"] == 5
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
 @pytest.mark.parametrize("timeout", [None, 2])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])

@@ -1,5 +1,5 @@
 from .item import BItem
-from collections.abc import Mapping
+from collections.abc import Mapping, Iterable
 
 
 class WaitTimeoutError(TimeoutError):
@@ -181,6 +181,11 @@ class API_Base:
         """
         self._status_timestamp = None
 
+    def _request_params_add_user_info(self, request_params):
+        if self._pass_user_info:
+            request_params["user"] = self._user
+            request_params["user_group"] = self._user_group
+
     def _prepare_item_add(self, *, item, pos, before_uid, after_uid):
         """
         Prepare parameters for ``item_add`` operation.
@@ -188,7 +193,7 @@ class API_Base:
         if not isinstance(item, BItem) and not isinstance(item, Mapping):
             raise TypeError(f"Incorrect item type {type(item)!r}. Expected type: 'BItem' or 'dict'")
 
-        item = item.to_dict() if isinstance(item, BItem) else item.copy()
+        item = item.to_dict() if isinstance(item, BItem) else dict(item).copy()
 
         request_params = {"item": item}
         if pos is not None:
@@ -198,9 +203,34 @@ class API_Base:
         if after_uid is not None:
             request_params["after_uid"] = after_uid
 
-        if self._pass_user_info:
-            request_params["user"] = self._user
-            request_params["user_group"] = self._user_group
+        self._request_params_add_user_info(request_params)
+
+        return request_params
+
+    def _prepare_item_add_batch(self, *, items, pos, before_uid, after_uid):
+        """
+        Prepare parameters for ``item_add_batch`` operation.
+        """
+        if not isinstance(items, Iterable):
+            raise TypeError(f"Parameter ``items`` must be iterable: type(items)={type(items)!r}")
+
+        for n, item in enumerate(items):
+            if not isinstance(item, BItem) and not isinstance(item, Mapping):
+                raise TypeError(
+                    f"Incorrect type {type(item)!r} if item #{n} ({item!r}). Expected type: 'BItem' or 'dict'"
+                )
+
+        items = [_.to_dict() if isinstance(_, BItem) else dict(_).copy() for _ in items]
+
+        request_params = {"items": items}
+        if pos is not None:
+            request_params["pos"] = pos
+        if before_uid is not None:
+            request_params["before_uid"] = before_uid
+        if after_uid is not None:
+            request_params["after_uid"] = after_uid
+
+        self._request_params_add_user_info(request_params)
 
         return request_params
 
