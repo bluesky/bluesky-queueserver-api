@@ -13,6 +13,7 @@ from .api_docstrings import (
     _doc_api_item_add_batch,
     _doc_api_item_update,
     _doc_api_item_get,
+    _doc_api_item_remove,
     _doc_api_queue_start,
     _doc_api_environment_open,
     _doc_api_environment_close,
@@ -277,8 +278,12 @@ class API_Async_Mixin(API_Base):
         self._clear_status_timestamp()
         return await self.send_request(method="queue_item_update", params=request_params)
 
+    async def item_remove(self, *, pos=None, uid=None):
+        request_params = self._prepare_item_get_remove(pos=pos, uid=uid)
+        return await self.send_request(method="queue_item_remove", params=request_params)
+
     async def item_get(self, *, pos=None, uid=None):
-        request_params = self._prepare_item_get(pos=pos, uid=uid)
+        request_params = self._prepare_item_get_remove(pos=pos, uid=uid)
         return await self.send_request(method="queue_item_get", params=request_params)
 
     async def environment_open(self):
@@ -305,6 +310,7 @@ API_Async_Mixin.item_add.__doc__ = _doc_api_item_add
 API_Async_Mixin.item_add_batch.__doc__ = _doc_api_item_add_batch
 API_Async_Mixin.item_update.__doc__ = _doc_api_item_update
 API_Async_Mixin.item_get.__doc__ = _doc_api_item_get
+API_Async_Mixin.item_remove.__doc__ = _doc_api_item_remove
 API_Async_Mixin.queue_start.__doc__ = _doc_api_queue_start
 API_Async_Mixin.environment_open.__doc__ = _doc_api_environment_open
 API_Async_Mixin.environment_close.__doc__ = _doc_api_environment_close

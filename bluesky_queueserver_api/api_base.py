@@ -248,7 +248,7 @@ class API_Base:
         self._request_params_add_user_info(request_params)
         return request_params
 
-    def _prepare_item_get(self, *, pos, uid):
+    def _prepare_item_get_remove(self, *, pos, uid):
         """
         Prepare parameters for ``item_get`` operation
         """

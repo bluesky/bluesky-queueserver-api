@@ -632,6 +632,48 @@ _doc_api_item_get = """
         await RM.item_get(pos=-2)
 """
 
+_doc_api_item_remove = """
+    Remove item from the queue. By default the last item in the queue is removed.
+    Alternatively the position or UID of the item can be specified.
+
+    Parameters
+    ----------
+    pos: str, int or None
+        Position of the item in the queue. The position may be positive or negative
+        (counted from the back of the queue) integer. If ``pos`` value is a string
+        ``"front"`` or ``"back"``, then the item at the front or the back of the queue
+        is returned. If the value is ``None`` (default), then the position is not specified.
+    uid: str or None
+        UID of the item. If ``None`` (default), then the parameter are not specified.
+
+    Returns
+    -------
+    dict
+        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
+        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
+        ``item`` (*dict*) - the dictionary of item parameters, which is ``{}`` if
+        the operation fails.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.item_remove()
+        RM.item_remove(pos="front")
+        RM.item_remove(pos=-1)
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.item_remove()
+        await RM.item_remove(pos="front")
+        await RM.item_remove(pos=-1)
+"""
+
 _doc_api_queue_start = """
     Start execution of the queue. If the request is accepted, the ``manager_state``
     status parameter is expected to change to ``starting_queue``, then ``executing_queue``
