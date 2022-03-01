@@ -1,4 +1,5 @@
 import asyncio
+
 import pytest
 import threading
 import time as ttime
@@ -981,6 +982,81 @@ def test_item_execute_01(re_manager, fastapi_server, protocol, library):  # noqa
             check_status(await RM.status(), 0, 1, ["starting_queue", "executing_queue"])
             await RM.wait_for_idle()
             check_status(await RM.status(), 0, 2, ["idle"])  # One item is added to history
+
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle()
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_queue_start_stop_cancel_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``queue_start``, ``queue_stop``, ``queue_stop_cancel``: basic test
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item = BPlan("count", ["det1", "det2"], num=5, delay=1)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue, queue_stop_pending):
+        assert status["items_in_queue"] == items_in_queue
+        assert status["queue_stop_pending"] == queue_stop_pending
+
+    if not _is_async(library):
+        RM = rm_api_class()
+
+        check_resp(RM.environment_open())
+        RM.wait_for_idle()
+        check_status(RM.status(), 0, False)
+
+        check_resp(RM.item_add(item))
+        check_status(RM.status(), 1, False)
+
+        check_resp(RM.queue_start())
+        ttime.sleep(1)
+        check_status(RM.status(), 0, False)
+        check_resp(RM.queue_stop())
+        check_status(RM.status(), 0, True)
+        check_resp(RM.queue_stop_cancel())
+        check_status(RM.status(), 0, False)
+
+        RM.wait_for_idle()
+        check_status(RM.status(), 0, False)
+
+        check_resp(RM.environment_close())
+        RM.wait_for_idle()
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle()
+            check_status(await RM.status(), 0, False)
+
+            check_resp(await RM.item_add(item))
+            check_status(await RM.status(), 1, False)
+
+            check_resp(await RM.queue_start())
+            ttime.sleep(1)
+            check_status(await RM.status(), 0, False)
+            check_resp(await RM.queue_stop())
+            check_status(await RM.status(), 0, True)
+            check_resp(await RM.queue_stop_cancel())
+            check_status(await RM.status(), 0, False)
+
+            await RM.wait_for_idle()
+            check_status(await RM.status(), 0, False)
 
             check_resp(await RM.environment_close())
             await RM.wait_for_idle()

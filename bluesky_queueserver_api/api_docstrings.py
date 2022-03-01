@@ -873,8 +873,7 @@ _doc_api_queue_start = """
     -------
     dict
         Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager, ``item`` (*dict*) - the dictionary
-        of item parameters, which is ``{}`` if the operation fails.
+        in case the request was rejected by RE Manager.
 
     Raises
     ------
@@ -891,6 +890,61 @@ _doc_api_queue_start = """
         # Asynchronous code (0MQ, HTTP)
         await RM.queue_start()
 """
+
+_doc_api_queue_stop = """
+    Request RE Manager to stop execution of the queue after completion of the currently
+    running plan. The request succeeds only if the queue is currently running (``manager_state``
+    status field has value ``executing_queue``). The ``queue_stop_pending`` status field
+    can be used at any time to verify if the request is pending.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.queue_stop()
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.queue_stop()
+"""
+
+
+_doc_api_queue_stop_cancel = """
+    Cancel the pending request to stop execution of the queue after the currently running plan.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.queue_stop_cancel()
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.queue_stop_cancel()
+"""
+
 
 _doc_api_environment_open = """
     Open RE Worker environment. The API request only initiates the operation of
