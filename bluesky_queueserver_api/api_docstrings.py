@@ -752,11 +752,74 @@ _doc_api_item_move = """
 
         # Synchronous code (0MQ, HTTP)
         RM.item_move(pos="front", pos_dest="5")
-        RM.item_remove(uid="uid-source", before_uid="uid-dest")
+        RM.item_move(uid="uid-source", before_uid="uid-dest")
 
         # Asynchronous code (0MQ, HTTP)
         await RM.item_move(pos="front", pos_dest="5")
-        await RM.item_remove(uid="uid-source", before_uid="uid-dest")
+        await RM.item_move(uid="uid-source", before_uid="uid-dest")
+"""
+
+_doc_api_item_move_batch = """
+    Move a batch of item to a different position in the queue. The method accepts
+    a list of UIDs of the items included in the batch. The UIDs in the list must
+    be unique (not repeated) and items with listed UIDs must exist in the queue.
+    If the list is empty, then operation succeeds and the queue remains unchanged.
+    The destination must be specified using one of the mutually exclusive parameters
+    ``pos_dest``, ``before_uid`` or ``after_uid``. The reference item with the UID
+    of passed with the parameters ``before_uid`` or ``after_uid`` must not be
+    in the batch. The parameter ``reorder`` controls the order of the items in
+    the moved batch and indicates whether items in the batch should be reordered
+    with respect to the order of UIDs in the list ``uids``. The batch may include
+    any set of non-repeated items from the queue arranged in arbitrary order.
+    By default (``reorder=False``) the batch is inserted in the specified position
+    as a contiguous sequence of items ordered according to the UIDs in the list
+    ``uids``. If ``reorder=True``, then the inserted items are ordered according
+    to their original positions in the queue. It is assumed that the method will
+    be mostly used with the default ordering option and user will be responsible
+    for creating properly ordered lists of items. The other option is implemented
+    for the cases when the user may want to submit randomly ordered lists of UIDs,
+    but preserve the original order of the moved batch.
+
+    Parameters
+    ----------
+    uids: list(str)
+        List of UIDs of the items in the batch. The list may not contain repeated UIDs.
+        All UIDs must be present in the queue. The list may be empty.
+    pos_dest: str ("front" or "back")
+        New position of the item. Only string values ``'front'`` and ``'back'``
+        are accepted.
+    before_uid, after_uid: str or None
+        UID of an existing item in the queue. The selected item will be moved before
+        or after this item. The item with the specified UID may not be included
+        in the batch.
+    reorder: boolean
+        Arrange moved items in the order of UIDs in the ``uids`` list (False, default) or
+        according to the original item positions in the queue (True).
+
+    Returns
+    -------
+    dict
+        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
+        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
+        ``items`` (*list(dict)*) - the list of moved items, which is ``[]`` if
+        the operation fails, ``qsize`` - the size of the queue.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.item_move_batch(uids=["uid1", "uid2"], pos_dest="front")
+        RM.item_move_batch(uids=["uid1", "uid2"], before_uid="uid-dest")
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.item_move_batch(uids=["uid1", "uid2"], pos_dest="front")
+        await RM.item_move_batch(uids=["uid1", "uid2"], before_uid="uid-dest")
 """
 
 

@@ -110,6 +110,7 @@ API for management of RE Queue
     zmq.REManagerAPI.item_remove
     zmq.REManagerAPI.item_remove_batch
     zmq.REManagerAPI.item_move
+    zmq.REManagerAPI.item_move_batch
     zmq.REManagerAPI.queue_start
 
 

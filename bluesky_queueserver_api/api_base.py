@@ -258,6 +258,19 @@ class API_Base:
 
         return request_params
 
+    def _prepare_item_move_batch(self, *, uids, pos_dest, before_uid, after_uid, reorder):
+        """
+        Prepare parameters for ``item_add`` operation.
+        """
+        request_params = {}
+        self._add_request_param(request_params, "uids", uids)
+        self._add_request_param(request_params, "pos_dest", pos_dest)
+        self._add_request_param(request_params, "before_uid", before_uid)
+        self._add_request_param(request_params, "after_uid", after_uid)
+        self._add_request_param(request_params, "reorder", reorder)
+
+        return request_params
+
     def _prepare_item_get_remove(self, *, pos, uid):
         """
         Prepare parameters for ``item_get`` and ``item_remove`` operation

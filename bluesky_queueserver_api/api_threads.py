@@ -16,6 +16,7 @@ from .api_docstrings import (
     _doc_api_item_remove,
     _doc_api_item_remove_batch,
     _doc_api_item_move,
+    _doc_api_item_move_batch,
     _doc_api_queue_start,
     _doc_api_environment_open,
     _doc_api_environment_close,
@@ -294,6 +295,18 @@ class API_Threads_Mixin(API_Base):
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_move", params=request_params)
 
+    def item_move_batch(self, *, uids=None, pos_dest=None, before_uid=None, after_uid=None, reorder=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_item_move_batch(
+            uids=uids,
+            pos_dest=pos_dest,
+            before_uid=before_uid,
+            after_uid=after_uid,
+            reorder=reorder,
+        )
+        self._clear_status_timestamp()
+        return self.send_request(method="queue_item_move_batch", params=request_params)
+
     def item_get(self, *, pos=None, uid=None):
         request_params = self._prepare_item_get_remove(pos=pos, uid=uid)
         return self.send_request(method="queue_item_get", params=request_params)
@@ -324,7 +337,8 @@ API_Threads_Mixin.item_update.__doc__ = _doc_api_item_update
 API_Threads_Mixin.item_get.__doc__ = _doc_api_item_get
 API_Threads_Mixin.item_remove.__doc__ = _doc_api_item_remove
 API_Threads_Mixin.item_remove_batch.__doc__ = _doc_api_item_remove_batch
-API_Threads_Mixin.item_move.__doc__ = (_doc_api_item_move,)
+API_Threads_Mixin.item_move.__doc__ = _doc_api_item_move
+API_Threads_Mixin.item_move_batch.__doc__ = _doc_api_item_move_batch
 API_Threads_Mixin.queue_start.__doc__ = _doc_api_queue_start
 API_Threads_Mixin.environment_open.__doc__ = _doc_api_environment_open
 API_Threads_Mixin.environment_close.__doc__ = _doc_api_environment_close
