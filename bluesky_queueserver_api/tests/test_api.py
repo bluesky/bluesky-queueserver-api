@@ -417,6 +417,104 @@ def test_item_remove_batch_01(re_manager, fastapi_server, protocol, library):  #
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
+def test_item_move_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``item_move``: basic test
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item1 = BPlan("count", ["det1", "det2"], num=1, delay=1)
+    item2 = BPlan("count", ["det1", "det2"], num=2, delay=1)
+    item3 = BPlan("count", ["det1", "det2"], num=3, delay=1)
+
+    def check_status(status, items_in_queue):
+        assert status["items_in_queue"] == items_in_queue
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        resp_item1 = RM.item_add(item1)
+        resp_item2 = RM.item_add(item2)
+        resp_item3 = RM.item_add(item3)
+        check_status(RM.status(), 3)
+
+        resp_item1["item"]["item_uid"]
+        uid2 = resp_item2["item"]["item_uid"]
+        uid3 = resp_item3["item"]["item_uid"]
+
+        resp1 = RM.item_move(pos=-1, pos_dest=0)
+        assert resp1["success"] is True
+        resp1a = RM.item_get(pos=0)
+        assert resp1a["success"] is True
+        assert resp1a["item"]["item_uid"] == uid3
+
+        resp2 = RM.item_move(uid=uid3, after_uid=uid2)
+        assert resp2["success"] is True
+        resp2a = RM.item_get(pos=2)
+        assert resp2a["success"] is True
+        assert resp2a["item"]["item_uid"] == uid3
+
+        status = RM.status()
+        plan_queue_uid = status["plan_queue_uid"]
+
+        resp3 = RM.item_move(uid=uid3, before_uid=uid2)
+        assert resp3["success"] is True
+        resp3a = RM.item_get(pos=1)
+        assert resp3a["success"] is True
+        assert resp3a["item"]["item_uid"] == uid3
+
+        status = RM.status()
+        assert status["plan_queue_uid"] != plan_queue_uid
+
+        check_status(RM.status(), 3)
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            resp_item1 = await RM.item_add(item1)
+            resp_item2 = await RM.item_add(item2)
+            resp_item3 = await RM.item_add(item3)
+            check_status(await RM.status(), 3)
+
+            resp_item1["item"]["item_uid"]
+            uid2 = resp_item2["item"]["item_uid"]
+            uid3 = resp_item3["item"]["item_uid"]
+
+            resp1 = await RM.item_move(pos=-1, pos_dest=0)
+            assert resp1["success"] is True
+            resp1a = await RM.item_get(pos=0)
+            assert resp1a["success"] is True
+            assert resp1a["item"]["item_uid"] == uid3
+
+            resp2 = await RM.item_move(uid=uid3, after_uid=uid2)
+            assert resp2["success"] is True
+            resp2a = await RM.item_get(pos=2)
+            assert resp2a["success"] is True
+            assert resp2a["item"]["item_uid"] == uid3
+
+            status = await RM.status()
+            plan_queue_uid = status["plan_queue_uid"]
+
+            resp3 = await RM.item_move(uid=uid3, before_uid=uid2)
+            assert resp3["success"] is True
+            resp3a = await RM.item_get(pos=1)
+            assert resp3a["success"] is True
+            assert resp3a["item"]["item_uid"] == uid3
+
+            status = await RM.status()
+            assert status["plan_queue_uid"] != plan_queue_uid
+
+            check_status(await RM.status(), 3)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
 def test_item_add_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
     """
     ``item_add``: basic test

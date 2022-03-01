@@ -713,6 +713,52 @@ _doc_api_item_remove_batch = """
         await RM.item_remove_batch(["item-uid1", "item-uid2"])
 """
 
+_doc_api_item_move = """
+    Move item to a different position in the queue. The parameters ``pos`` and
+    ``uid`` are mutually exclusive. The parameters ``pos_dest``, ``before_uid``
+    and ``after_uid`` are also mutually exclusive.
+
+    Parameters
+    ----------
+    pos: str, int or None
+        Position of the item in the queue. The position may be positive or negative
+        (counted from the back of the queue) integer. If ``pos`` value is a string
+        ``"front"`` or ``"back"``, then the item at the front or the back of the queue
+        is returned. If the value is ``None`` (default), then the position is not specified.
+    uid: str or None
+        UID of the item to move. If ``None`` (default), then the parameter are not specified.
+    pos_dest: str, int or None
+        New position of the item. Integer number can be negative.
+    before_uid, after_uid: str or None
+        UID of an existing item in the queue. The selected item is moved before
+        or after this item.
+
+    Returns
+    -------
+    dict
+        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
+        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
+        ``item`` (*dict*) - the dictionary of item parameters, which is ``{}`` if
+        the operation fails, ``qsize`` - the size of the queue.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.item_move(pos="front", pos_dest="5")
+        RM.item_remove(uid="uid-source", before_uid="uid-dest")
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.item_move(pos="front", pos_dest="5")
+        await RM.item_remove(uid="uid-source", before_uid="uid-dest")
+"""
+
 
 _doc_api_queue_start = """
     Start execution of the queue. If the request is accepted, the ``manager_state``

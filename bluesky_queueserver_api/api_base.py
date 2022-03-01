@@ -186,6 +186,13 @@ class API_Base:
             request_params["user"] = self._user
             request_params["user_group"] = self._user_group
 
+    def _add_request_param(self, request_params, name, value):
+        """
+        Add parameter to dictionary ``request_params`` if value is not ``None``.
+        """
+        if value is not None:
+            request_params[name] = value
+
     def _prepare_item_add(self, *, item, pos, before_uid, after_uid):
         """
         Prepare parameters for ``item_add`` operation.
@@ -196,13 +203,9 @@ class API_Base:
         item = item.to_dict() if isinstance(item, BItem) else dict(item).copy()
 
         request_params = {"item": item}
-        if pos is not None:
-            request_params["pos"] = pos
-        if before_uid is not None:
-            request_params["before_uid"] = before_uid
-        if after_uid is not None:
-            request_params["after_uid"] = after_uid
-
+        self._add_request_param(request_params, "pos", pos)
+        self._add_request_param(request_params, "before_uid", before_uid)
+        self._add_request_param(request_params, "after_uid", after_uid)
         self._request_params_add_user_info(request_params)
         return request_params
 
@@ -222,13 +225,9 @@ class API_Base:
         items = [_.to_dict() if isinstance(_, BItem) else dict(_).copy() for _ in items]
 
         request_params = {"items": items}
-        if pos is not None:
-            request_params["pos"] = pos
-        if before_uid is not None:
-            request_params["before_uid"] = before_uid
-        if after_uid is not None:
-            request_params["after_uid"] = after_uid
-
+        self._add_request_param(request_params, "pos", pos)
+        self._add_request_param(request_params, "before_uid", before_uid)
+        self._add_request_param(request_params, "after_uid", after_uid)
         self._request_params_add_user_info(request_params)
         return request_params
 
@@ -242,10 +241,21 @@ class API_Base:
         item = item.to_dict() if isinstance(item, BItem) else dict(item).copy()
 
         request_params = {"item": item}
-        if replace is not None:
-            request_params["replace"] = replace
-
+        self._add_request_param(request_params, "replace", replace)
         self._request_params_add_user_info(request_params)
+        return request_params
+
+    def _prepare_item_move(self, *, pos, uid, pos_dest, before_uid, after_uid):
+        """
+        Prepare parameters for ``item_add`` operation.
+        """
+        request_params = {}
+        self._add_request_param(request_params, "pos", pos)
+        self._add_request_param(request_params, "uid", uid)
+        self._add_request_param(request_params, "pos_dest", pos_dest)
+        self._add_request_param(request_params, "before_uid", before_uid)
+        self._add_request_param(request_params, "after_uid", after_uid)
+
         return request_params
 
     def _prepare_item_get_remove(self, *, pos, uid):
@@ -253,10 +263,8 @@ class API_Base:
         Prepare parameters for ``item_get`` and ``item_remove`` operation
         """
         request_params = {}
-        if pos:
-            request_params["pos"] = pos
-        if uid:
-            request_params["uid"] = uid
+        self._add_request_param(request_params, "pos", pos)
+        self._add_request_param(request_params, "uid", uid)
         return request_params
 
     def _prepare_item_remove_batch(self, *, uids, ignore_missing):
@@ -264,6 +272,5 @@ class API_Base:
         Prepare parameters for ``item_remove_batch`` operation
         """
         request_params = {"uids": uids}
-        if ignore_missing is not None:
-            request_params["ignore_missing"] = ignore_missing
+        self._add_request_param(request_params, "ignore_missing", ignore_missing)
         return request_params
