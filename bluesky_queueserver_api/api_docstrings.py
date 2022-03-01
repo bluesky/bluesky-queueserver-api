@@ -823,6 +823,47 @@ _doc_api_item_move_batch = """
 """
 
 
+_doc_api_item_execute = """
+    Immediately start execution of the submitted item. The item may be a plan or
+    an instruction. The request fails if item execution can not be started immediately
+    (RE Manager is not in IDLE state, RE Worker environment does not exist, etc.).
+    If the request succeeds, the item is executed once. The item is not added to
+    the queue if it can not be immediately started and it is not pushed back into
+    the queue in case its execution fails/stops. If the queue is in the LOOP mode,
+    the executed item is not added to the back of the queue after completion.
+    The API request does not alter the sequence of enqueued plans.
+
+    Parameters
+    ----------
+    item: dict, BItem, BPlan or BInst
+        Dictionary or an instance of ``BItem``, ``BPlan`` or ``BInst`` representing
+        a plan or an instruction.
+
+    Returns
+    -------
+    dict
+        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
+        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
+        ``item`` (*dict*) - the dictionary of item parameters, ``None`` if the
+        request contains no ``item`` parameter, ``qsize`` - the size of the queue.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.item_execute(BPlan("count", ["det1"], num=10, delay=1))
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.item_execute(BPlan("count", ["det1"], num=10, delay=1))
+"""
+
+
 _doc_api_queue_start = """
     Start execution of the queue. If the request is accepted, the ``manager_state``
     status parameter is expected to change to ``starting_queue``, then ``executing_queue``

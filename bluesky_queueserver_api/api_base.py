@@ -287,3 +287,16 @@ class API_Base:
         request_params = {"uids": uids}
         self._add_request_param(request_params, "ignore_missing", ignore_missing)
         return request_params
+
+    def _prepare_item_execute(self, *, item):
+        """
+        Prepare parameters for ``item_execute`` operation.
+        """
+        if not isinstance(item, BItem) and not isinstance(item, Mapping):
+            raise TypeError(f"Incorrect item type {type(item)!r}. Expected type: 'BItem' or 'dict'")
+
+        item = item.to_dict() if isinstance(item, BItem) else dict(item).copy()
+
+        request_params = {"item": item}
+        self._request_params_add_user_info(request_params)
+        return request_params

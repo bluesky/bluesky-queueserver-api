@@ -17,6 +17,7 @@ from .api_docstrings import (
     _doc_api_item_remove_batch,
     _doc_api_item_move,
     _doc_api_item_move_batch,
+    _doc_api_item_execute,
     _doc_api_queue_start,
     _doc_api_environment_open,
     _doc_api_environment_close,
@@ -315,6 +316,12 @@ class API_Async_Mixin(API_Base):
         request_params = self._prepare_item_get_remove(pos=pos, uid=uid)
         return await self.send_request(method="queue_item_get", params=request_params)
 
+    async def item_execute(self, item):
+        # Docstring is maintained separately
+        request_params = self._prepare_item_execute(item=item)
+        self._clear_status_timestamp()
+        return await self.send_request(method="queue_item_execute", params=request_params)
+
     async def environment_open(self):
         self._clear_status_timestamp()
         return await self.send_request(method="environment_open")
@@ -343,6 +350,7 @@ API_Async_Mixin.item_remove.__doc__ = _doc_api_item_remove
 API_Async_Mixin.item_remove_batch.__doc__ = _doc_api_item_remove_batch
 API_Async_Mixin.item_move.__doc__ = _doc_api_item_move
 API_Async_Mixin.item_move_batch.__doc__ = _doc_api_item_move_batch
+API_Async_Mixin.item_execute.__doc__ = _doc_api_item_execute
 API_Async_Mixin.queue_start.__doc__ = _doc_api_queue_start
 API_Async_Mixin.environment_open.__doc__ = _doc_api_environment_open
 API_Async_Mixin.environment_close.__doc__ = _doc_api_environment_close
