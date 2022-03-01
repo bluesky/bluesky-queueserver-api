@@ -252,7 +252,7 @@ def test_environment_close_destroy_02(
 # fmt: on
 def test_item_get_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
     """
-    ``status``: basic test
+    ``item_get``: basic test
     """
     rm_api_class = _select_re_manager_api(protocol, library)
     item1 = BPlan("count", ["det1", "det2"], num=1, delay=1)
@@ -305,7 +305,7 @@ def test_item_get_01(re_manager, fastapi_server, protocol, library):  # noqa: F8
 # fmt: on
 def test_item_remove_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
     """
-    ``status``: basic test
+    ``item_remove``: basic test
     """
     rm_api_class = _select_re_manager_api(protocol, library)
     item1 = BPlan("count", ["det1", "det2"], num=1, delay=1)
@@ -328,7 +328,7 @@ def test_item_remove_01(re_manager, fastapi_server, protocol, library):  # noqa:
         assert resp3["success"] is True
         assert resp3["qsize"] == 0
 
-        check_status(RM.status(), 2)
+        check_status(RM.status(), 0)
 
         RM.close()
     else:
@@ -347,7 +347,66 @@ def test_item_remove_01(re_manager, fastapi_server, protocol, library):  # noqa:
             assert resp3["success"] is True
             assert resp3["qsize"] == 0
 
+            check_status(await RM.status(), 0)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_item_remove_batch_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``item_remove_batch``: basic test
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item1 = BPlan("count", ["det1", "det2"], num=1, delay=1)
+    item2 = BPlan("count", ["det1", "det2"], num=2, delay=1)
+
+    def check_status(status, items_in_queue):
+        assert status["items_in_queue"] == items_in_queue
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        resp_item1 = RM.item_add(item1)
+        resp_item2 = RM.item_add(item2)
+        check_status(RM.status(), 2)
+
+        resp1 = RM.item_remove_batch(uids=[resp_item1["item"]["item_uid"], resp_item2["item"]["item_uid"]])
+        assert resp1["success"] is True
+        assert resp1["qsize"] == 0
+
+        # Non-existing UIDs
+        RM.item_remove_batch(uids=["some-uid"])
+        with pytest.raises(RM.RequestFailedError, match="The queue does not contain items"):
+            RM.item_remove_batch(uids=["some-uid"], ignore_missing=False)
+
+        check_status(RM.status(), 0)
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            resp_item1 = await RM.item_add(item1)
+            resp_item2 = await RM.item_add(item2)
             check_status(await RM.status(), 2)
+
+            resp1 = await RM.item_remove_batch(
+                uids=[resp_item1["item"]["item_uid"], resp_item2["item"]["item_uid"]]
+            )
+            assert resp1["success"] is True
+            assert resp1["qsize"] == 0
+
+            check_status(await RM.status(), 0)
+
+            # Non-existing UIDs
+            await RM.item_remove_batch(uids=["some-uid"])
+            with pytest.raises(RM.RequestFailedError, match="The queue does not contain items"):
+                await RM.item_remove_batch(uids=["some-uid"], ignore_missing=False)
 
             await RM.close()
 

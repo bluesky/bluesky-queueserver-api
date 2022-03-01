@@ -250,11 +250,20 @@ class API_Base:
 
     def _prepare_item_get_remove(self, *, pos, uid):
         """
-        Prepare parameters for ``item_get`` operation
+        Prepare parameters for ``item_get`` and ``item_remove`` operation
         """
         request_params = {}
         if pos:
             request_params["pos"] = pos
         if uid:
             request_params["uid"] = uid
+        return request_params
+
+    def _prepare_item_remove_batch(self, *, uids, ignore_missing):
+        """
+        Prepare parameters for ``item_remove_batch`` operation
+        """
+        request_params = {"uids": uids}
+        if ignore_missing is not None:
+            request_params["ignore_missing"] = ignore_missing
         return request_params

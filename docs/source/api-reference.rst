@@ -107,6 +107,8 @@ API for management of RE Queue
     zmq.REManagerAPI.item_add_batch
     zmq.REManagerAPI.item_update
     zmq.REManagerAPI.item_get
+    zmq.REManagerAPI.item_remove
+    zmq.REManagerAPI.item_remove_batch
     zmq.REManagerAPI.queue_start
 
 

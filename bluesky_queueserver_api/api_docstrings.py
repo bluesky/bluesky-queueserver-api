@@ -652,7 +652,7 @@ _doc_api_item_remove = """
         Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
         ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
         ``item`` (*dict*) - the dictionary of item parameters, which is ``{}`` if
-        the operation fails.
+        the operation fails, ``qsize`` - the size of the queue.
 
     Raises
     ------
@@ -673,6 +673,46 @@ _doc_api_item_remove = """
         await RM.item_remove(pos="front")
         await RM.item_remove(pos=-1)
 """
+
+_doc_api_item_remove_batch = """
+    Remove a batch of items from the queue. The batch of items is represented
+    as a list of item UIDs.
+
+    Parameters
+    ----------
+    uids: list(str)
+        List of UIDs of the items in the batch. The list may not contain repeated UIDs.
+        All UIDs must be present in the queue. The list may be empty.
+    ignore_missing: boolean (optional)
+        If the value is ``False``, then the method fails if the batch contains repeating
+        items or some of the batch items are not found in the queue. If ``True`` (default),
+        then the method attempts to remove all items in the batch and ignores missing
+        items. The method returns the list of items that were removed from the queue.
+
+    Returns
+    -------
+    dict
+        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
+        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
+        ``items`` (*list(dict)*) - the list of removed items, which is ``[]`` if
+        the operation fails, ``qsize`` - the size of the queue.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.item_remove_batch(["item-uid1", "item-uid2"])
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.item_remove_batch(["item-uid1", "item-uid2"])
+"""
+
 
 _doc_api_queue_start = """
     Start execution of the queue. If the request is accepted, the ``manager_state``
