@@ -21,6 +21,7 @@ from .api_docstrings import (
     _doc_api_queue_start,
     _doc_api_queue_stop,
     _doc_api_queue_stop_cancel,
+    _doc_api_queue_clear,
     _doc_api_environment_open,
     _doc_api_environment_close,
     _doc_api_environment_destroy,
@@ -344,6 +345,10 @@ class API_Threads_Mixin(API_Base):
         self._clear_status_timestamp()
         return self.send_request(method="queue_stop_cancel")
 
+    def queue_clear(self):
+        self._clear_status_timestamp()
+        return self.send_request(method="queue_clear")
+
 
 API_Threads_Mixin.status.__doc__ = _doc_api_status
 API_Threads_Mixin.status.__doc__ = _doc_api_ping
@@ -360,6 +365,7 @@ API_Threads_Mixin.item_execute.__doc__ = _doc_api_item_execute
 API_Threads_Mixin.queue_start.__doc__ = _doc_api_queue_start
 API_Threads_Mixin.queue_stop.__doc__ = _doc_api_queue_stop
 API_Threads_Mixin.queue_stop_cancel.__doc__ = _doc_api_queue_stop_cancel
+API_Threads_Mixin.queue_clear.__doc__ = _doc_api_queue_clear
 API_Threads_Mixin.environment_open.__doc__ = _doc_api_environment_open
 API_Threads_Mixin.environment_close.__doc__ = _doc_api_environment_close
 API_Threads_Mixin.environment_destroy.__doc__ = _doc_api_environment_destroy

@@ -1067,6 +1067,46 @@ def test_queue_start_stop_cancel_01(re_manager, fastapi_server, protocol, librar
 
 
 # fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_queue_clear_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``item_add``: basic test
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item = BPlan("count", ["det1", "det2"], num=10, delay=1)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue):
+        assert status["items_in_queue"] == items_in_queue
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        check_status(RM.status(), 0)
+        check_resp(RM.item_add(item))
+        check_status(RM.status(), 1)
+        check_resp(RM.queue_clear())
+        check_status(RM.status(), 0)
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            check_status(await RM.status(), 0)
+            check_resp(await RM.item_add(item))
+            check_status(await RM.status(), 1)
+            check_resp(await RM.queue_clear())
+            check_status(await RM.status(), 0)
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
 @pytest.mark.parametrize("timeout", [None, 2])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])

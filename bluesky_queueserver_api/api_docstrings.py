@@ -946,6 +946,34 @@ _doc_api_queue_stop_cancel = """
 """
 
 
+_doc_api_queue_clear = """
+    Remove all items from the plan queue. The currently running plan does not belong
+    to the queue and is not affected by this operation. If the plan fails or its
+    execution is stopped, it will be pushed to the beginning of the queue.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.queue_clear()
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.queue_clear()
+"""
+
+
 _doc_api_environment_open = """
     Open RE Worker environment. The API request only initiates the operation of
     opening an environment. If the request is accepted, the ``manager_state``
