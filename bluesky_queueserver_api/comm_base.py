@@ -72,10 +72,11 @@ class RequestTimeoutError(TimeoutError):
 
 
 class RequestFailedError(Exception):
-    def __init__(self, response):
+    def __init__(self, request, response):
         msg = response.get("msg", "") if isinstance(response, Mapping) else str(response)
         msg = msg or "(no error message)"
         msg = f"Request failed: {msg}"
+        self.request = request
         self.response = response
         super().__init__(msg)
 
@@ -105,7 +106,7 @@ class ReManagerAPI_Base:
     def request_fail_exceptions_enabled(self, v):
         self._request_fail_exceptions = bool(v)
 
-    def _check_response(self, *, response):
+    def _check_response(self, *, request, response):
         """
         Check if response is a dictionary and has ``"success": True``. Raise an exception
         if the request is considered failed and exceptions are allowed. If response is
@@ -115,7 +116,7 @@ class ReManagerAPI_Base:
             # If the response is mapping, but it does not have 'success' field,
             #   then consider the request successful (this only happens for 'status' requests).
             if not isinstance(response, Mapping) or not response.get("success", True):
-                raise self.RequestFailedError(response)
+                raise self.RequestFailedError(request, response)
 
 
 class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):

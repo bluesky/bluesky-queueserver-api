@@ -29,7 +29,7 @@ class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
             response = self._client.send_message(method=method, params=params)
         except Exception:
             self._process_comm_exception(method=method, params=params)
-        self._check_response(response=response)
+        self._check_response(request={"method": method, "params": params}, response=response)
 
         return response
 
@@ -51,7 +51,7 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         except Exception:
             response = self._process_comm_exception(method=method, params=params, client_response=client_response)
 
-        self._check_response(response=response)
+        self._check_response(request={"method": method, "params": params}, response=response)
 
         return response
 

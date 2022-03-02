@@ -1017,6 +1017,42 @@ _doc_api_queue_mode_set = """
 """
 
 
+_doc_api_queue_get = """
+    Returns the list of items (plans and instructions) in the plan queue and currently running plan.
+    The function downloads the queue from the server if ``plan_queue_uid`` has changed, otherwise
+    the cached copy of the queue is returned.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager, ``items`` - a list of queue items,
+        ``running_item`` - a dictionary with parameters of currently running plan (``{}`` if
+        the queue is not running), ``plan_queue_uid`` - UID of the plan queue.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        response = RM.queue_get()
+        queue_items = response["items"]
+        running_item = response["running_item"]
+        queue_uid = response["plan_queue_uid"]
+
+        # Asynchronous code (0MQ, HTTP)
+        response = await RM.queue_get()
+        queue_items = response["items"]
+        running_item = response["running_item"]
+        queue_uid = response["plan_queue_uid"]
+"""
+
+
 _doc_api_environment_open = """
     Open RE Worker environment. The API request only initiates the operation of
     opening an environment. If the request is accepted, the ``manager_state``

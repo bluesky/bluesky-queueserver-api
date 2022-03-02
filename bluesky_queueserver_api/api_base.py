@@ -1,5 +1,6 @@
 from .item import BItem
 from collections.abc import Mapping, Iterable
+import copy
 
 
 class WaitTimeoutError(TimeoutError):
@@ -170,10 +171,11 @@ class API_Base:
         self._user = "Python API User"
         self._user_group = "admin"
 
-        self._current_queue = []
-        self._current_queue_uid = None
-        self._current_history = []
-        self._current_history_uid = None
+        self._current_plan_queue = []
+        self._current_running_item = {}
+        self._current_plan_queue_uid = None
+        self._current_plan_history = []
+        self._current_plan_history_uid = None
 
     def _clear_status_timestamp(self):
         """
@@ -310,3 +312,25 @@ class API_Base:
         else:
             request_params = {"mode": kwargs}
         return request_params
+
+    def _process_response_queue_get(self, response):
+        """
+        ``queue_get``: process response
+        """
+        if response["success"] is True:
+            self._current_plan_queue = copy.deepcopy(response["items"])
+            self._current_running_item = copy.deepcopy(response["running_item"])
+            self._current_plan_queue_uid = copy.deepcopy(response["plan_queue_uid"])
+
+    def _generate_response_queue_get(self):
+        """
+        ``queue_get``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "plan_queue_uid": self._current_plan_queue_uid,
+            "running_item": copy.deepcopy(self._current_running_item),
+            "items": copy.deepcopy(self._current_plan_queue),
+        }
+        return response

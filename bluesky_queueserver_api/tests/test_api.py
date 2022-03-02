@@ -1185,6 +1185,60 @@ def test_queue_mode_set_02(re_manager, fastapi_server, protocol, library):  # no
 
 
 # fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_queue_get_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``queue_get``: basic tests
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item = BPlan("count", ["det1", "det2"], num=10, delay=1)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue):
+        assert status["items_in_queue"] == items_in_queue
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        check_status(RM.status(), 0)
+        check_resp(RM.item_add(item))
+
+        # This is supposed to return the updated queue
+        response1 = RM.queue_get()
+        assert response1["running_item"] == {}
+        assert len(response1["items"]) == 1
+
+        # The queue has not changed, but the response generated based on cached data must match
+        response2 = RM.queue_get()
+        assert response2 == response1
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            check_status(await RM.status(), 0)
+            check_resp(await RM.item_add(item))
+
+            # This is supposed to return the updated queue
+            response1 = await RM.queue_get()
+            assert response1["running_item"] == {}
+            assert len(response1["items"]) == 1
+
+            # The queue has not changed, but the response generated based on cached data must match
+            response2 = await RM.queue_get()
+            assert response2 == response1
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
 @pytest.mark.parametrize("timeout", [None, 2])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])

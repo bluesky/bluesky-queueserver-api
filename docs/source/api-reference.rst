@@ -103,6 +103,8 @@ API for management of RE Queue
    :nosignatures:
    :toctree: generated
 
+    zmq.REManagerAPI.queue_get
+    zmq.REManagerAPI.queue_clear
     zmq.REManagerAPI.item_add
     zmq.REManagerAPI.item_add_batch
     zmq.REManagerAPI.item_update
@@ -112,7 +114,6 @@ API for management of RE Queue
     zmq.REManagerAPI.item_move
     zmq.REManagerAPI.item_move_batch
     zmq.REManagerAPI.item_execute
-    zmq.REManagerAPI.queue_clear
     zmq.REManagerAPI.queue_start
     zmq.REManagerAPI.queue_stop
     zmq.REManagerAPI.queue_stop_cancel
