@@ -1121,6 +1121,77 @@ _doc_api_history_clear = """
         await RM.history_clear()
 """
 
+_doc_api_plans_allowed = """
+    Returns the list (dictionary) of allowed plans. The function downloads the list of allowed plans
+    from the server if ``plans_allowed_uid`` has changed, otherwise the cached copy is returned.
+
+    Parameters
+    ----------
+    reload: boolean
+        Status data is always reloaded from the server if ``True``, otherwise the cached
+        status is used to verify `plans_allowed_uid`` if cache is up to date.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager, ``plans_allowed`` - a dictionary of
+        allowed plans, `plans_allowed_uid`` - UID of the dictionary of allowed plans.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        response = RM.plans_allowed()
+        plans_allowed = response["plans_allowed"]
+
+        # Asynchronous code (0MQ, HTTP)
+        response = await RM.plans_allowed()
+        plans_allowed = response["plans_allowed"]
+"""
+
+
+_doc_api_devices_allowed = """
+    Returns the list (dictionary) of allowed devices. The function downloads the list of allowed
+    devices the server if ``devices_allowed_uid`` has changed, otherwise the cached copy is returned.
+
+    Parameters
+    ----------
+    reload: boolean
+        Status data is always reloaded from the server if ``True``, otherwise the cached
+        status is used to verify `plans_allowed_uid`` if cache is up to date.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager, ``plans_allowed`` - a dictionary of
+        allowed plans, `plans_allowed_uid`` - UID of the dictionary of allowed plans.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        response = RM.plans_allowed()
+        plans_allowed = response["plans_allowed"]
+
+        # Asynchronous code (0MQ, HTTP)
+        response = await RM.plans_allowed()
+        plans_allowed = response["plans_allowed"]
+"""
+
 
 _doc_api_environment_open = """
     Open RE Worker environment. The API request only initiates the operation of

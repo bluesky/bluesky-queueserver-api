@@ -95,6 +95,15 @@ API for controlling RE Environment
     zmq.REManagerAPI.environment_close
     zmq.REManagerAPI.environment_destroy
 
+API for Monitoring Available Resources
+**************************************
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    zmq.REManagerAPI.plans_allowed
+    zmq.REManagerAPI.devices_allowed
 
 API for management of RE Queue
 ******************************

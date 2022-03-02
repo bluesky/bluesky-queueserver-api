@@ -26,6 +26,8 @@ from .api_docstrings import (
     _doc_api_queue_get,
     _doc_api_history_get,
     _doc_api_history_clear,
+    _doc_api_plans_allowed,
+    _doc_api_devices_allowed,
     _doc_api_environment_open,
     _doc_api_environment_close,
     _doc_api_environment_destroy,
@@ -390,6 +392,30 @@ class API_Async_Mixin(API_Base):
         self._clear_status_timestamp()
         return await self.send_request(method="history_clear")
 
+    async def plans_allowed(self, *, reload=False):
+        # Docstring is maintained separately
+        status = await self._status(reload=reload)
+        plans_allowed_uid = status["plans_allowed_uid"]
+        if plans_allowed_uid != self._current_plans_allowed_uid:
+            request_params = self._prepare_plans_devices_allowed()
+            response = await self.send_request(method="plans_allowed", params=request_params)
+            self._process_response_plans_allowed(response)
+        else:
+            response = self._generate_response_plans_allowed()
+        return response
+
+    async def devices_allowed(self, *, reload=False):
+        # Docstring is maintained separately
+        status = await self._status(reload=reload)
+        devices_allowed_uid = status["devices_allowed_uid"]
+        if devices_allowed_uid != self._current_devices_allowed_uid:
+            request_params = self._prepare_plans_devices_allowed()
+            response = await self.send_request(method="devices_allowed", params=request_params)
+            self._process_response_devices_allowed(response)
+        else:
+            response = self._generate_response_devices_allowed()
+        return response
+
 
 API_Async_Mixin.status.__doc__ = _doc_api_status
 API_Async_Mixin.status.__doc__ = _doc_api_ping
@@ -411,6 +437,8 @@ API_Async_Mixin.queue_mode_set.__doc__ = _doc_api_queue_mode_set
 API_Async_Mixin.queue_get.__doc__ = _doc_api_queue_get
 API_Async_Mixin.history_get.__doc__ = _doc_api_history_get
 API_Async_Mixin.history_clear.__doc__ = _doc_api_history_clear
+API_Async_Mixin.plans_allowed.__doc__ = _doc_api_plans_allowed
+API_Async_Mixin.devices_allowed.__doc__ = _doc_api_devices_allowed
 API_Async_Mixin.environment_open.__doc__ = _doc_api_environment_open
 API_Async_Mixin.environment_close.__doc__ = _doc_api_environment_close
 API_Async_Mixin.environment_destroy.__doc__ = _doc_api_environment_destroy

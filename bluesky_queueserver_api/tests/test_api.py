@@ -1320,6 +1320,70 @@ def test_history_get_clear_01(re_manager, fastapi_server, protocol, library):  #
 
 
 # fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_plans_devices_allowed_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``plans_allowed``, ``devices_allowed``: basic tests
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue, items_in_history):
+        assert status["items_in_queue"] == items_in_queue
+        assert status["items_in_history"] == items_in_history
+
+    if not _is_async(library):
+        RM = rm_api_class()
+
+        response = RM.plans_allowed()
+        assert response["success"] is True
+        assert isinstance(response["plans_allowed"], dict)
+        assert len(response["plans_allowed"]) > 0
+
+        response2 = RM.plans_allowed()
+        assert response2 == response
+
+        response = RM.devices_allowed()
+        assert response["success"] is True
+        assert isinstance(response["devices_allowed"], dict)
+        assert len(response["devices_allowed"]) > 0
+
+        response2 = RM.devices_allowed()
+        assert response2 == response
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+
+            response = await RM.plans_allowed()
+            assert response["success"] is True
+            assert isinstance(response["plans_allowed"], dict)
+            assert len(response["plans_allowed"]) > 0
+
+            response2 = await RM.plans_allowed()
+            assert response2 == response
+
+            response = await RM.devices_allowed()
+            assert response["success"] is True
+            assert isinstance(response["devices_allowed"], dict)
+            assert len(response["devices_allowed"]) > 0
+
+            response2 = await RM.devices_allowed()
+            assert response2 == response
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
 @pytest.mark.parametrize("timeout", [None, 2])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
