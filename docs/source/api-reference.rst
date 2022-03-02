@@ -116,6 +116,7 @@ API for management of RE Queue
     zmq.REManagerAPI.queue_start
     zmq.REManagerAPI.queue_stop
     zmq.REManagerAPI.queue_stop_cancel
+    zmq.REManagerAPI.queue_mode_set
 
 API for controlling RE History
 ******************************

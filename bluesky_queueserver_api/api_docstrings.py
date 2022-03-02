@@ -974,6 +974,49 @@ _doc_api_queue_clear = """
 """
 
 
+_doc_api_queue_mode_set = """
+    Sets parameters that define the mode of plan queue execution. Individual
+    mode parameters may be changed by using respective kwargs (currently only
+    ``loop`` parameter is supported) or passing dictionary using ``mode`` kwarg.
+    The mode may be reset to default by passing ``mode="default"``. If ``mode``
+    kwarg is used, other kwargs are ignored.
+
+    Parameters
+    ----------
+    mode: dict or str
+        Pass dictionary with mode parameters that need to be changed or ``"default"``
+        to reset all mode parameters to default values. All other kwargs are
+        ignored if ``mode`` kwarg is passed.
+    loop: boolean
+        Turns **loop** mode ON and OFF
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.queue_mode_set(loop=True)
+        RM.queue_mode_set(mode={"loop": True})
+        RM.queue_mode_set(mode="default")
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.queue_mode_set(loop=True)
+        await RM.queue_mode_set(mode={"loop": True})
+        await RM.queue_mode_set(mode="default")
+"""
+
+
 _doc_api_environment_open = """
     Open RE Worker environment. The API request only initiates the operation of
     opening an environment. If the request is accepted, the ``manager_state``

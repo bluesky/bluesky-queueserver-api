@@ -300,3 +300,13 @@ class API_Base:
         request_params = {"item": item}
         self._request_params_add_user_info(request_params)
         return request_params
+
+    def _prepare_queue_mode_set(self, **kwargs):
+        """
+        Prepare parameters for ``queue_mode_set`` operation.
+        """
+        if "mode" in kwargs:
+            request_params = {"mode": kwargs["mode"]}
+        else:
+            request_params = {"mode": kwargs}
+        return request_params

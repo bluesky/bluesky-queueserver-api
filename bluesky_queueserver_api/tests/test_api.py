@@ -1072,7 +1072,7 @@ def test_queue_start_stop_cancel_01(re_manager, fastapi_server, protocol, librar
 # fmt: on
 def test_queue_clear_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
     """
-    ``item_add``: basic test
+    ``queue_clear``: basic test
     """
     rm_api_class = _select_re_manager_api(protocol, library)
     item = BPlan("count", ["det1", "det2"], num=10, delay=1)
@@ -1101,6 +1101,84 @@ def test_queue_clear_01(re_manager, fastapi_server, protocol, library):  # noqa:
             check_status(await RM.status(), 1)
             check_resp(await RM.queue_clear())
             check_status(await RM.status(), 0)
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_queue_mode_set_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``queue_mode_set``: basic test
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, loop_mode):
+        assert status["plan_queue_mode"]["loop"] == loop_mode
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        check_status(RM.status(), False)
+        check_resp(RM.queue_mode_set(loop=True))
+        check_status(RM.status(), True)
+        check_resp(RM.queue_mode_set(loop=False))
+        check_status(RM.status(), False)
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            check_status(await RM.status(), False)
+            check_resp(await RM.queue_mode_set(loop=True))
+            check_status(await RM.status(), True)
+            check_resp(await RM.queue_mode_set(loop=False))
+            check_status(await RM.status(), False)
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_queue_mode_set_02(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``queue_mode_set``: setting mode directly, resetting mode to default
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, loop_mode):
+        assert status["plan_queue_mode"]["loop"] == loop_mode
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        check_status(RM.status(), False)
+        check_resp(RM.queue_mode_set(mode={"loop": True}))
+        check_status(RM.status(), True)
+        check_resp(RM.queue_mode_set(mode="default"))
+        check_status(RM.status(), False)
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            check_status(await RM.status(), False)
+            check_resp(await RM.queue_mode_set(mode={"loop": True}))
+            check_status(await RM.status(), True)
+            check_resp(await RM.queue_mode_set(mode="default"))
+            check_status(await RM.status(), False)
             await RM.close()
 
         asyncio.run(testing())

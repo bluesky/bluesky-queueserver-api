@@ -22,6 +22,7 @@ from .api_docstrings import (
     _doc_api_queue_stop,
     _doc_api_queue_stop_cancel,
     _doc_api_queue_clear,
+    _doc_api_queue_mode_set,
     _doc_api_environment_open,
     _doc_api_environment_close,
     _doc_api_environment_destroy,
@@ -322,32 +323,45 @@ class API_Threads_Mixin(API_Base):
         return self.send_request(method="queue_item_execute", params=request_params)
 
     def environment_open(self):
+        # Docstring is maintained separately
         self._clear_status_timestamp()
         return self.send_request(method="environment_open")
 
     def environment_close(self):
+        # Docstring is maintained separately
         self._clear_status_timestamp()
         return self.send_request(method="environment_close")
 
     def environment_destroy(self):
+        # Docstring is maintained separately
         self._clear_status_timestamp()
         return self.send_request(method="environment_destroy")
 
     def queue_start(self):
+        # Docstring is maintained separately
         self._clear_status_timestamp()
         return self.send_request(method="queue_start")
 
     def queue_stop(self):
+        # Docstring is maintained separately
         self._clear_status_timestamp()
         return self.send_request(method="queue_stop")
 
     def queue_stop_cancel(self):
+        # Docstring is maintained separately
         self._clear_status_timestamp()
         return self.send_request(method="queue_stop_cancel")
 
     def queue_clear(self):
+        # Docstring is maintained separately
         self._clear_status_timestamp()
         return self.send_request(method="queue_clear")
+
+    def queue_mode_set(self, **kwargs):
+        # Docstring is maintained separately
+        request_params = self._prepare_queue_mode_set(**kwargs)
+        self._clear_status_timestamp()
+        return self.send_request(method="queue_mode_set", params=request_params)
 
 
 API_Threads_Mixin.status.__doc__ = _doc_api_status
@@ -366,6 +380,7 @@ API_Threads_Mixin.queue_start.__doc__ = _doc_api_queue_start
 API_Threads_Mixin.queue_stop.__doc__ = _doc_api_queue_stop
 API_Threads_Mixin.queue_stop_cancel.__doc__ = _doc_api_queue_stop_cancel
 API_Threads_Mixin.queue_clear.__doc__ = _doc_api_queue_clear
+API_Threads_Mixin.queue_mode_set.__doc__ = _doc_api_queue_mode_set
 API_Threads_Mixin.environment_open.__doc__ = _doc_api_environment_open
 API_Threads_Mixin.environment_close.__doc__ = _doc_api_environment_close
 API_Threads_Mixin.environment_destroy.__doc__ = _doc_api_environment_destroy
