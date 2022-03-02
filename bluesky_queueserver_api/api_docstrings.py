@@ -1156,7 +1156,6 @@ _doc_api_plans_allowed = """
         plans_allowed = response["plans_allowed"]
 """
 
-
 _doc_api_devices_allowed = """
     Returns the list (dictionary) of allowed devices. The function downloads the list of allowed
     devices the server if ``devices_allowed_uid`` has changed, otherwise the cached copy is returned.
@@ -1171,8 +1170,8 @@ _doc_api_devices_allowed = """
     -------
     dict
         Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager, ``plans_allowed`` - a dictionary of
-        allowed plans, `plans_allowed_uid`` - UID of the dictionary of allowed plans.
+        in case the request was rejected by RE Manager, ``devices_allowed`` - a dictionary of
+        allowed devices, `devices_allowed_uid`` - UID of the dictionary of allowed devices.
 
     Raises
     ------
@@ -1184,12 +1183,82 @@ _doc_api_devices_allowed = """
     .. code-block:: python
 
         # Synchronous code (0MQ, HTTP)
-        response = RM.plans_allowed()
-        plans_allowed = response["plans_allowed"]
+        response = RM.devices_allowed()
+        devices_allowed = response["devices_allowed"]
 
         # Asynchronous code (0MQ, HTTP)
-        response = await RM.plans_allowed()
-        plans_allowed = response["plans_allowed"]
+        response = await RM.devices_allowed()
+        devices_allowed = response["devices_allowed"]
+"""
+
+_doc_api_plans_existing = """
+    Returns the list (dictionary) of existing plans. The function downloads the list of existing plans
+    from the server if ``plans_allowed_uid`` has changed, otherwise the cached copy is returned.
+
+    Parameters
+    ----------
+    reload: boolean
+        Status data is always reloaded from the server if ``True``, otherwise the cached
+        status is used to verify `plans_existing_uid`` if cache is up to date.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager, ``plans_existing`` - a dictionary of
+        existing plans, `plans_existing_uid`` - UID of the dictionary of allowed plans.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        response = RM.plans_existing()
+        plans_existing = response["plans_existing"]
+
+        # Asynchronous code (0MQ, HTTP)
+        response = await RM.plans_existing()
+        plans_existing = response["plans_existing"]
+"""
+
+_doc_api_devices_existing = """
+    Returns the list (dictionary) of existing devices. The function downloads the list of existing
+    devices the server if ``devices_existing_uid`` has changed, otherwise the cached copy is returned.
+
+    Parameters
+    ----------
+    reload: boolean
+        Status data is always reloaded from the server if ``True``, otherwise the cached
+        status is used to verify `plans_existing_uid`` if cache is up to date.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager, ``devices_existing`` - a dictionary of
+        existing devices, `devices_existing_uid`` - UID of the dictionary of existing devices.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        response = RM.devices_existing()
+        devices_existing = response["devices_existing"]
+
+        # Asynchronous code (0MQ, HTTP)
+        response = await RM.devices_existing()
+        devices_existing = response["devices_existing"]
 """
 
 

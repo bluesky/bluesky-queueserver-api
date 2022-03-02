@@ -28,6 +28,8 @@ from .api_docstrings import (
     _doc_api_history_clear,
     _doc_api_plans_allowed,
     _doc_api_devices_allowed,
+    _doc_api_plans_existing,
+    _doc_api_devices_existing,
     _doc_api_environment_open,
     _doc_api_environment_close,
     _doc_api_environment_destroy,
@@ -416,6 +418,28 @@ class API_Async_Mixin(API_Base):
             response = self._generate_response_devices_allowed()
         return response
 
+    async def plans_existing(self, *, reload=False):
+        # Docstring is maintained separately
+        status = await self._status(reload=reload)
+        plans_existing_uid = status["plans_existing_uid"]
+        if plans_existing_uid != self._current_plans_existing_uid:
+            response = await self.send_request(method="plans_existing")
+            self._process_response_plans_existing(response)
+        else:
+            response = self._generate_response_plans_existing()
+        return response
+
+    async def devices_existing(self, *, reload=False):
+        # Docstring is maintained separately
+        status = await self._status(reload=reload)
+        devices_existing_uid = status["devices_existing_uid"]
+        if devices_existing_uid != self._current_devices_existing_uid:
+            response = await self.send_request(method="devices_existing")
+            self._process_response_devices_existing(response)
+        else:
+            response = self._generate_response_devices_existing()
+        return response
+
 
 API_Async_Mixin.status.__doc__ = _doc_api_status
 API_Async_Mixin.status.__doc__ = _doc_api_ping
@@ -439,6 +463,8 @@ API_Async_Mixin.history_get.__doc__ = _doc_api_history_get
 API_Async_Mixin.history_clear.__doc__ = _doc_api_history_clear
 API_Async_Mixin.plans_allowed.__doc__ = _doc_api_plans_allowed
 API_Async_Mixin.devices_allowed.__doc__ = _doc_api_devices_allowed
+API_Async_Mixin.plans_existing.__doc__ = _doc_api_plans_existing
+API_Async_Mixin.devices_existing.__doc__ = _doc_api_devices_existing
 API_Async_Mixin.environment_open.__doc__ = _doc_api_environment_open
 API_Async_Mixin.environment_close.__doc__ = _doc_api_environment_close
 API_Async_Mixin.environment_destroy.__doc__ = _doc_api_environment_destroy

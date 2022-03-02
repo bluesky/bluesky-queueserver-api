@@ -104,6 +104,8 @@ API for Monitoring Available Resources
 
     zmq.REManagerAPI.plans_allowed
     zmq.REManagerAPI.devices_allowed
+    zmq.REManagerAPI.plans_existing
+    zmq.REManagerAPI.devices_existing
 
 API for management of RE Queue
 ******************************

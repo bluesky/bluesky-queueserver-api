@@ -415,3 +415,43 @@ class API_Base:
             "devices_allowed": copy.deepcopy(self._current_devices_allowed),
         }
         return response
+
+    def _process_response_plans_existing(self, response):
+        """
+        ``plans_existing``: process response
+        """
+        if response["success"] is True:
+            self._current_plans_existing = copy.deepcopy(response["plans_existing"])
+            self._current_plans_existing_uid = copy.deepcopy(response["plans_existing_uid"])
+
+    def _generate_response_plans_existing(self):
+        """
+        ``plans_existing``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "plans_existing_uid": self._current_plans_existing_uid,
+            "plans_existing": copy.deepcopy(self._current_plans_existing),
+        }
+        return response
+
+    def _process_response_devices_existing(self, response):
+        """
+        ``devices_existing``: process response
+        """
+        if response["success"] is True:
+            self._current_devices_existing = copy.deepcopy(response["devices_existing"])
+            self._current_devices_existing_uid = copy.deepcopy(response["devices_existing_uid"])
+
+    def _generate_response_devices_existing(self):
+        """
+        ``devices_existing``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "devices_existing_uid": self._current_devices_existing_uid,
+            "devices_existing": copy.deepcopy(self._current_devices_existing),
+        }
+        return response
