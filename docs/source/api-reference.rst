@@ -122,9 +122,15 @@ API for management of RE Queue
 API for controlling RE History
 ******************************
 
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    zmq.REManagerAPI.history_get
+    zmq.REManagerAPI.history_clear
+
 API for controlling Run Engine
 ******************************
-
 
 Asynchronous Communication with 0MQ Server
 ------------------------------------------

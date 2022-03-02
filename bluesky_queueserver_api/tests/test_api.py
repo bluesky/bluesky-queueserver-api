@@ -1239,6 +1239,87 @@ def test_queue_get_01(re_manager, fastapi_server, protocol, library):  # noqa: F
 
 
 # fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_history_get_clear_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``history_get``, ``history_clear``: basic tests
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item = BPlan("count", ["det1", "det2"], num=1, delay=0.1)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue, items_in_history):
+        assert status["items_in_queue"] == items_in_queue
+        assert status["items_in_history"] == items_in_history
+
+    if not _is_async(library):
+        RM = rm_api_class()
+
+        check_resp(RM.environment_open())
+        RM.wait_for_idle()
+
+        check_resp(RM.item_add(item))
+        check_status(RM.status(), 1, 0)
+        check_resp(RM.queue_start())
+        RM.wait_for_idle()
+        check_status(RM.status(), 0, 1)
+
+        # This is supposed to return the updated queue
+        response1 = RM.history_get()
+        assert len(response1["items"]) == 1
+
+        # The history has not changed, the response generated based on cached data
+        response2 = RM.history_get()
+        assert response2 == response1
+
+        RM.history_clear()
+        response3 = RM.history_get()
+        assert len(response3["items"]) == 0
+
+        check_resp(RM.environment_close())
+        RM.wait_for_idle()
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle()
+
+            check_resp(await RM.item_add(item))
+            check_status(await RM.status(), 1, 0)
+            check_resp(await RM.queue_start())
+            await RM.wait_for_idle()
+            check_status(await RM.status(), 0, 1)
+
+            # This is supposed to return the updated queue
+            response1 = await RM.history_get()
+            assert len(response1["items"]) == 1
+
+            # The history has not changed, the response generated based on cached data
+            response2 = await RM.history_get()
+            assert response2 == response1
+
+            await RM.history_clear()
+            response3 = await RM.history_get()
+            assert len(response3["items"]) == 0
+
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle()
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
 @pytest.mark.parametrize("timeout", [None, 2])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])

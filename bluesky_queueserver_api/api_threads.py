@@ -24,6 +24,8 @@ from .api_docstrings import (
     _doc_api_queue_clear,
     _doc_api_queue_mode_set,
     _doc_api_queue_get,
+    _doc_api_history_get,
+    _doc_api_history_clear,
     _doc_api_environment_open,
     _doc_api_environment_close,
     _doc_api_environment_destroy,
@@ -375,6 +377,22 @@ class API_Threads_Mixin(API_Base):
             response = self._generate_response_queue_get()
         return response
 
+    def history_get(self, *, reload=False):
+        # Docstring is maintained separately
+        status = self._status(reload=reload)
+        plan_history_uid = status["plan_history_uid"]
+        if plan_history_uid != self._current_plan_history_uid:
+            response = self.send_request(method="history_get")
+            self._process_response_history_get(response)
+        else:
+            response = self._generate_response_history_get()
+        return response
+
+    def history_clear(self):
+        # Docstring is maintained separately
+        self._clear_status_timestamp()
+        return self.send_request(method="history_clear")
+
 
 API_Threads_Mixin.status.__doc__ = _doc_api_status
 API_Threads_Mixin.status.__doc__ = _doc_api_ping
@@ -394,6 +412,8 @@ API_Threads_Mixin.queue_stop_cancel.__doc__ = _doc_api_queue_stop_cancel
 API_Threads_Mixin.queue_clear.__doc__ = _doc_api_queue_clear
 API_Threads_Mixin.queue_mode_set.__doc__ = _doc_api_queue_mode_set
 API_Threads_Mixin.queue_get.__doc__ = _doc_api_queue_get
+API_Threads_Mixin.history_get.__doc__ = _doc_api_history_get
+API_Threads_Mixin.history_clear.__doc__ = _doc_api_history_clear
 API_Threads_Mixin.environment_open.__doc__ = _doc_api_environment_open
 API_Threads_Mixin.environment_close.__doc__ = _doc_api_environment_close
 API_Threads_Mixin.environment_destroy.__doc__ = _doc_api_environment_destroy

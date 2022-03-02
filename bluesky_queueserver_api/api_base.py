@@ -334,3 +334,23 @@ class API_Base:
             "items": copy.deepcopy(self._current_plan_queue),
         }
         return response
+
+    def _process_response_history_get(self, response):
+        """
+        ``history_get``: process response
+        """
+        if response["success"] is True:
+            self._current_plan_history = copy.deepcopy(response["items"])
+            self._current_plan_history_uid = copy.deepcopy(response["plan_history_uid"])
+
+    def _generate_response_history_get(self):
+        """
+        ``history_get``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "plan_history_uid": self._current_plan_history_uid,
+            "items": copy.deepcopy(self._current_plan_history),
+        }
+        return response

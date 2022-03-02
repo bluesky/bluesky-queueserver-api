@@ -1022,6 +1022,12 @@ _doc_api_queue_get = """
     The function downloads the queue from the server if ``plan_queue_uid`` has changed, otherwise
     the cached copy of the queue is returned.
 
+    Parameters
+    ----------
+    reload: boolean
+        Status data is always reloaded from the server if ``True``, otherwise the cached
+        status is used to verify `plan_queue_uid`` if cache is up to date.
+
     Returns
     -------
     dict
@@ -1050,6 +1056,69 @@ _doc_api_queue_get = """
         queue_items = response["items"]
         running_item = response["running_item"]
         queue_uid = response["plan_queue_uid"]
+"""
+
+_doc_api_history_get = """
+    Returns the list of plans in the history. The function downloads the history from the server
+    if ``plan_history_uid`` has changed, otherwise the cached copy of the queue is returned.
+
+    Parameters
+    ----------
+    reload: boolean
+        Status data is always reloaded from the server if ``True``, otherwise the cached
+        status is used to verify `plan_history_uid`` if cache is up to date.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager, ``items`` - a list of history items,
+        ``plan_history_uid`` - UID of the plan history.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        response = RM.history_get()
+        history_items = response["items"]
+        history_uid = response["plan_history_uid"]
+
+        # Asynchronous code (0MQ, HTTP)
+        response = await RM.history_get()
+        history_items = response["items"]
+        history_uid = response["plan_history_uid"]
+"""
+
+
+_doc_api_history_clear = """
+    Remove all items from the history.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.history_clear()
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.history_clear()
 """
 
 
