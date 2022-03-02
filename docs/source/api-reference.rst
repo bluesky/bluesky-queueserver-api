@@ -102,6 +102,9 @@ API for Monitoring Available Resources
    :nosignatures:
    :toctree: generated
 
+    zmq.REManagerAPI.permissions_reload
+    zmq.REManagerAPI.permissions_get
+    zmq.REManagerAPI.permissions_set
     zmq.REManagerAPI.plans_allowed
     zmq.REManagerAPI.devices_allowed
     zmq.REManagerAPI.plans_existing

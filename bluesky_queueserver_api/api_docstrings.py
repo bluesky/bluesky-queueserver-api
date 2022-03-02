@@ -1261,6 +1261,117 @@ _doc_api_devices_existing = """
         devices_existing = response["devices_existing"]
 """
 
+_doc_api_permissions_reload = """
+    Reload user group permissions from the default location or the location set using
+    command line parameters and generate lists of allowed plans and devices based on
+    the lists of existing plans and devices. By default, the method will use current
+    lists of existing plans and devices stored in memory. Optionally the method can
+    reload the lists from the disk file (see reload_plans_devices parameter).
+    The method always updates UIDs of the lists of allowed plans and devices even
+    if the contents remain the same.
+
+    Parameters
+    ----------
+    reload_plans_devices: boolean (optional)
+        Reload the lists of existing plans and devices from disk if True, otherwise
+        use current lists stored in memory. Default: False.
+    reload_permissions: boolean (optional)
+        Reload user group permissions from disk if True, otherwise use current
+        permissions. Default: True.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.permissions_reload()
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.permissions_reload()
+"""
+
+
+_doc_api_permissions_get = """
+    Download the dictionary of user group permissions currently used by RE Manager.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager, ``user_group_permission`` -
+        the dictionary of user group permissions.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        response = RM.permissions_get()
+        permissions = response["user_group_permissions"]
+
+        # Asynchronous code (0MQ, HTTP)
+        response = await RM.permissions_get()
+        permissions = response["user_group_permissions"]
+"""
+
+
+_doc_api_permissions_set = """
+    Uploads the dictionary of user group permissions. If the uploaded dictionary
+    contains a valid set of permissions different from currently used one,
+    the new permissions are set as current and the updated lists of allowed
+    plans and devices are generated. The method does nothing if the uploaded
+    permissions are identical to currently used permissions. The API request fails
+    if the uploaded dictionary does not pass validation.
+
+    Parameters
+    ----------
+    user_group_permissions: dict
+        Dictionary, which contains user group permissions.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        response = RM.permissions_get()
+        permissions = response["user_group_permissions"]
+        # < modify permissions >
+        RM.permissions_get(permissions)
+
+        # Asynchronous code (0MQ, HTTP)
+        response = await RM.permissions_get()
+        permissions = response["user_group_permissions"]
+        # < modify permissions >
+        await RM.permissions_get(permissions)
+"""
+
 
 _doc_api_environment_open = """
     Open RE Worker environment. The API request only initiates the operation of

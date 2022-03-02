@@ -455,3 +455,19 @@ class API_Base:
             "devices_existing": copy.deepcopy(self._current_devices_existing),
         }
         return response
+
+    def _prepare_permissions_reload(self, *, reload_plans_devices, reload_permissions):
+        """
+        Prepare parameters for ``permissions_reload``
+        """
+        request_params = {}
+        self._add_request_param(request_params, "reload_plans_devices", reload_plans_devices)
+        self._add_request_param(request_params, "reload_permissions", reload_permissions)
+        return request_params
+
+    def _prepare_permissions_set(self, *, user_group_permissions):
+        """
+        Prepare parameters for ``permissions_set``
+        """
+        request_params = {"user_group_permissions": user_group_permissions}
+        return request_params

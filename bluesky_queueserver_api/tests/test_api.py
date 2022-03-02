@@ -1329,14 +1329,6 @@ def test_plans_devices_allowed_01(re_manager, fastapi_server, protocol, library)
     """
     rm_api_class = _select_re_manager_api(protocol, library)
 
-    def check_resp(resp):
-        assert resp["success"] is True
-        assert resp["msg"] == ""
-
-    def check_status(status, items_in_queue, items_in_history):
-        assert status["items_in_queue"] == items_in_queue
-        assert status["items_in_history"] == items_in_history
-
     if not _is_async(library):
         RM = rm_api_class()
 
@@ -1393,14 +1385,6 @@ def test_plans_devices_existing_01(re_manager, fastapi_server, protocol, library
     """
     rm_api_class = _select_re_manager_api(protocol, library)
 
-    # def check_resp(resp):
-    #     assert resp["success"] is True
-    #     assert resp["msg"] == ""
-
-    # def check_status(status, items_in_queue, items_in_history):
-    #     assert status["items_in_queue"] == items_in_queue
-    #     assert status["items_in_history"] == items_in_history
-
     if not _is_async(library):
         RM = rm_api_class()
 
@@ -1441,6 +1425,114 @@ def test_plans_devices_existing_01(re_manager, fastapi_server, protocol, library
 
             response2 = await RM.devices_existing()
             assert response2 == response
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_permissions_get_set_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``permissions_get``, ``permissions_set``: basic tests
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = rm_api_class()
+
+        resp1 = RM.permissions_get()
+        assert resp1["success"] is True
+        permissions = resp1["user_group_permissions"]
+
+        # Remove allowed plans (list of allowed plans should be empty)
+        del permissions["user_groups"]["admin"]["allowed_plans"]
+
+        resp2 = RM.plans_allowed()
+        assert resp2["success"] is True
+        allowed_plans = resp2["plans_allowed"]
+
+        assert allowed_plans != {}
+
+        resp3 = RM.permissions_set(permissions)
+        assert resp3["success"] is True
+
+        resp4 = RM.plans_allowed()
+        assert resp4["success"] is True
+        allowed_plans = resp4["plans_allowed"]
+
+        assert allowed_plans == {}
+
+        # Do not reload permssions from disk
+        resp5 = RM.permissions_reload(reload_permissions=False)
+        assert resp5["success"] is True
+
+        resp6 = RM.plans_allowed()
+        assert resp6["success"] is True
+        allowed_plans = resp6["plans_allowed"]
+
+        assert allowed_plans == {}
+
+        # Reload permssions from disk
+        resp6 = RM.permissions_reload(reload_permissions=True)
+        assert resp6["success"] is True
+
+        resp7 = RM.plans_allowed()
+        assert resp7["success"] is True
+        allowed_plans = resp7["plans_allowed"]
+
+        assert allowed_plans != {}
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+
+            resp1 = await RM.permissions_get()
+            assert resp1["success"] is True
+            permissions = resp1["user_group_permissions"]
+
+            # Remove allowed plans (list of allowed plans should be empty)
+            del permissions["user_groups"]["admin"]["allowed_plans"]
+
+            resp2 = await RM.plans_allowed()
+            assert resp2["success"] is True
+            allowed_plans = resp2["plans_allowed"]
+
+            assert allowed_plans != {}
+
+            resp3 = await RM.permissions_set(permissions)
+            assert resp3["success"] is True
+
+            resp4 = await RM.plans_allowed()
+            assert resp4["success"] is True
+            allowed_plans = resp4["plans_allowed"]
+
+            assert allowed_plans == {}
+
+            # Do not reload permssions from disk
+            resp5 = await RM.permissions_reload(reload_permissions=False)
+            assert resp5["success"] is True
+
+            resp6 = await RM.plans_allowed()
+            assert resp6["success"] is True
+            allowed_plans = resp6["plans_allowed"]
+
+            assert allowed_plans == {}
+
+            # Reload permssions from disk
+            resp6 = await RM.permissions_reload(reload_permissions=True)
+            assert resp6["success"] is True
+
+            resp7 = await RM.plans_allowed()
+            assert resp7["success"] is True
+            allowed_plans = resp7["plans_allowed"]
+
+            assert allowed_plans != {}
 
             await RM.close()
 

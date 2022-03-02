@@ -30,6 +30,9 @@ from .api_docstrings import (
     _doc_api_devices_allowed,
     _doc_api_plans_existing,
     _doc_api_devices_existing,
+    _doc_api_permissions_reload,
+    _doc_api_permissions_get,
+    _doc_api_permissions_set,
     _doc_api_environment_open,
     _doc_api_environment_close,
     _doc_api_environment_destroy,
@@ -443,6 +446,24 @@ class API_Threads_Mixin(API_Base):
             response = self._generate_response_devices_existing()
         return response
 
+    def permissions_reload(self, *, reload_plans_devices=None, reload_permissions=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_permissions_reload(
+            reload_plans_devices=reload_plans_devices, reload_permissions=reload_permissions
+        )
+        self._clear_status_timestamp()
+        return self.send_request(method="permissions_reload", params=request_params)
+
+    def permissions_get(self):
+        # Docstring is maintained separately
+        return self.send_request(method="permissions_get")
+
+    def permissions_set(self, user_group_permissions):
+        # Docstring is maintained separately
+        request_params = self._prepare_permissions_set(user_group_permissions=user_group_permissions)
+        self._clear_status_timestamp()
+        return self.send_request(method="permissions_set", params=request_params)
+
 
 API_Threads_Mixin.status.__doc__ = _doc_api_status
 API_Threads_Mixin.status.__doc__ = _doc_api_ping
@@ -468,6 +489,9 @@ API_Threads_Mixin.plans_allowed.__doc__ = _doc_api_plans_allowed
 API_Threads_Mixin.devices_allowed.__doc__ = _doc_api_devices_allowed
 API_Threads_Mixin.plans_existing.__doc__ = _doc_api_plans_existing
 API_Threads_Mixin.devices_existing.__doc__ = _doc_api_devices_existing
+API_Threads_Mixin.permissions_reload.__doc__ = _doc_api_permissions_reload
+API_Threads_Mixin.permissions_get.__doc__ = _doc_api_permissions_get
+API_Threads_Mixin.permissions_set.__doc__ = _doc_api_permissions_set
 API_Threads_Mixin.environment_open.__doc__ = _doc_api_environment_open
 API_Threads_Mixin.environment_close.__doc__ = _doc_api_environment_close
 API_Threads_Mixin.environment_destroy.__doc__ = _doc_api_environment_destroy
