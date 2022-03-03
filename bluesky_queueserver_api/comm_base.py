@@ -39,9 +39,18 @@ rest_api_method_map = {
     "re_stop": ("POST", "/re/stop"),
     "re_abort": ("POST", "/re/abort"),
     "re_halt": ("POST", "/re/halt"),
+    "re_runs": ("POST", "/re/runs"),
     "plans_allowed": ("GET", "/plans/allowed"),
     "devices_allowed": ("GET", "/devices/allowed"),
+    "plans_existing": ("GET", "/plans/existing"),
+    "devices_existing": ("GET", "/devices/existing"),
     "permissions_reload": ("POST", "/permissions/reload"),
+    "permissions_get": ("POST", "/permissions/get"),
+    "permissions_set": ("POST", "/permissions/set"),
+    "script_upload": ("POST", "/script/upload"),
+    "function_execute": ("POST", "/function/execute"),
+    "task_status": ("POST", "/task/status"),
+    "task_result": ("POST", "/task/result"),
     "manager_stop": ("POST", "/manager/stop"),
     "manager_kill": ("POST", "/test/manager/kill"),
 }
@@ -63,10 +72,11 @@ class RequestTimeoutError(TimeoutError):
 
 
 class RequestFailedError(Exception):
-    def __init__(self, response):
+    def __init__(self, request, response):
         msg = response.get("msg", "") if isinstance(response, Mapping) else str(response)
         msg = msg or "(no error message)"
         msg = f"Request failed: {msg}"
+        self.request = request
         self.response = response
         super().__init__(msg)
 
@@ -96,7 +106,7 @@ class ReManagerAPI_Base:
     def request_fail_exceptions_enabled(self, v):
         self._request_fail_exceptions = bool(v)
 
-    def _check_response(self, *, response):
+    def _check_response(self, *, request, response):
         """
         Check if response is a dictionary and has ``"success": True``. Raise an exception
         if the request is considered failed and exceptions are allowed. If response is
@@ -106,7 +116,7 @@ class ReManagerAPI_Base:
             # If the response is mapping, but it does not have 'success' field,
             #   then consider the request successful (this only happens for 'status' requests).
             if not isinstance(response, Mapping) or not response.get("success", True):
-                raise self.RequestFailedError(response)
+                raise self.RequestFailedError(request, response)
 
 
 class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):

@@ -1,5 +1,6 @@
 from .item import BItem
-from collections.abc import Mapping
+from collections.abc import Mapping, Iterable
+import copy
 
 
 class WaitTimeoutError(TimeoutError):
@@ -170,16 +171,39 @@ class API_Base:
         self._user = "Python API User"
         self._user_group = "admin"
 
-        self._current_queue = []
-        self._current_queue_uid = None
-        self._current_history = []
-        self._current_history_uid = None
+        self._current_plan_queue = []
+        self._current_running_item = {}
+        self._current_plan_queue_uid = None
+        self._current_plan_history = []
+        self._current_plan_history_uid = None
+        self._current_plans_allowed = {}
+        self._current_plans_allowed_uid = None
+        self._current_devices_allowed = {}
+        self._current_devices_allowed_uid = None
+        self._current_plans_existing = {}
+        self._current_plans_existing_uid = None
+        self._current_devices_existing = {}
+        self._current_devices_existing_uid = None
+        self._current_run_list = []
+        self._current_run_list_uid = None
 
     def _clear_status_timestamp(self):
         """
         Clearing status timestamp causes status to be reloaded from the server next time it is requested.
         """
         self._status_timestamp = None
+
+    def _request_params_add_user_info(self, request_params):
+        if self._pass_user_info:
+            request_params["user"] = self._user
+            request_params["user_group"] = self._user_group
+
+    def _add_request_param(self, request_params, name, value):
+        """
+        Add parameter to dictionary ``request_params`` if value is not ``None``.
+        """
+        if value is not None:
+            request_params[name] = value
 
     def _prepare_item_add(self, *, item, pos, before_uid, after_uid):
         """
@@ -188,29 +212,345 @@ class API_Base:
         if not isinstance(item, BItem) and not isinstance(item, Mapping):
             raise TypeError(f"Incorrect item type {type(item)!r}. Expected type: 'BItem' or 'dict'")
 
-        item = item.to_dict() if isinstance(item, BItem) else item.copy()
+        item = item.to_dict() if isinstance(item, BItem) else dict(item).copy()
 
         request_params = {"item": item}
-        if pos is not None:
-            request_params["pos"] = pos
-        if before_uid is not None:
-            request_params["before_uid"] = before_uid
-        if after_uid is not None:
-            request_params["after_uid"] = after_uid
+        self._add_request_param(request_params, "pos", pos)
+        self._add_request_param(request_params, "before_uid", before_uid)
+        self._add_request_param(request_params, "after_uid", after_uid)
+        self._request_params_add_user_info(request_params)
+        return request_params
 
-        if self._pass_user_info:
-            request_params["user"] = self._user
-            request_params["user_group"] = self._user_group
+    def _prepare_item_add_batch(self, *, items, pos, before_uid, after_uid):
+        """
+        Prepare parameters for ``item_add_batch`` operation.
+        """
+        if not isinstance(items, Iterable):
+            raise TypeError(f"Parameter ``items`` must be iterable: type(items)={type(items)!r}")
+
+        for n, item in enumerate(items):
+            if not isinstance(item, BItem) and not isinstance(item, Mapping):
+                raise TypeError(
+                    f"Incorrect type {type(item)!r} if item #{n} ({item!r}). Expected type: 'BItem' or 'dict'"
+                )
+
+        items = [_.to_dict() if isinstance(_, BItem) else dict(_).copy() for _ in items]
+
+        request_params = {"items": items}
+        self._add_request_param(request_params, "pos", pos)
+        self._add_request_param(request_params, "before_uid", before_uid)
+        self._add_request_param(request_params, "after_uid", after_uid)
+        self._request_params_add_user_info(request_params)
+        return request_params
+
+    def _prepare_item_update(self, *, item, replace):
+        """
+        Prepare parameters for ``item_update`` operation.
+        """
+        if not isinstance(item, BItem) and not isinstance(item, Mapping):
+            raise TypeError(f"Incorrect item type {type(item)!r}. Expected type: 'BItem' or 'dict'")
+
+        item = item.to_dict() if isinstance(item, BItem) else dict(item).copy()
+
+        request_params = {"item": item}
+        self._add_request_param(request_params, "replace", replace)
+        self._request_params_add_user_info(request_params)
+        return request_params
+
+    def _prepare_item_move(self, *, pos, uid, pos_dest, before_uid, after_uid):
+        """
+        Prepare parameters for ``item_add`` operation.
+        """
+        request_params = {}
+        self._add_request_param(request_params, "pos", pos)
+        self._add_request_param(request_params, "uid", uid)
+        self._add_request_param(request_params, "pos_dest", pos_dest)
+        self._add_request_param(request_params, "before_uid", before_uid)
+        self._add_request_param(request_params, "after_uid", after_uid)
 
         return request_params
 
-    def _prepare_item_get(self, *, pos, uid):
+    def _prepare_item_move_batch(self, *, uids, pos_dest, before_uid, after_uid, reorder):
         """
-        Prepare parameters for ``item_get`` operation
+        Prepare parameters for ``item_add`` operation.
         """
         request_params = {}
-        if pos:
-            request_params["pos"] = pos
-        if uid:
-            request_params["uid"] = uid
+        self._add_request_param(request_params, "uids", uids)
+        self._add_request_param(request_params, "pos_dest", pos_dest)
+        self._add_request_param(request_params, "before_uid", before_uid)
+        self._add_request_param(request_params, "after_uid", after_uid)
+        self._add_request_param(request_params, "reorder", reorder)
+
+        return request_params
+
+    def _prepare_item_get_remove(self, *, pos, uid):
+        """
+        Prepare parameters for ``item_get`` and ``item_remove`` operation
+        """
+        request_params = {}
+        self._add_request_param(request_params, "pos", pos)
+        self._add_request_param(request_params, "uid", uid)
+        return request_params
+
+    def _prepare_item_remove_batch(self, *, uids, ignore_missing):
+        """
+        Prepare parameters for ``item_remove_batch`` operation
+        """
+        request_params = {"uids": uids}
+        self._add_request_param(request_params, "ignore_missing", ignore_missing)
+        return request_params
+
+    def _prepare_item_execute(self, *, item):
+        """
+        Prepare parameters for ``item_execute`` operation.
+        """
+        if not isinstance(item, BItem) and not isinstance(item, Mapping):
+            raise TypeError(f"Incorrect item type {type(item)!r}. Expected type: 'BItem' or 'dict'")
+
+        item = item.to_dict() if isinstance(item, BItem) else dict(item).copy()
+
+        request_params = {"item": item}
+        self._request_params_add_user_info(request_params)
+        return request_params
+
+    def _prepare_queue_mode_set(self, **kwargs):
+        """
+        Prepare parameters for ``queue_mode_set`` operation.
+        """
+        if "mode" in kwargs:
+            request_params = {"mode": kwargs["mode"]}
+        else:
+            request_params = {"mode": kwargs}
+        return request_params
+
+    def _process_response_queue_get(self, response):
+        """
+        ``queue_get``: process response
+        """
+        if response["success"] is True:
+            self._current_plan_queue = copy.deepcopy(response["items"])
+            self._current_running_item = copy.deepcopy(response["running_item"])
+            self._current_plan_queue_uid = copy.deepcopy(response["plan_queue_uid"])
+
+    def _generate_response_queue_get(self):
+        """
+        ``queue_get``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "plan_queue_uid": self._current_plan_queue_uid,
+            "running_item": copy.deepcopy(self._current_running_item),
+            "items": copy.deepcopy(self._current_plan_queue),
+        }
+        return response
+
+    def _process_response_history_get(self, response):
+        """
+        ``history_get``: process response
+        """
+        if response["success"] is True:
+            self._current_plan_history = copy.deepcopy(response["items"])
+            self._current_plan_history_uid = copy.deepcopy(response["plan_history_uid"])
+
+    def _generate_response_history_get(self):
+        """
+        ``history_get``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "plan_history_uid": self._current_plan_history_uid,
+            "items": copy.deepcopy(self._current_plan_history),
+        }
+        return response
+
+    def _prepare_plans_devices_allowed(self):
+        """
+        Prepare parameters for ``plans_allowed`` and ``devices_allowed`` operation.
+        """
+        request_params = {}
+        self._request_params_add_user_info(request_params)
+
+        # User name should not be includedin the request
+        if "user" in request_params:
+            del request_params["user"]
+
+        return request_params
+
+    def _process_response_plans_allowed(self, response):
+        """
+        ``plans_allowed``: process response
+        """
+        if response["success"] is True:
+            self._current_plans_allowed = copy.deepcopy(response["plans_allowed"])
+            self._current_plans_allowed_uid = copy.deepcopy(response["plans_allowed_uid"])
+
+    def _generate_response_plans_allowed(self):
+        """
+        ``plans_allowed``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "plans_allowed_uid": self._current_plans_allowed_uid,
+            "plans_allowed": copy.deepcopy(self._current_plans_allowed),
+        }
+        return response
+
+    def _process_response_devices_allowed(self, response):
+        """
+        ``devices_allowed``: process response
+        """
+        if response["success"] is True:
+            self._current_devices_allowed = copy.deepcopy(response["devices_allowed"])
+            self._current_devices_allowed_uid = copy.deepcopy(response["devices_allowed_uid"])
+
+    def _generate_response_devices_allowed(self):
+        """
+        ``devices_allowed``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "devices_allowed_uid": self._current_devices_allowed_uid,
+            "devices_allowed": copy.deepcopy(self._current_devices_allowed),
+        }
+        return response
+
+    def _process_response_plans_existing(self, response):
+        """
+        ``plans_existing``: process response
+        """
+        if response["success"] is True:
+            self._current_plans_existing = copy.deepcopy(response["plans_existing"])
+            self._current_plans_existing_uid = copy.deepcopy(response["plans_existing_uid"])
+
+    def _generate_response_plans_existing(self):
+        """
+        ``plans_existing``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "plans_existing_uid": self._current_plans_existing_uid,
+            "plans_existing": copy.deepcopy(self._current_plans_existing),
+        }
+        return response
+
+    def _process_response_devices_existing(self, response):
+        """
+        ``devices_existing``: process response
+        """
+        if response["success"] is True:
+            self._current_devices_existing = copy.deepcopy(response["devices_existing"])
+            self._current_devices_existing_uid = copy.deepcopy(response["devices_existing_uid"])
+
+    def _generate_response_devices_existing(self):
+        """
+        ``devices_existing``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "devices_existing_uid": self._current_devices_existing_uid,
+            "devices_existing": copy.deepcopy(self._current_devices_existing),
+        }
+        return response
+
+    def _prepare_permissions_reload(self, *, reload_plans_devices, reload_permissions):
+        """
+        Prepare parameters for ``permissions_reload``
+        """
+        request_params = {}
+        self._add_request_param(request_params, "reload_plans_devices", reload_plans_devices)
+        self._add_request_param(request_params, "reload_permissions", reload_permissions)
+        return request_params
+
+    def _prepare_permissions_set(self, *, user_group_permissions):
+        """
+        Prepare parameters for ``permissions_set``
+        """
+        request_params = {"user_group_permissions": user_group_permissions}
+        return request_params
+
+    def _prepare_script_upload(self, *, script, update_re, run_in_background):
+        """
+        Prepare parameters for ``script_upload``
+        """
+        request_params = {"script": script}
+        self._add_request_param(request_params, "update_re", update_re)
+        self._add_request_param(request_params, "run_in_background", run_in_background)
+        return request_params
+
+    def _prepare_function_execute(self, *, item, run_in_background):
+        """
+        Prepare parameters for ``script_upload``
+        """
+        if not isinstance(item, BItem) and not isinstance(item, Mapping):
+            raise TypeError(f"Incorrect item type {type(item)!r}. Expected type: 'BItem' or 'dict'")
+
+        item = item.to_dict() if isinstance(item, BItem) else dict(item).copy()
+
+        request_params = {"item": item}
+        self._add_request_param(request_params, "run_in_background", run_in_background)
+        self._request_params_add_user_info(request_params)
+        return request_params
+
+    def _prepare_task_result(self, *, task_uid):
+        """
+        Prepare parameters for ``task_result`` and ``task_status``
+        """
+        request_params = {"task_uid": task_uid}
+        return request_params
+
+    def _verify_options_re_runs(self, option):
+        """
+        Options for ``re_runs`` API is processed locally, so verify that the option
+        value is supported.
+        """
+        allowed_options = (None, "active", "open", "closed")
+        if option not in allowed_options:
+            raise IndexError(f"Unsupported option {option!r}. Supported options: {allowed_options}")
+
+    def _process_response_re_runs(self, response, *, option):
+        """
+        ``re_runs``: process response
+        """
+        if response["success"] is True:
+            self._current_run_list = copy.deepcopy(response["run_list"])
+            self._current_run_list_uid = response["run_list_uid"]
+            response["run_list"] = self._select_re_runs_items(option=option)
+        return response
+
+    def _select_re_runs_items(self, *, option):
+        """
+        ``re_runs``: select runs from the full list based on the option.
+        """
+        if option == "open":
+            run_list = [_ for _ in self._current_run_list if _["is_open"]]
+        elif option == "closed":
+            run_list = [_ for _ in self._current_run_list if not _["is_open"]]
+        else:
+            run_list = copy.deepcopy(self._current_run_list)
+        return run_list
+
+    def _generate_response_re_runs(self, *, option):
+        """
+        ``re_runs``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "run_list_uid": self._current_run_list_uid,
+            "run_list": self._select_re_runs_items(option=option),
+        }
+        return response
+
+    def _prepare_re_pause(self, *, option):
+        """
+        Prepare parameters for ``re_pause`` operation
+        """
+        request_params = {}
+        self._add_request_param(request_params, "option", option)
         return request_params

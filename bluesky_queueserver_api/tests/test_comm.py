@@ -40,16 +40,18 @@ def test_ReManagerAPI_Base_01():
 # fmt: on
 def test_ReManagerAPI_Base_02(request_fail_exceptions, response, success, msg):
     RM = ReManagerAPI_Base(request_fail_exceptions=request_fail_exceptions)
+    request = {"method": "test"}
     if success or not request_fail_exceptions:
-        RM._check_response(response=response)
+        RM._check_response(request=request, response=response)
     else:
         with pytest.raises(RM.RequestFailedError, match=re.escape(msg)):
-            RM._check_response(response=response)
+            RM._check_response(request=request, response=response)
 
         try:
-            RM._check_response(response=response)
+            RM._check_response(request=request, response=response)
         except RM.RequestFailedError as ex:
             assert ex.response == response
+            assert ex.request == request
         else:
             assert False, "Exception was not raised"
 

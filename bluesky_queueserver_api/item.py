@@ -35,6 +35,26 @@ class BItem:
             if kwargs:
                 self.kwargs = kwargs
 
+        self._add_optional_items()
+
+    def _add_optional_items(self):
+        """
+        Add empty optional elements to ``self.item_dict`` if they do not exist.
+        """
+        dict_optional_items = {"args": [], "kwargs": {}, "meta": {}}
+        for k, v in dict_optional_items.items():
+            if k not in self._item_dict:
+                self._item_dict[k] = v
+
+    def _remove_optional_items_from_dict(self, item_dict):
+        """
+        Remove optional elements from ``item_dict`` if they are empty.
+        """
+        optional_items = ["args", "kwargs", "meta"]
+        for k in optional_items:
+            if (k in item_dict) and not item_dict[k]:
+                del item_dict[k]
+
     def _validate_item_dict(self, item_dict):
         """
         Perform validation of item dictionary. Convert mappings to dicts and iterables to lists.
@@ -174,38 +194,34 @@ class BItem:
     @property
     def args(self):
         """
-        The read-write property sets or gets the copy of the list of item args. This is an optional parameter.
-        An empty list is returned if args are not set.
-
-        Raises
-        ------
-        TypeError
-            Raised if the new value is not a list.
+        The read-write property sets or gets the list of item args. An empty list is returned
+        if args are not set.
         """
-        return copy.deepcopy(self._item_dict.get("args", []))
+        return self._item_dict["args"]
 
     @args.setter
     def args(self, item_args):
         item_args = self._validate_args(item_args)
-        self._item_dict["args"] = copy.deepcopy(item_args)
+        if "args" not in self._item_dict:
+            self._item_dict["args"] = []
+        self._item_dict["args"].clear()
+        self._item_dict["args"].extend(copy.deepcopy(item_args))
 
     @property
     def kwargs(self):
         """
         The read-write property sets or gets the copy of the dictionary of item kwargs.
-        This is an optional parameter. An empty dictionary is returned if kwargs are not set.
-
-        Raises
-        ------
-        TypeError
-            Raised if the new value is not a dictionary.
+        An empty dictionary is returned if kwargs are not set.
         """
-        return copy.deepcopy(self._item_dict.get("kwargs", {}))
+        return self._item_dict["kwargs"]
 
     @kwargs.setter
     def kwargs(self, item_kwargs):
         item_kwargs = self._validate_kwargs(item_kwargs)
-        self._item_dict["kwargs"] = copy.deepcopy(item_kwargs)
+        if "kwargs" not in self._item_dict:
+            self._item_dict["kwargs"] = {}
+        self._item_dict["kwargs"].clear()
+        self._item_dict["kwargs"].update(copy.deepcopy(item_kwargs))
 
     @property
     def item_uid(self):
@@ -229,7 +245,7 @@ class BItem:
     @property
     def meta(self):
         """
-        The read-write property that sets or gets the copy of item metadata. Metadata is currenly
+        The read-write property that sets or gets the item metadata. Metadata is currenly
         used only for plans. Metadata set for instructions and functions is ignored. This is
         an optional parameter. An empty dictionary is returned if kwargs are not set. Metadata
         may be represented as a dictionary or a list of dictionaries. The dictionaries in the list
@@ -240,19 +256,24 @@ class BItem:
         TypeError
             Raised if the new value is not a dictionary.
         """
-        return copy.deepcopy(self._item_dict.get("meta", {}))
+        return self._item_dict["meta"]
 
     @meta.setter
     def meta(self, meta):
         meta = self._validate_meta(meta)
-        self._item_dict["meta"] = copy.deepcopy(meta)
+        if "meta" not in self._item_dict:
+            self._item_dict["meta"] = {}
+        self._item_dict["meta"].clear()
+        self._item_dict["meta"].update(copy.deepcopy(meta))
 
     def to_dict(self):
         """
         The method returns the copy of the dictionary with item parameters, which is ready to be
         passed to the server.
         """
-        return copy.deepcopy(self._item_dict)
+        item_dict = copy.deepcopy(self._item_dict)
+        self._remove_optional_items_from_dict(item_dict)
+        return item_dict
 
     def from_dict(self, item_dict):
         """
@@ -269,6 +290,7 @@ class BItem:
             )
         self._item_dict.clear()
         self._item_dict.update(dict_to_copy)
+        self._add_optional_items()
 
     @property
     def dict_ref(self):
@@ -278,10 +300,10 @@ class BItem:
         return self._item_dict
 
     def __str__(self):
-        return self._item_dict.__str__()
+        return self.to_dict().__str__()
 
     def __repr__(self):
-        return self._item_dict.__repr__()
+        return self.to_dict().__repr__()
 
 
 class _BItemSpecialized(BItem):
