@@ -9,6 +9,7 @@ from .api_docstrings import (
     _doc_api_status,
     _doc_api_ping,
     _doc_api_wait_for_idle,
+    _doc_api_wait_for_idle_or_paused,
     _doc_api_item_add,
     _doc_api_item_add_batch,
     _doc_api_item_update,
@@ -41,6 +42,11 @@ from .api_docstrings import (
     _doc_api_task_status,
     _doc_api_task_result,
     _doc_api_re_runs,
+    _doc_api_re_pause,
+    _doc_api_re_resume,
+    _doc_api_re_stop,
+    _doc_api_re_abort,
+    _doc_api_re_halt,
 )
 
 
@@ -278,6 +284,13 @@ class API_Async_Mixin(API_Base):
 
         await self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
 
+    async def wait_for_idle_or_paused(self, *, timeout=default_wait_timeout, monitor=None):
+        # Docstring is maintained separately
+        def condition(status):
+            return status["manager_state"] in ("paused", "idle")
+
+        await self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
+
     # =====================================================================================
     #                 API for monitoring and control of Queue
 
@@ -504,10 +517,37 @@ class API_Async_Mixin(API_Base):
             response = self._generate_response_re_runs(option=option)
         return response
 
+    async def re_pause(self, option=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_re_pause(option=option)
+        self._clear_status_timestamp()
+        return await self.send_request(method="re_pause", params=request_params)
+
+    async def re_resume(self):
+        # Docstring is maintained separately
+        self._clear_status_timestamp()
+        return await self.send_request(method="re_resume")
+
+    async def re_stop(self):
+        # Docstring is maintained separately
+        self._clear_status_timestamp()
+        return await self.send_request(method="re_stop")
+
+    async def re_abort(self):
+        # Docstring is maintained separately
+        self._clear_status_timestamp()
+        return await self.send_request(method="re_abort")
+
+    async def re_halt(self):
+        # Docstring is maintained separately
+        self._clear_status_timestamp()
+        return await self.send_request(method="re_halt")
+
 
 API_Async_Mixin.status.__doc__ = _doc_api_status
 API_Async_Mixin.status.__doc__ = _doc_api_ping
 API_Async_Mixin.wait_for_idle.__doc__ = _doc_api_wait_for_idle
+API_Async_Mixin.wait_for_idle_or_paused.__doc__ = _doc_api_wait_for_idle_or_paused
 API_Async_Mixin.item_add.__doc__ = _doc_api_item_add
 API_Async_Mixin.item_add_batch.__doc__ = _doc_api_item_add_batch
 API_Async_Mixin.item_update.__doc__ = _doc_api_item_update
@@ -540,3 +580,8 @@ API_Async_Mixin.function_execute.__doc__ = _doc_api_function_execute
 API_Async_Mixin.task_status.__doc__ = _doc_api_task_status
 API_Async_Mixin.task_result.__doc__ = _doc_api_task_result
 API_Async_Mixin.re_runs.__doc__ = _doc_api_re_runs
+API_Async_Mixin.re_pause.__doc__ = _doc_api_re_pause
+API_Async_Mixin.re_resume.__doc__ = _doc_api_re_resume
+API_Async_Mixin.re_stop.__doc__ = _doc_api_re_stop
+API_Async_Mixin.re_abort.__doc__ = _doc_api_re_abort
+API_Async_Mixin.re_halt.__doc__ = _doc_api_re_halt

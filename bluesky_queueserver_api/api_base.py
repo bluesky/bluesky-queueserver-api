@@ -546,3 +546,11 @@ class API_Base:
             "run_list": self._select_re_runs_items(option=option),
         }
         return response
+
+    def _prepare_re_pause(self, *, option):
+        """
+        Prepare parameters for ``re_pause`` operation
+        """
+        request_params = {}
+        self._add_request_param(request_params, "option", option)
+        return request_params

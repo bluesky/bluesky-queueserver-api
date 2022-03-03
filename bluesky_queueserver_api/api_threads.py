@@ -9,6 +9,7 @@ from .api_docstrings import (
     _doc_api_status,
     _doc_api_ping,
     _doc_api_wait_for_idle,
+    _doc_api_wait_for_idle_or_paused,
     _doc_api_item_add,
     _doc_api_item_add_batch,
     _doc_api_item_update,
@@ -41,6 +42,11 @@ from .api_docstrings import (
     _doc_api_task_status,
     _doc_api_task_result,
     _doc_api_re_runs,
+    _doc_api_re_pause,
+    _doc_api_re_resume,
+    _doc_api_re_stop,
+    _doc_api_re_abort,
+    _doc_api_re_halt,
 )
 
 
@@ -271,6 +277,13 @@ class API_Threads_Mixin(API_Base):
         # Docstring is maintained separately
         def condition(status):
             return status["manager_state"] == "idle"
+
+        self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
+
+    def wait_for_idle_or_paused(self, *, timeout=default_wait_timeout, monitor=None):
+        # Docstring is maintained separately
+        def condition(status):
+            return status["manager_state"] in ("paused", "idle")
 
         self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
 
@@ -505,10 +518,37 @@ class API_Threads_Mixin(API_Base):
             response = self._generate_response_re_runs(option=option)
         return response
 
+    def re_pause(self, option=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_re_pause(option=option)
+        self._clear_status_timestamp()
+        return self.send_request(method="re_pause", params=request_params)
+
+    def re_resume(self):
+        # Docstring is maintained separately
+        self._clear_status_timestamp()
+        return self.send_request(method="re_resume")
+
+    def re_stop(self):
+        # Docstring is maintained separately
+        self._clear_status_timestamp()
+        return self.send_request(method="re_stop")
+
+    def re_abort(self):
+        # Docstring is maintained separately
+        self._clear_status_timestamp()
+        return self.send_request(method="re_abort")
+
+    def re_halt(self):
+        # Docstring is maintained separately
+        self._clear_status_timestamp()
+        return self.send_request(method="re_halt")
+
 
 API_Threads_Mixin.status.__doc__ = _doc_api_status
 API_Threads_Mixin.status.__doc__ = _doc_api_ping
 API_Threads_Mixin.wait_for_idle.__doc__ = _doc_api_wait_for_idle
+API_Threads_Mixin.wait_for_idle_or_paused.__doc__ = _doc_api_wait_for_idle_or_paused
 API_Threads_Mixin.item_add.__doc__ = _doc_api_item_add
 API_Threads_Mixin.item_add_batch.__doc__ = _doc_api_item_add_batch
 API_Threads_Mixin.item_update.__doc__ = _doc_api_item_update
@@ -541,3 +581,8 @@ API_Threads_Mixin.function_execute.__doc__ = _doc_api_function_execute
 API_Threads_Mixin.task_status.__doc__ = _doc_api_task_status
 API_Threads_Mixin.task_result.__doc__ = _doc_api_task_result
 API_Threads_Mixin.re_runs.__doc__ = _doc_api_re_runs
+API_Threads_Mixin.re_pause.__doc__ = _doc_api_re_pause
+API_Threads_Mixin.re_resume.__doc__ = _doc_api_re_resume
+API_Threads_Mixin.re_stop.__doc__ = _doc_api_re_stop
+API_Threads_Mixin.re_abort.__doc__ = _doc_api_re_abort
+API_Threads_Mixin.re_halt.__doc__ = _doc_api_re_halt

@@ -1735,6 +1735,114 @@ def test_re_runs_01(re_manager, fastapi_server, protocol, library, options, n_el
 
 
 # fmt: off
+@pytest.mark.parametrize("pause_option, continue_option", [
+    (None, "resume"),
+    ("deferred", "resume"),
+    ("immediate", "resume"),
+    (None, "stop"),
+    (None, "abort"),
+    (None, "halt"),
+])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_re_pause_01(re_manager, fastapi_server, protocol, library, pause_option, continue_option):  # noqa: F811
+    """
+    ``re_pause``, ``re_resume``, ``re_stop``, ``re_abort``, ``re_halt``: basic tests
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    plan = BPlan("count", ["det1"], num=5, delay=1)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue, items_in_history, manager_state):
+        assert status["items_in_queue"] == items_in_queue
+        assert status["items_in_history"] == items_in_history
+        assert status["manager_state"] == manager_state
+
+    if not _is_async(library):
+        RM = rm_api_class()
+
+        check_resp(RM.environment_open())
+        RM.wait_for_idle()
+        check_status(RM.status(), 0, 0, "idle")
+
+        check_resp(RM.item_add(plan))
+        check_status(RM.status(), 1, 0, "idle")
+
+        check_resp(RM.queue_start())
+        ttime.sleep(1)
+
+        params = [] if pause_option is None else [pause_option]
+        check_resp(RM.re_pause(*params))
+
+        RM.wait_for_idle_or_paused()
+        check_status(RM.status(), 0, 0, "paused")
+
+        if continue_option == "resume":
+            check_resp(RM.re_resume())
+        elif continue_option == "stop":
+            check_resp(RM.re_stop())
+        elif continue_option == "abort":
+            check_resp(RM.re_abort())
+        elif continue_option == "halt":
+            check_resp(RM.re_halt())
+        else:
+            assert False, f"Unknown option: {continue_option!r}"
+
+        RM.wait_for_idle()
+
+        check_resp(RM.environment_close())
+        RM.wait_for_idle()
+        check_status(RM.status(), 0 if continue_option == "resume" else 1, 1, "idle")
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle()
+            check_status(await RM.status(), 0, 0, "idle")
+
+            check_resp(await RM.item_add(plan))
+            check_status(await RM.status(), 1, 0, "idle")
+
+            check_resp(await RM.queue_start())
+            ttime.sleep(1)
+
+            params = [] if pause_option is None else [pause_option]
+            check_resp(await RM.re_pause(*params))
+
+            await RM.wait_for_idle_or_paused()
+            check_status(await RM.status(), 0, 0, "paused")
+
+            if continue_option == "resume":
+                check_resp(await RM.re_resume())
+            elif continue_option == "stop":
+                check_resp(await RM.re_stop())
+            elif continue_option == "abort":
+                check_resp(await RM.re_abort())
+            elif continue_option == "halt":
+                check_resp(await RM.re_halt())
+            else:
+                assert False, f"Unknown option: {continue_option!r}"
+
+            await RM.wait_for_idle()
+
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle()
+            check_status(await RM.status(), 0 if continue_option == "resume" else 1, 1, "idle")
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
 @pytest.mark.parametrize("timeout", [None, 2])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])

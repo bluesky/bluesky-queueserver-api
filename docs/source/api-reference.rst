@@ -82,7 +82,7 @@ API for controlling RE Manager
     zmq.REManagerAPI.status
     zmq.REManagerAPI.ping
     zmq.REManagerAPI.wait_for_idle
-
+    zmq.REManagerAPI.wait_for_idle_or_paused
 
 API for controlling RE Environment
 **********************************
@@ -163,6 +163,11 @@ API for controlling Run Engine
    :toctree: generated
 
     zmq.REManagerAPI.re_runs
+    zmq.REManagerAPI.re_pause
+    zmq.REManagerAPI.re_resume
+    zmq.REManagerAPI.re_stop
+    zmq.REManagerAPI.re_abort
+    zmq.REManagerAPI.re_halt
 
 Asynchronous Communication with 0MQ Server
 ------------------------------------------

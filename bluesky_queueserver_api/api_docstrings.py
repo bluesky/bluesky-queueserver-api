@@ -398,6 +398,11 @@ _doc_api_wait_for_idle = """
             # < process timeout error, RE Manager is probably not idle >
 """
 
+_doc_api_wait_for_idle_or_paused = """
+    Wait for RE Manager to switch to ``idle`` or ``paused`` state. See the description
+    of ``wait_for_idle`` API for more details.
+"""
+
 _doc_api_item_add = """
     Add item to the queue. The item may be a plan or an instruction represented
     as a dictionary or as an instance of ``BItem``, ``BPlan`` or ``BInst`` classes.
@@ -1762,4 +1767,90 @@ _doc_api_re_runs = """
         reply = await RM.re_runs("active")  # Returns all active runs
         reply = await RM.re_runs("open")    # Returns open runs
         reply = await RM.re_runs("closed")  # Returns closed runs
+"""
+
+_doc_api_re_pause = """
+    Request Run Engine to pause currently running plan. The request fails if RE Worker
+    environment does not exist or no plan is currently running. The request only initates
+    the sequence of pausing the plan.
+
+    If deferred pause is requested past the last checkpoint of the plan, the plan is run
+    to completion and the queue is stopped. The stopped queue can not be resumed using
+    **re_resume** method, instead queue_start method should be used to restart the queue.
+    Check manager_state status flag to determine if the queue is stopped (*'idle'* state)
+    or Run Engine is paused (*'paused'* state).
+
+    The pause_pending status flag is set if pause request is successfully passed to Run Engine.
+    It may take significant time for deferred pause to be processed. The flag is cleared once
+    the pending pause request is processed (the plan is paused or plan is completed and
+    the queue is stopped).
+
+    Parameters
+    ----------
+    option: str ('immediate' or 'deferred', optional)
+        Pause the plan immediately (roll back to the previous checkpoint) or continue to
+        the next checkpoint. Default: *'deferred'*.
+
+    Returns
+    -------
+    dict
+        Dictionary keys:
+
+        - **success**: *boolean* - success of the request.
+
+        - **msg**: *str* - error message in case the request is rejected by RE Manager.
+
+    Raises
+    ------
+    Exception
+        Reraises the exceptions from ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.re_pause()             # Initiate deferred pause
+        RM.re_pause("deferred")   # Initiate deferred pause
+        RM.re_pause("immediate")  # Initiate immediate pause
+
+        RM.wait_for_idle_or_paused()
+
+        RM.re_resume()
+        RM.re_stop()
+        RM.re_abort()
+        RM.re_halt()
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.re_pause()             # Initiate deferred pause
+        await RM.re_pause("deferred")   # Initiate deferred pause
+        await RM.re_pause("immediate")  # Initiate immediate pause
+
+        await RM.wait_for_idle_or_paused()
+
+        await RM.re_resume()
+        await RM.re_stop()
+        await RM.re_abort()
+        await RM.re_halt()
+"""
+
+_doc_api_re_resume = """
+    Request Run Engine to resume paused plan. See documentation for ``re_pause`` API
+    for more detailed information.
+"""
+
+_doc_api_re_stop = """
+    Request Run Engine to stop paused plan. See documentation for ``re_pause`` API
+    for more detailed information.
+"""
+
+_doc_api_re_abort = """
+    Request Run Engine to abort paused plan. See documentation for ``re_pause`` API
+    for more detailed information.
+"""
+
+_doc_api_re_halt = """
+    Request Run Engine to halt paused plan. See documentation for ``re_pause`` API
+    for more detailed information.
 """
