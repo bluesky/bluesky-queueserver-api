@@ -36,6 +36,10 @@ from .api_docstrings import (
     _doc_api_environment_open,
     _doc_api_environment_close,
     _doc_api_environment_destroy,
+    _doc_api_script_upload,
+    _doc_api_function_execute,
+    _doc_api_task_status,
+    _doc_api_task_result,
 )
 
 
@@ -461,6 +465,32 @@ class API_Async_Mixin(API_Base):
         self._clear_status_timestamp()
         return await self.send_request(method="permissions_set", params=request_params)
 
+    async def script_upload(self, script, *, update_re=None, run_in_background=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_script_upload(
+            script=script, update_re=update_re, run_in_background=run_in_background
+        )
+        self._clear_status_timestamp()
+        return await self.send_request(method="script_upload", params=request_params)
+
+    async def function_execute(self, item, *, run_in_background=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_function_execute(item=item, run_in_background=run_in_background)
+        self._clear_status_timestamp()
+        return await self.send_request(method="function_execute", params=request_params)
+
+    async def task_status(self, task_uid):
+        # Docstring is maintained separately
+        request_params = self._prepare_task_result(task_uid=task_uid)
+        self._clear_status_timestamp()
+        return await self.send_request(method="task_status", params=request_params)
+
+    async def task_result(self, task_uid):
+        # Docstring is maintained separately
+        request_params = self._prepare_task_result(task_uid=task_uid)
+        self._clear_status_timestamp()
+        return await self.send_request(method="task_result", params=request_params)
+
 
 API_Async_Mixin.status.__doc__ = _doc_api_status
 API_Async_Mixin.status.__doc__ = _doc_api_ping
@@ -492,3 +522,7 @@ API_Async_Mixin.permissions_set.__doc__ = _doc_api_permissions_set
 API_Async_Mixin.environment_open.__doc__ = _doc_api_environment_open
 API_Async_Mixin.environment_close.__doc__ = _doc_api_environment_close
 API_Async_Mixin.environment_destroy.__doc__ = _doc_api_environment_destroy
+API_Async_Mixin.script_upload.__doc__ = _doc_api_script_upload
+API_Async_Mixin.function_execute.__doc__ = _doc_api_function_execute
+API_Async_Mixin.task_status.__doc__ = _doc_api_task_status
+API_Async_Mixin.task_result.__doc__ = _doc_api_task_result

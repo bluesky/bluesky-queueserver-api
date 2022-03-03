@@ -11,7 +11,7 @@ from bluesky_queueserver_api.zmq import REManagerAPI as REManagerAPI_zmq_threads
 from bluesky_queueserver_api.zmq.aio import REManagerAPI as REManagerAPI_zmq_async
 from bluesky_queueserver_api.http import REManagerAPI as REManagerAPI_http_threads
 from bluesky_queueserver_api.http.aio import REManagerAPI as REManagerAPI_http_async
-from bluesky_queueserver_api import BPlan, WaitMonitor
+from bluesky_queueserver_api import BPlan, BFunc, WaitMonitor
 
 _plan1 = {"name": "count", "args": [["det1", "det2"]], "item_type": "plan"}
 _user = "Test User"
@@ -1533,6 +1533,118 @@ def test_permissions_get_set_01(re_manager, fastapi_server, protocol, library): 
             allowed_plans = resp7["plans_allowed"]
 
             assert allowed_plans != {}
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("test_option", ["script_upload", "function_execute"])
+@pytest.mark.parametrize("run_in_background", [False, True])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_script_upload_01(
+    re_manager, fastapi_server, protocol, library, run_in_background, test_option  # noqa: F811
+):
+    """
+    ``script_upload``, ``function_execute``, ``task_status``, ``task_result``: basic tests
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    script = "import time as ttime\nttime.sleep(3)\n"
+    function = BFunc("function_sleep", 3)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, worker_environment_exists, manager_state):
+        assert status["worker_environment_exists"] == worker_environment_exists
+        assert status["manager_state"] == manager_state
+
+    if not _is_async(library):
+        RM = rm_api_class()
+
+        check_resp(RM.environment_open())
+        RM.wait_for_idle()
+        check_status(RM.status(), True, "idle")
+
+        if test_option == "script_upload":
+            resp1 = RM.script_upload(script, run_in_background=run_in_background)
+            assert resp1["success"] is True
+            task_uid = resp1["task_uid"]
+        elif test_option == "function_execute":
+            resp1 = RM.function_execute(function, run_in_background=run_in_background)
+            assert resp1["success"] is True
+            task_uid = resp1["task_uid"]
+        else:
+            assert False, f"Unknown test option: {test_option}"
+
+        ttime.sleep(1)
+        status = RM.status()
+        assert status["worker_background_tasks"] == (1 if run_in_background else 0)
+
+        for _ in range(10):
+            resp2 = RM.task_status(task_uid)
+            assert resp2["success"] is True
+            if resp2["status"] == "completed":
+                break
+            ttime.sleep(0.5)
+
+        resp3 = RM.task_result(task_uid)
+        assert resp3["success"] is True
+        assert resp3["status"] == "completed"
+        assert resp3["result"]["success"] is True
+
+        check_resp(RM.environment_close())
+        RM.wait_for_idle()
+        check_status(RM.status(), False, "idle")
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle()
+            check_status(await RM.status(), True, "idle")
+
+            if test_option == "script_upload":
+                resp1 = await RM.script_upload(script, run_in_background=run_in_background)
+                assert resp1["success"] is True
+                task_uid = resp1["task_uid"]
+            elif test_option == "function_execute":
+                resp1 = await RM.function_execute(function, run_in_background=run_in_background)
+                assert resp1["success"] is True
+                task_uid = resp1["task_uid"]
+            else:
+                assert False, f"Unknown test option: {test_option}"
+
+            await asyncio.sleep(1)
+            status = await RM.status()
+            assert status["worker_background_tasks"] == (1 if run_in_background else 0)
+
+            for _ in range(10):
+                resp2 = await RM.task_status(task_uid)
+                assert resp2["success"] is True
+                if resp2["status"] == "completed":
+                    break
+                await asyncio.sleep(0.5)
+
+            resp2 = await RM.task_status(task_uid)
+            assert resp2["success"] is True
+            assert resp2["status"] == "completed"
+
+            resp3 = await RM.task_result(task_uid)
+            assert resp3["success"] is True
+            assert resp3["status"] == "completed"
+            assert resp3["result"]["success"] is True
+
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle()
+            check_status(await RM.status(), False, "idle")
 
             await RM.close()
 

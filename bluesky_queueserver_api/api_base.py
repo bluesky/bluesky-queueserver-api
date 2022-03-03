@@ -471,3 +471,33 @@ class API_Base:
         """
         request_params = {"user_group_permissions": user_group_permissions}
         return request_params
+
+    def _prepare_script_upload(self, *, script, update_re, run_in_background):
+        """
+        Prepare parameters for ``script_upload``
+        """
+        request_params = {"script": script}
+        self._add_request_param(request_params, "update_re", update_re)
+        self._add_request_param(request_params, "run_in_background", run_in_background)
+        return request_params
+
+    def _prepare_function_execute(self, *, item, run_in_background):
+        """
+        Prepare parameters for ``script_upload``
+        """
+        if not isinstance(item, BItem) and not isinstance(item, Mapping):
+            raise TypeError(f"Incorrect item type {type(item)!r}. Expected type: 'BItem' or 'dict'")
+
+        item = item.to_dict() if isinstance(item, BItem) else dict(item).copy()
+
+        request_params = {"item": item}
+        self._add_request_param(request_params, "run_in_background", run_in_background)
+        self._request_params_add_user_info(request_params)
+        return request_params
+
+    def _prepare_task_result(self, *, task_uid):
+        """
+        Prepare parameters for ``task_result`` and ``task_status``
+        """
+        request_params = {"task_uid": task_uid}
+        return request_params

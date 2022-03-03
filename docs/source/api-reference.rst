@@ -133,7 +133,7 @@ API for management of RE Queue
     zmq.REManagerAPI.queue_stop_cancel
     zmq.REManagerAPI.queue_mode_set
 
-API for controlling RE History
+API for Controlling RE History
 ******************************
 
 .. autosummary::
@@ -142,6 +142,18 @@ API for controlling RE History
 
     zmq.REManagerAPI.history_get
     zmq.REManagerAPI.history_clear
+
+API for Executing Tasks
+***********************
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    zmq.REManagerAPI.script_upload
+    zmq.REManagerAPI.function_execute
+    zmq.REManagerAPI.task_status
+    zmq.REManagerAPI.task_result
 
 API for controlling Run Engine
 ******************************

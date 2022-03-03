@@ -1465,3 +1465,243 @@ _doc_api_environment_destroy = """
         # Asynchronous code (0MQ, HTTP)
         await RM.environment_destroy()
 """
+
+_doc_api_script_upload = r"""
+    Upload and execute script in RE Worker namespace. The script may add, change or
+    replace objects defined in the namespace, including plans and devices. Dynamic
+    modification of the worker namespace may be used to implement more flexible workflows.
+    The API call updates the lists of existing and allowed plans and devices if necessary.
+    Changes in the lists will be indicated by changed list UIDs. Use ``task_result`` API
+    to check if the script was loaded correctly. Note, that if the task fails, the script
+    is still executed to the point where the exception is raised and the respective changes
+    to the environment are applied.
+
+    Parameters
+    ----------
+    script: str
+        The string that contains the Python script. The rules for the script are the same
+        as for Bluesky startup scripts. The script can use objects already existing in
+        the RE Worker namespace.
+    update_re: boolean (optional, default False)
+        The uploaded scripts may replace Run Engine (``RE``) and Data Broker (``db``)
+        instances in the namespace. In most cases this operation should not be allowed,
+        therefore it is disabled by default (``update_re`` is ``False``), i.e. if the script
+        creates new ``RE`` and ``db`` objects, those objects are discarded. Set this parameter
+        True to allow the server to replace RE and db objects. This parameter has no
+        effect if the script is not creating new instances of ``RE`` and/or ``db``.
+    run_in_background: boolean (optional, default False)
+        Set this parameter True to upload and execute the script in the background
+        (while a plan or another foreground task is running). Generally, it is not
+        recommended to update RE Worker namespace in the background. Background tasks
+        are executed in separate threads and only thread-safe scripts should be uploaded
+        in the background. **Developers of data acquisition workflows and/or user specific
+        code are responsible for thread safety.**
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager, ``task_uid`` - UID of the started
+        task.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        script = "def test_sleep():\n    yield from bps.sleep(5)\n"
+
+        # Synchronous code (0MQ, HTTP)
+        RM.script_upload(script)
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.script_upload(script)
+"""
+
+_doc_api_function_execute = """
+    Start execution of a function in RE Worker namespace. The function must be defined in the
+    namespace (in startup code or a script uploaded using *script_upload* method. The function
+    may be executed as a foreground task (only if RE Manager and RE Worker environment are idle)
+    or as a background task. Background tasks are executed in separate threads and may
+    consume processing or memory resources and interfere with running plans or other tasks.
+    RE Manager does not guarantee thread safety of the user code running in the background.
+    Developers of startup code are fully responsible for preventing threading issues.
+
+    The method allows to pass parameters (*args* and *kwargs*) to the function. Once the task
+    is completed, the results of the function execution, including the return value, can be
+    loaded using *task_result* method. If the task fails, the return value is a string
+    with full traceback of the raised exception. The data types of parameters and return
+    values must be JSON serializable. The task fails if the return value can not be serialized.
+
+    The method only **initiates** execution of the function. If the request is successful
+    (*success=True*), the server starts the task, which attempts to execute the function
+    with given name and parameters. The function may still fail start (e.g. if the user is
+    permitted to execute function with the given name, but the function is not defined
+    in the namespace). Use *'task_result'* method with the returned *task_uid* to
+    check the status of the tasks and load the result upon completion.
+
+    Parameters
+    ----------
+    item: BItem, BFunc or dict
+        BItem, BFunc or dictionary with function name, *args* and *kwargs*. The structure of
+        dictionary is identical to item representing a plan or an instruction, except that
+        ``item_type`` is ``"function"``.
+    run_in_background: boolean (optional, default False)
+        Set this parameter True to upload and execute the script in the background
+        (while a plan or another foreground task is running). Generally, it is not
+        recommended to update RE Worker namespace in the background. Background tasks
+        are executed in separate threads and only thread-safe scripts should be uploaded
+        in the background. **Developers of data acquisition workflows and/or user specific
+        code are responsible for thread safety.**
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager, ``item`` - dictionary of function
+        parameters (may be ``None`` if operation fails), ``task_uid`` - UID of the started task.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        function = BFunc("function_sleep", 10)
+
+        # Synchronous code (0MQ, HTTP)
+        RM.function_execute(function)
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.function_execute(function)
+"""
+
+
+_doc_api_task_status = """
+    Returns the status of one or more tasks executed by the worker process. The request
+    must contain one or more valid task UIDs, returned by one of APIs that starts tasks.
+    A single UID may be passed as a string, multiple UIDs must be passed as as a list
+    of strings. If a UID is passed as a string, then the returned status is also a string,
+    if a list of one or more UIDs is passed, then the status is a dictionary that maps
+    task UIDs and their status. The completed tasks are stored at the server at least
+    for the period determined by retention time (currently 120 seconds after completion
+    of the task). The expired results could be automatically deleted at any time and
+    the method will return the task status as ``"not_found"``.
+
+    Parameters
+    ----------
+    task_uid: str or list(str)
+        A single task UID (*str*) or a list of one or multiple UIDs.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
+        in case the request was rejected by RE Manager, ``task_uid`` - returns UID(s)
+        passed as input parameter, ``status`` - status of the task(s) or ``None``
+        if the request (not task) failed. If task_uid is a string representing single UID,
+        then status is a string that may be one of ``running``, ``completed`` or
+        ``not_found``. If task_uid is a list of strings, then ``status`` is a dictionary
+        that maps task UIDs to status of the respective tasks.
+
+    Raises
+    ------
+    Reraises the exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        function = BFunc("function_sleep", 10)
+
+        # Synchronous code (0MQ, HTTP)
+        reply = RM.function_execute(function)
+        task_uid = reply["task_uid"]
+        # Status of a single task
+        reply = RM.task_status(task_uid)
+        task_status = reply["status"]
+        # Same result, but allows to submit multiple task UIDs
+        reply = RM.task_status([task_uid])
+        task_status = reply["status"][task_uid]
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.function_execute(function)
+        reply = await RM.function_execute(function)
+        task_uid = reply["task_uid"]
+        # Status of a single task
+        reply = await RM.task_status(task_uid)
+        task_status = reply["status"]
+        # Same result, but allows to submit multiple task UIDs
+        reply = await RM.task_status([task_uid])
+        task_status = reply["status"][task_uid]
+"""
+
+_doc_api_task_result = """
+    Get the status and results of task execution. The completed tasks are stored at
+    the server at least for the period determined by retention time (currently
+    120 seconds after completion of the task). The expired results could be
+    automatically deleted at any time and the method will return the task status
+    as ``not_found``.
+
+    Parameters
+    ----------
+    task_uid: str
+        A single task UID.
+
+    Returns
+    -------
+    dict
+        Dictionary keys:
+
+        - **success**: *boolean* - success of the request.
+
+        - **msg**: *str* - error message in case the request is rejected by RE Manager.
+
+        - **task_uid**: *str* - task UID.
+
+        - **status**: *str ("running", "completed", "not_found") or None* - status of the task
+          or *None* if the request (not task) fails.
+
+        - **result**: *dict or None* - dictionary containing the information on a running task,
+          results of execution of the completed task or *None* if the request failed.
+          The contents of the dictionary depends on the returned **status**: "running"
+          (keys: **task_uid**, **start_time** and **run_in_background**), **completed** (keys:
+          **task_uid**, **success** - True/False, **msg** - error message, **return_value** -
+          value returned by the function or a string with full traceback if the task failed,
+          **time_start** and **time_stop**), **not_found** - empty dictionary.
+
+    Raises
+    ------
+    Exception
+        Reraises the exceptions from ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        function = BFunc("function_sleep", 10)
+
+        # Synchronous code (0MQ, HTTP)
+        reply = RM.function_execute(function)
+        task_uid = reply["task_uid"]
+        reply = RM.task_result(task_uid)
+        task_status = reply["status"]
+        task_result = reply["result"]
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.function_execute(function)
+        reply = await RM.function_execute(function)
+        task_uid = reply["task_uid"]
+        reply = await RM.task_result(task_uid)
+        task_status = reply["status"]
+        task_result = reply["result"]
+"""
