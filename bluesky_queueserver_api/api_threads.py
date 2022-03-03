@@ -40,6 +40,7 @@ from .api_docstrings import (
     _doc_api_function_execute,
     _doc_api_task_status,
     _doc_api_task_result,
+    _doc_api_re_runs,
 )
 
 
@@ -492,6 +493,18 @@ class API_Threads_Mixin(API_Base):
         request_params = self._prepare_task_result(task_uid=task_uid)
         return self.send_request(method="task_result", params=request_params)
 
+    def re_runs(self, option=None, *, reload=False):
+        # Docstring is maintained separately
+        self._verify_options_re_runs(option=option)
+        status = self._status(reload=reload)
+        run_list_uid = status["run_list_uid"]
+        if run_list_uid != self._current_run_list_uid:
+            response = self.send_request(method="re_runs")
+            response = self._process_response_re_runs(response, option=option)
+        else:
+            response = self._generate_response_re_runs(option=option)
+        return response
+
 
 API_Threads_Mixin.status.__doc__ = _doc_api_status
 API_Threads_Mixin.status.__doc__ = _doc_api_ping
@@ -527,3 +540,4 @@ API_Threads_Mixin.script_upload.__doc__ = _doc_api_script_upload
 API_Threads_Mixin.function_execute.__doc__ = _doc_api_function_execute
 API_Threads_Mixin.task_status.__doc__ = _doc_api_task_status
 API_Threads_Mixin.task_result.__doc__ = _doc_api_task_result
+API_Threads_Mixin.re_runs.__doc__ = _doc_api_re_runs

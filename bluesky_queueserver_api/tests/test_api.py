@@ -1652,6 +1652,89 @@ def test_script_upload_01(
 
 
 # fmt: off
+@pytest.mark.parametrize("options, n_elements", [
+    ({}, 1),
+    ({"option": "active"}, 1),
+    ({"option": "open"}, 1),
+    ({"option": "closed"}, 0),
+])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_re_runs_01(re_manager, fastapi_server, protocol, library, options, n_elements):  # noqa: F811
+    """
+    ``re_runs``: basic tests
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    plan = BPlan("count", ["det1"], num=5, delay=1)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue, manager_state):
+        assert status["items_in_queue"] == items_in_queue
+        assert status["manager_state"] == manager_state
+
+    if not _is_async(library):
+        RM = rm_api_class()
+
+        check_resp(RM.environment_open())
+        RM.wait_for_idle()
+        check_status(RM.status(), 0, "idle")
+
+        check_resp(RM.item_add(plan))
+        check_status(RM.status(), 1, "idle")
+
+        check_resp(RM.queue_start())
+        ttime.sleep(1)
+
+        resp1 = RM.re_runs(**options)
+        assert resp1["success"] is True
+        assert len(resp1["run_list"]) == n_elements
+        resp1a = RM.re_runs(**options)
+        assert resp1a["run_list"] == resp1["run_list"]
+
+        RM.wait_for_idle()
+
+        check_resp(RM.environment_close())
+        RM.wait_for_idle()
+        check_status(RM.status(), False, "idle")
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle()
+            check_status(await RM.status(), 0, "idle")
+
+            check_resp(await RM.item_add(plan))
+            check_status(await RM.status(), 1, "idle")
+
+            check_resp(await RM.queue_start())
+            ttime.sleep(1)
+
+            resp1 = await RM.re_runs(**options)
+            assert resp1["success"] is True
+            assert len(resp1["run_list"]) == n_elements
+            resp1a = await RM.re_runs(**options)
+            assert resp1a["run_list"] == resp1["run_list"]
+
+            await RM.wait_for_idle()
+
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle()
+            check_status(await RM.status(), False, "idle")
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
 @pytest.mark.parametrize("timeout", [None, 2])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])

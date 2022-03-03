@@ -184,6 +184,8 @@ class API_Base:
         self._current_plans_existing_uid = None
         self._current_devices_existing = {}
         self._current_devices_existing_uid = None
+        self._current_run_list = []
+        self._current_run_list_uid = None
 
     def _clear_status_timestamp(self):
         """
@@ -501,3 +503,46 @@ class API_Base:
         """
         request_params = {"task_uid": task_uid}
         return request_params
+
+    def _verify_options_re_runs(self, option):
+        """
+        Options for ``re_runs`` API is processed locally, so verify that the option
+        value is supported.
+        """
+        allowed_options = (None, "active", "open", "closed")
+        if option not in allowed_options:
+            raise IndexError(f"Unsupported option {option!r}. Supported options: {allowed_options}")
+
+    def _process_response_re_runs(self, response, *, option):
+        """
+        ``re_runs``: process response
+        """
+        if response["success"] is True:
+            self._current_run_list = copy.deepcopy(response["run_list"])
+            self._current_run_list_uid = response["run_list_uid"]
+            response["run_list"] = self._select_re_runs_items(option=option)
+        return response
+
+    def _select_re_runs_items(self, *, option):
+        """
+        ``re_runs``: select runs from the full list based on the option.
+        """
+        if option == "open":
+            run_list = [_ for _ in self._current_run_list if _["is_open"]]
+        elif option == "closed":
+            run_list = [_ for _ in self._current_run_list if not _["is_open"]]
+        else:
+            run_list = copy.deepcopy(self._current_run_list)
+        return run_list
+
+    def _generate_response_re_runs(self, *, option):
+        """
+        ``re_runs``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "run_list_uid": self._current_run_list_uid,
+            "run_list": self._select_re_runs_items(option=option),
+        }
+        return response

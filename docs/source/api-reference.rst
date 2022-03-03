@@ -158,6 +158,12 @@ API for Executing Tasks
 API for controlling Run Engine
 ******************************
 
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    zmq.REManagerAPI.re_runs
+
 Asynchronous Communication with 0MQ Server
 ------------------------------------------
 

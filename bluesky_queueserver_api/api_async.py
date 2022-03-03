@@ -40,6 +40,7 @@ from .api_docstrings import (
     _doc_api_function_execute,
     _doc_api_task_status,
     _doc_api_task_result,
+    _doc_api_re_runs,
 )
 
 
@@ -491,6 +492,18 @@ class API_Async_Mixin(API_Base):
         self._clear_status_timestamp()
         return await self.send_request(method="task_result", params=request_params)
 
+    async def re_runs(self, option=None, *, reload=False):
+        # Docstring is maintained separately
+        self._verify_options_re_runs(option=option)
+        status = await self._status(reload=reload)
+        run_list_uid = status["run_list_uid"]
+        if run_list_uid != self._current_run_list_uid:
+            response = await self.send_request(method="re_runs")
+            response = self._process_response_re_runs(response, option=option)
+        else:
+            response = self._generate_response_re_runs(option=option)
+        return response
+
 
 API_Async_Mixin.status.__doc__ = _doc_api_status
 API_Async_Mixin.status.__doc__ = _doc_api_ping
@@ -526,3 +539,4 @@ API_Async_Mixin.script_upload.__doc__ = _doc_api_script_upload
 API_Async_Mixin.function_execute.__doc__ = _doc_api_function_execute
 API_Async_Mixin.task_status.__doc__ = _doc_api_task_status
 API_Async_Mixin.task_result.__doc__ = _doc_api_task_result
+API_Async_Mixin.re_runs.__doc__ = _doc_api_re_runs
