@@ -1467,7 +1467,7 @@ def test_permissions_get_set_01(re_manager, fastapi_server, protocol, library): 
         assert allowed_plans == {}
 
         # Do not reload permssions from disk
-        resp5 = RM.permissions_reload(reload_permissions=False)
+        resp5 = RM.permissions_reload(restore_permissions=False)
         assert resp5["success"] is True
 
         resp6 = RM.plans_allowed()
@@ -1477,7 +1477,7 @@ def test_permissions_get_set_01(re_manager, fastapi_server, protocol, library): 
         assert allowed_plans == {}
 
         # Reload permssions from disk
-        resp6 = RM.permissions_reload(reload_permissions=True)
+        resp6 = RM.permissions_reload(restore_permissions=True)
         assert resp6["success"] is True
 
         resp7 = RM.plans_allowed()
@@ -1515,7 +1515,7 @@ def test_permissions_get_set_01(re_manager, fastapi_server, protocol, library): 
             assert allowed_plans == {}
 
             # Do not reload permssions from disk
-            resp5 = await RM.permissions_reload(reload_permissions=False)
+            resp5 = await RM.permissions_reload(restore_permissions=False)
             assert resp5["success"] is True
 
             resp6 = await RM.plans_allowed()
@@ -1525,7 +1525,7 @@ def test_permissions_get_set_01(re_manager, fastapi_server, protocol, library): 
             assert allowed_plans == {}
 
             # Reload permssions from disk
-            resp6 = await RM.permissions_reload(reload_permissions=True)
+            resp6 = await RM.permissions_reload(restore_permissions=True)
             assert resp6["success"] is True
 
             resp7 = await RM.plans_allowed()
