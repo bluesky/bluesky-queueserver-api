@@ -458,13 +458,13 @@ class API_Base:
         }
         return response
 
-    def _prepare_permissions_reload(self, *, reload_plans_devices, reload_permissions):
+    def _prepare_permissions_reload(self, *, restore_plans_devices, restore_permissions):
         """
         Prepare parameters for ``permissions_reload``
         """
         request_params = {}
-        self._add_request_param(request_params, "reload_plans_devices", reload_plans_devices)
-        self._add_request_param(request_params, "reload_permissions", reload_permissions)
+        self._add_request_param(request_params, "restore_plans_devices", restore_plans_devices)
+        self._add_request_param(request_params, "restore_permissions", restore_permissions)
         return request_params
 
     def _prepare_permissions_set(self, *, user_group_permissions):

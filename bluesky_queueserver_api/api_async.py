@@ -461,10 +461,10 @@ class API_Async_Mixin(API_Base):
             response = self._generate_response_devices_existing()
         return response
 
-    async def permissions_reload(self, *, reload_plans_devices=None, reload_permissions=None):
+    async def permissions_reload(self, *, restore_plans_devices=None, restore_permissions=None):
         # Docstring is maintained separately
         request_params = self._prepare_permissions_reload(
-            reload_plans_devices=reload_plans_devices, reload_permissions=reload_permissions
+            restore_plans_devices=restore_plans_devices, restore_permissions=restore_permissions
         )
         self._clear_status_timestamp()
         return await self.send_request(method="permissions_reload", params=request_params)
