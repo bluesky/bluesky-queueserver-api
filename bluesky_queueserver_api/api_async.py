@@ -207,6 +207,12 @@ class API_Async_Mixin(API_Base):
                 except Exception:
                     pass
 
+        # Attempt to load the updated status
+        try:
+            await self._status(reload=True)
+        except Exception:
+            pass
+
         if timeout_occurred:
             raise self.WaitTimeoutError("Timeout while waiting for condition")
         if wait_cancelled:

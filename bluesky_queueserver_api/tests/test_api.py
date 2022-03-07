@@ -1973,3 +1973,61 @@ def test_wait_for_idle_02(re_manager, fastapi_server, protocol, library):  # noq
             await RM.close()
 
         asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_wait_for_idle_03(protocol, library):  # noqa: F811
+    """
+    ``wait_for_idle``: run the API without servers
+    """
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    monitor = WaitMonitor()
+    timeout = 2
+
+    if not _is_async(library):
+
+        def cancel_wait():
+            ttime.sleep(timeout)
+            monitor.cancel()
+
+        RM = rm_api_class()
+
+        t = ttime.time()
+        with pytest.raises(RM.WaitTimeoutError):
+            RM.wait_for_idle(timeout=5)
+        assert ttime.time() - t < 10
+
+        thread = threading.Thread(target=cancel_wait)
+        thread.start()
+        with pytest.raises(RM.WaitCancelError, match="Wait for condition was cancelled"):
+            RM.wait_for_idle(monitor=monitor)
+        thread.join()
+
+        RM.close()
+
+    else:
+
+        async def testing():
+            async def cancel_wait():
+                asyncio.sleep(timeout)
+                monitor.cancel()
+
+            RM = rm_api_class()
+
+            t = ttime.time()
+            with pytest.raises(RM.WaitTimeoutError):
+                await RM.wait_for_idle(timeout=5)
+            assert ttime.time() - t < 10
+
+            asyncio.create_task(cancel_wait())
+            with pytest.raises(RM.WaitCancelError, match="Wait for condition was cancelled"):
+                await RM.wait_for_idle(monitor=monitor)
+
+            await RM.close()
+
+        asyncio.run(testing())
