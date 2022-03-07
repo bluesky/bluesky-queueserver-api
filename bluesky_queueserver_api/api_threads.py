@@ -202,7 +202,11 @@ class API_Threads_Mixin(API_Base):
                 except Exception:
                     pass
 
-        self._status(reload=True)  # Load the updated status
+        # Attempt to load the updated status
+        try:
+            self._status(reload=True)
+        except Exception:
+            pass
 
         if timeout_occurred:
             raise self.WaitTimeoutError("Timeout while waiting for condition")
