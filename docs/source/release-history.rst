@@ -13,7 +13,7 @@ Fixed
 
 - Proper handling of exceptions by ``wait_..`` API (such as ``wait_for_idle``). All exceptions
   are handled internally by the functions. If server is not accessible (requests timed out),
-  then the API also times out (``REManagerAPI.RequestTimeoutError`` exception is raised).
+  then the API also times out (``REManagerAPI.WaitTimeoutError`` exception is raised).
 
 Changed
 -------
