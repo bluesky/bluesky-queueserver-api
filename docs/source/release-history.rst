@@ -12,13 +12,13 @@ Fixed
 -----
 
 - Proper handling of exceptions by ``wait_..`` API (such as ``wait_for_idle``). All exceptions
-  are handled internally by the functions. If server is not accessible (requests timeo out),
-  then the API also time out.
+  are handled internally by the functions. If server is not accessible (requests timed out),
+  then the API also times out (``REManagerAPI.RequestTimeoutError`` exception is raised).
 
 Changed
 -------
 
-- Renamed parameters of permissions_reload API: ``reload_permissions`` is renamed to
+- Renamed parameters of ``permissions_reload`` API: ``reload_permissions`` is renamed to
 ``restore_permissions``, ``reload_plans_devices`` is renamed to ``restore_plans_devices``.
 
 v0.0.2 (2022-03-03)
