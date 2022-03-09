@@ -19,7 +19,7 @@ Changed
 -------
 
 - Renamed parameters of ``permissions_reload`` API: ``reload_permissions`` is renamed to
-``restore_permissions``, ``reload_plans_devices`` is renamed to ``restore_plans_devices``.
+  ``restore_permissions``, ``reload_plans_devices`` is renamed to ``restore_plans_devices``.
 
 v0.0.2 (2022-03-03)
 ===================
