@@ -88,7 +88,9 @@ def test_status_02(re_manager, fastapi_server, protocol, library, reload):  # no
     """
     rm_api_class = _select_re_manager_api(protocol, library)
     status_params = {"reload": reload} if (reload is not None) else {}
-    add_item_params = {"item": _plan1, "user": _user, "user_group": _user_group}
+    add_item_params = {"item": _plan1}
+    if protocol != "HTTP":
+        add_item_params.update({"user": _user, "user_group": _user_group})
 
     def check_resp(resp):
         assert resp["success"] is True
