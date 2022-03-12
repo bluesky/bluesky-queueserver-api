@@ -550,7 +550,7 @@ class API_Threads_Mixin(API_Base):
 
 
 API_Threads_Mixin.status.__doc__ = _doc_api_status
-API_Threads_Mixin.status.__doc__ = _doc_api_ping
+API_Threads_Mixin.ping.__doc__ = _doc_api_ping
 API_Threads_Mixin.wait_for_idle.__doc__ = _doc_api_wait_for_idle
 API_Threads_Mixin.wait_for_idle_or_paused.__doc__ = _doc_api_wait_for_idle_or_paused
 API_Threads_Mixin.item_add.__doc__ = _doc_api_item_add
