@@ -13,7 +13,7 @@ class WaitCancelError(TimeoutError):
 
 class WaitMonitor:
     """
-    Creates ``monitor`` object for 'wait' operations, such as ``wait_for_idle``.
+    Creates ``monitor`` object for 'wait_...' operations, such as ``wait_for_idle``.
     The object may be used to stop the operation from another thread or
     asynchronous task.
 
