@@ -234,10 +234,13 @@ _doc_REManagerAPI_HTTP = """
 
 _doc_send_request = """
     Send request to RE Manager and receive the response. The function directly passes
-    the request to low-level Queue Server API. The detailed description of available
-    methods, including names, parameters and returned values, can be found in Queue
-    Server API reference. The function may raise exceptions in case of request timeout
-    or failure.
+    the request to low-level Queue Server API (0MQ) or sends formatted request to
+    the server (HTTP). The detailed description of available methods, including names,
+    parameters and returned values, can be found in Queue Server API reference.
+    The function raises ``RequestTimeoutError` in case of communication timeout.
+    Depending on ``REManagerAPI`` configuration (``request_fail_exceptions`` parameter),
+    the API raises ``RequestFailedError`` if the request is rejected by the Queue
+    Server or returns result to the calling function.
 
     Parameters
     ----------
@@ -254,12 +257,13 @@ _doc_send_request = """
     Raises
     ------
     RequestTimeoutError
-        Request timed out.
+        Communication timed out.
     RequestFailedError
-        Request failed (``response["success"]==False``).
+        Request failed or rejected by the Queue Server (the response contains
+        ``"success": False``).
     RequestError, ClientError
-        Error while processing the request or communicating with the server. Raised only
-        for HTTP requests.
+        Error while processing the request or communicating with the server.
+        Raised only by HTTP requests.
 
     Examples
     --------
@@ -307,24 +311,27 @@ _doc_close = """
 """
 
 _doc_api_status = """
-    Load status of RE Manager. The function returns status or raises exception if
-    operation failed (e.g. timeout occurred).
+    Load status of RE Manager.
 
     Parameters
     ----------
     reload: boolean
         Immediately reload status (``True``) or return cached status if it
-        is not expired (``False``). Calling the API with ``reload=True`` always
-        initiates communication with the server.
+        is not expired (``False``). Calling the API with ``"reload": True`` always
+        initiates communication with the server. Note, that all API that are
+        expected to change RE Manager status also invalidate local cache, so
+        explicitly reloading status is rarely required.
 
     Returns
     -------
-    dict
-        Copy of the dictionary with RE Manager status.
+    status: dict
+        Copy of the dictionary with RE Manager status. See
+        `API documentation <https://blueskyproject.io/bluesky-queueserver/re_manager_api.html#status>`_.
 
     Raises
     ------
-        Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -347,16 +354,14 @@ _doc_api_ping = """
 """
 
 _doc_api_wait_for_idle = """
-    Wait for RE Manager to return to ``idle`` state. The function performs
+    Wait for RE Manager to return to ``"idle"`` state. The function performs
     periodic polling of RE Manager status and returns when ``manager_state``
-    status flag is ``idle``. Polling period is determined by ``status_polling_period``
-    parameter of ``REManagerAPI`` class. The function raises ``WaitTimeoutError``
+    status flag is ``"idle"``. Polling period is determined by ``status_polling_period``
+    parameter of ``REManagerAPI``. The function raises ``WaitTimeoutError``
     if timeout occurs or ``WaitCancelError`` if wait operation was cancelled by
-    ``monitor.cancel()``. See instructions on ``WaitMonitor`` class, which allows
-    cancelling wait operations (from a different thread or task), modify timeout
-    and monitoring the progress.
+    ``monitor.cancel()`` (see documentation on ``WaitMonitor`` class).
 
-    Synchronous version of ``wait_for_idle`` is threadsafe. Multiple instances
+    The synchronous version of ``wait_for_idle`` is threadsafe. Multiple instances
     may run simultanously in multiple threads (sync) or tasks (async). Results
     of polling RE Manager status are shared between multiple running instances.
 
@@ -385,7 +390,7 @@ _doc_api_wait_for_idle = """
         RM.queue_start()
         try:
             RM.wait_for_idle(timeout=120)  # Wait for 2 minutes
-            # < queue is completed or stopped, RE Manager is idle >
+            # The queue is completed or stopped, RE Manager is idle.
         except RM.WaitTimeoutError:
             # < process timeout error, RE Manager is probably not idle >
 
@@ -393,24 +398,24 @@ _doc_api_wait_for_idle = """
         await RM.queue_start()
         try:
             await RM.wait_for_idle(timeout=120)  # Wait for 2 minutes
-            # < queue is completed or stopped, RE Manager is idle >
+            # The queue is completed or stopped, RE Manager is idle.
         except RM.WaitTimeoutError:
             # < process timeout error, RE Manager is probably not idle >
 """
 
 _doc_api_wait_for_idle_or_paused = """
-    Wait for RE Manager to switch to ``idle`` or ``paused`` state. See the description
-    of ``wait_for_idle`` API for more details.
+    Wait for RE Manager to switch to ``idle`` or ``paused`` state. See the documentation
+    for ``wait_for_idle`` API.
 """
 
 _doc_api_item_add = """
     Add item to the queue. The item may be a plan or an instruction represented
-    as a dictionary or as an instance of ``BItem``, ``BPlan`` or ``BInst`` classes.
-    By default the item is added to the back of the queue. Alternatively
-    the item can be placed at the desired position in the queue or before
-    or after one of the existing items. The parameters ``pos``, ``before_uid`` and
-    ``after_uid`` are mutually exclusive, i.e. only one of the parameters may
-    have a value different from ``None``.
+    as a dictionary of parameters or an instance of ``BItem``, ``BPlan`` or
+    ``BInst`` classes. The item is added to the back of the queue by default.
+    Alternatively, the item may be placed at the desired position in the queue or
+    inserted before or after one of the existing items. The parameters ``pos``,
+    ``before_uid`` and ``after_uid`` are mutually exclusive, i.e. only one of
+    the parameters may have a value different from ``None``.
 
     Parameters
     ----------
@@ -420,26 +425,38 @@ _doc_api_item_add = """
     pos: str, int or None
         Position of the item in the queue. RE Manager will attempt to insert the
         item at the specified position. The position may be positive or negative
-        (counted from the back of the queue) integer. If ``pos`` value is a string
-        ``"front"`` or ``"back"``, then the item is inserted at the front or the back
-        of the queue. If the value is ``None``, then the position is not specified.
+        integer. If the value is negative, the position is counted from the back of
+        the queue, so ``"pos": -1`` inserts the item to the back of the queue,
+        ``"pos": -2`` - to the position previous to last ect. If ``pos`` has a string
+        value ``"front"`` or ``"back"``, then the item is inserted at the front or
+        the back of the queue. If the value is ``None`` (default), then the position
+        is not specified.
     before_uid, after_uid: str or None
         Insert the item before or after the item with the given item UID. If ``None``
         (default), then the parameters are not specified.
 
     Returns
     -------
-    dict
-        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
-        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
-        ``qsize`` (*int* or *None*) - new size of the queue or *None* if operation
-        failed, ``item`` (*dict* or *None*) - inserted item with assigned UID.
-        If the request is rejected, ``item`` may contain the copy of the submitted
-        item (with assigned UID), *None* or be missing depending on the failure.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``qsize``: *int* or *None* - new size of the queue or ``None`` if operation
+          failed,
+
+        - ``item``: *dict* or *None* - a dictionary with parameters of the inserted
+          item, including the assigned UID. If the request is rejected, the dictionary
+          is a copy of the submitted ``item`` (with assigned UID) or *None*.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -487,42 +504,50 @@ _doc_api_item_add = """
 
 _doc_api_item_add_batch = """
     Add a batch of items to the queue. The batch is represented as a list of items.
-    Each item may be a plan or an instruction represented as a dictionary or as an
-    instance of ``BItem``, ``BPlan`` or ``BInst`` classes. If one of plans in
-    the batch can not be added to the queue (e.g. it does not pass validation),
-    then the whole batch is rejected. See documentation for ``item_add`` API
-    for more detailed information.
+    Each item may be a plan or an instruction represented as a dictionary of parameters
+    or as an instance of ``BItem``, ``BPlan`` or ``BInst`` class. If one of items in
+    the batch does not pass validation, then the whole batch is rejected.
+    See ``REManagerAPI.item_add()`` API documentation for more detailed information.
 
     Parameters
     ----------
     items: list(dict), list(BItem), list(BPlan) or list(BInst)
-        A list of dictionary or instances of ``BItem``, ``BPlan`` or ``BInst``
-        representing a plan or an instruction.
+        A list of items in the batch.
     pos: str, int or None
-        Position of the first item of the batch in the queue. RE Manager will attempt
-        to insert the batch so that the first item is at the specified position.
-        The position may be positive or negative (counted from the back of the queue)
-        integer. If ``pos`` value is a string ``"front"`` or ``"back"``, then the item
-        is inserted at the front or the back of the queue. If the value is ``None``,
-        then the position is not specified.
+        Position of the first item of the batch in the queue. RE Manager inserts
+        the first item at the specified position. The rest of the batch is inserted
+        after the first item. The position may be a positive or negative integer.
+        Negative positions are counted from the back of the queue. If the parameter
+        has a string value ``"front"`` or ``"back"``, then the batch is pushed to
+        the front or the back of the queue. If the value is ``None``, then the position
+        is not specified.
     before_uid, after_uid: str or None
-        Insert the batch of items before or after the item with the given item UID.
-        If ``None`` (default), then the parameters are not specified.
+        Insert the batch before or after the item with the given item UID. If ``None``
+        (default), then the parameters are not specified.
 
     Returns
     -------
-    dict
-        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
-        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
-        ``qsize`` (*int* or *None*) - new size of the queue or *None* if operation
-        failed, ``items`` (*list(dict)* or *None*) - the list of inserted item with
-        assigned UID. If the request is rejected, ``item`` may contain the copy of
-        the list of submitted items (with assigned UID), *None* or be missing depending
-        on the failure.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``qsize``: *int* or *None* - new size of the queue or ``None`` if operation
+          failed.
+
+        - ``items``: *list(dict)* or *None* - the list of dictionaries with parameters
+          of inserted items with assigned UID. If the request is rejected, ``items``
+          returns the copy of the list of submitted items (with assigned UIDs) or ``None``
+          on the failure.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -540,40 +565,50 @@ _doc_api_item_add_batch = """
 """
 
 _doc_api_item_update = """
-    Update the existing item in the queue. The method is intended for editing queue
-    items, but may be used for replacing the existing items with completely different
-    ones. The updated item may be a plan or an instruction. The item parameter
-    ``item_uid`` must be set to a UID of an existing queue item that is expected
-    to be replaced. The method fails if the item UID is not found. By default,
-    the UID of the updated item is not changed and ``user`` and ``user_group``
-    parameters are set to the values provided in the request. The ``user_group``
-    is also used for validation of submitted item. If it is preferable to replace
-    the item UID with a new random UID (e.g. if the item is replaced with completely
-    different item), the method should be called with the optional parameter
-    ``replace=True``.
+    Update an existing item in the queue. The method may be used for modifying
+    (editing) queue items or replacing the existing items with completely different
+    items. The updated item may be a plan or an instruction. The item parameter
+    ``item_uid`` must be set to a UID of an existing queue item that is replaced.
+    The method fails if the item UID is not found. By default, the UID of the updated
+    item is not changed and ``user`` and ``user_group`` parameters are set to
+    the values provided as part of the request. The ``user_group`` is also used
+    for validation of submitted item. In case the existing item is replaced with
+    a completely different item, set ``"replace": True`` to tell the server to
+    generate a new UID for the item (optional).
 
     Parameters
     ----------
     item: dict, BItem, BPlan or BInst
-        Dictionary or an instance of ``BItem``, ``BPlan`` or ``BInst`` representing
-        a plan or an instruction.
+        Dictionary of item parameters or an instance of ``BItem``, ``BPlan`` or ``BInst``
+        representing a plan or an instruction. The item parameter ``item_uid`` must
+        contain UID of one of the items in the queue.
     replace: boolean
-        Replace the updated item UID with the new random UID (``True``) or keep
-        the original UID (``False``). Default value is (``False``).
+        The server generates a new item UID before the item is inserted in the queue
+        if ``True``. Default: ``False``.
 
     Returns
     -------
-    dict
-        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
-        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
-        ``qsize`` (*int* or *None*) - the size of the queue or *None* if operation
-        failed, ``item`` (*dict* or *None*) - inserted item with assigned UID.
-        If the request is rejected, ``item`` may contain the copy of the submitted
-        item (with assigned UID), *None* or be missing depending on the failure.
+
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``qsize``: *int* or *None* - new size of the queue or ``None`` if operation
+          failed.
+
+        - ``item``: *dict* or *None* - a dictionary with parameters of the inserted
+          item, including the assigned UID. If the request is rejected, the dictionary
+          is a copy of the submitted ``item`` (with assigned UID) or *None*.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -597,29 +632,36 @@ _doc_api_item_update = """
 
 _doc_api_item_get = """
     Load an existing queue item. Items may be addressed by position or UID.
-    Bu default, the API returns the item at the back of the queue.
+    Returns the item at the back of the queue by default.
 
     Parameters
     ----------
     pos: str, int or None
         Position of the item in the queue. The position may be positive or negative
-        (counted from the back of the queue) integer. If ``pos`` value is a string
-        ``"front"`` or ``"back"``, then the item at the front or the back of the queue
-        is returned. If the value is ``None`` (default), then the position is not specified.
+        integer. If the position is negative, the items are counted from the back of
+        the queue. If ``pos`` value is a string `"front"`` or ``"back"``, then
+        the item from the front or the back of the queue is returned. If the value
+        is ``None`` (default), then the position is not specified.
     uid: str or None
         UID of the item. If ``None`` (default), then the parameter are not specified.
 
     Returns
     -------
-    dict
-        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
-        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
-        ``item`` (*dict*) - the dictionary of item parameters, which is ``{}`` if
-        the operation fails.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``item``: *dict* - a dictionary of item parameters. ``{}`` if the operation fails.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -638,30 +680,41 @@ _doc_api_item_get = """
 """
 
 _doc_api_item_remove = """
-    Remove item from the queue. By default the last item in the queue is removed.
+    Remove an item from the queue. The last item in the queue is removed by default.
     Alternatively the position or UID of the item can be specified.
 
     Parameters
     ----------
     pos: str, int or None
         Position of the item in the queue. The position may be positive or negative
-        (counted from the back of the queue) integer. If ``pos`` value is a string
-        ``"front"`` or ``"back"``, then the item at the front or the back of the queue
-        is returned. If the value is ``None`` (default), then the position is not specified.
+        integer. Negative positions are counted from the back of the queue. If the position
+        has a string value ``"front"`` or ``"back"``, then the item is removed from front
+        and the back of the queue. If the value is ``None`` (default), then the position
+        is not specified.
     uid: str or None
         UID of the item. If ``None`` (default), then the parameter are not specified.
 
     Returns
     -------
-    dict
-        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
-        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
-        ``item`` (*dict*) - the dictionary of item parameters, which is ``{}`` if
-        the operation fails, ``qsize`` - the size of the queue.
+
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``qsize``: *int* or *None* - new size of the queue.
+
+        - ``item``: *dict* - a dictionary of item parameters. ``{}`` if the operation
+          fails.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -687,7 +740,8 @@ _doc_api_item_remove_batch = """
     ----------
     uids: list(str)
         List of UIDs of the items in the batch. The list may not contain repeated UIDs.
-        All UIDs must be present in the queue. The list may be empty.
+        All UIDs must be present in the queue, otherwise the operation fails unless
+        ``ignore_missing`` is ``True``. The list may be empty.
     ignore_missing: boolean (optional)
         If the value is ``False``, then the method fails if the batch contains repeating
         items or some of the batch items are not found in the queue. If ``True`` (default),
@@ -696,15 +750,25 @@ _doc_api_item_remove_batch = """
 
     Returns
     -------
-    dict
-        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
-        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
-        ``items`` (*list(dict)*) - the list of removed items, which is ``[]`` if
-        the operation fails, ``qsize`` - the size of the queue.
+
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``qsize``: *int* - new size of the queue.
+
+        - ``items``: *list(dict)* - the list of removed items, which is ``[]`` if
+          the operation fails.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -719,36 +783,47 @@ _doc_api_item_remove_batch = """
 """
 
 _doc_api_item_move = """
-    Move item to a different position in the queue. The parameters ``pos`` and
+    Move an item to a different position in the queue. The parameters ``pos`` and
     ``uid`` are mutually exclusive. The parameters ``pos_dest``, ``before_uid``
     and ``after_uid`` are also mutually exclusive.
 
     Parameters
     ----------
     pos: str, int or None
-        Position of the item in the queue. The position may be positive or negative
-        (counted from the back of the queue) integer. If ``pos`` value is a string
-        ``"front"`` or ``"back"``, then the item at the front or the back of the queue
-        is returned. If the value is ``None`` (default), then the position is not specified.
+        Position of an item to be moved. The position may be positive or negative
+        integer, ``"front"`` or ``"back"``. Negative positions are counted from
+        the back of the queue. If the value is ``None`` (default), then the position
+        is not specified.
     uid: str or None
-        UID of the item to move. If ``None`` (default), then the parameter are not specified.
+        UID of the item to be moved. If ``None`` (default), then the parameter are not specified.
     pos_dest: str, int or None
-        New position of the item. Integer number can be negative.
+        New position of the moved item: positive or negative integer, ``"front"`` or ``"back"``.
+        If the value is ``None`` (default), then the position is not specified.
     before_uid, after_uid: str or None
         UID of an existing item in the queue. The selected item is moved before
-        or after this item.
+        or after this item. If ``None`` (default), then the parameter are not specified.
 
     Returns
     -------
-    dict
-        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
-        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
-        ``item`` (*dict*) - the dictionary of item parameters, which is ``{}`` if
-        the operation fails, ``qsize`` - the size of the queue.
+
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``qsize``: *int* - the size of the queue.
+
+        - ``item``: *dict* - a dictionary of parameters of the moved item, ``{}`` if
+          the operation fails.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -765,31 +840,22 @@ _doc_api_item_move = """
 """
 
 _doc_api_item_move_batch = """
-    Move a batch of item to a different position in the queue. The method accepts
-    a list of UIDs of the items included in the batch. The UIDs in the list must
+    Move a batch of items to a different position in the queue. The batch is
+    defined as a list of UIDs of included items. The UIDs in the list must
     be unique (not repeated) and items with listed UIDs must exist in the queue.
     If the list is empty, then operation succeeds and the queue remains unchanged.
     The destination must be specified using one of the mutually exclusive parameters
-    ``pos_dest``, ``before_uid`` or ``after_uid``. The reference item with the UID
-    of passed with the parameters ``before_uid`` or ``after_uid`` must not be
-    in the batch. The parameter ``reorder`` controls the order of the items in
-    the moved batch and indicates whether items in the batch should be reordered
-    with respect to the order of UIDs in the list ``uids``. The batch may include
-    any set of non-repeated items from the queue arranged in arbitrary order.
-    By default (``reorder=False``) the batch is inserted in the specified position
-    as a contiguous sequence of items ordered according to the UIDs in the list
-    ``uids``. If ``reorder=True``, then the inserted items are ordered according
-    to their original positions in the queue. It is assumed that the method will
-    be mostly used with the default ordering option and user will be responsible
-    for creating properly ordered lists of items. The other option is implemented
-    for the cases when the user may want to submit randomly ordered lists of UIDs,
-    but preserve the original order of the moved batch.
+    ``pos_dest``, ``before_uid`` or ``after_uid``. The item referred by ``before_uid``
+    or ``after_uid`` must not be included in the batch. The parameter ``reorder``
+    controls the order in which the moved items are placed in the queue: if ``reorder``
+    is ``False`` (default), the order of items are defined by the order of ``uids`` list,
+    otherwise the items are ordered by their original positions in the queue.
 
     Parameters
     ----------
     uids: list(str)
         List of UIDs of the items in the batch. The list may not contain repeated UIDs.
-        All UIDs must be present in the queue. The list may be empty.
+        All UIDs must exist in the queue. The list may be empty.
     pos_dest: str ("front" or "back")
         New position of the item. Only string values ``'front'`` and ``'back'``
         are accepted.
@@ -803,15 +869,25 @@ _doc_api_item_move_batch = """
 
     Returns
     -------
-    dict
-        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
-        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
-        ``items`` (*list(dict)*) - the list of moved items, which is ``[]`` if
-        the operation fails, ``qsize`` - the size of the queue.
+
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``qsize``: *int* - new size of the queue.
+
+        - ``items``: *list(dict)* - the list of moved items, which is ``[]`` if
+          the operation fails.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -829,32 +905,40 @@ _doc_api_item_move_batch = """
 
 
 _doc_api_item_execute = """
-    Immediately start execution of the submitted item. The item may be a plan or
-    an instruction. The request fails if item execution can not be started immediately
+    Immediately execute the submitted item. The item may be a plan or an instruction.
+    The request fails if item execution can not be started immediately
     (RE Manager is not in IDLE state, RE Worker environment does not exist, etc.).
-    If the request succeeds, the item is executed once. The item is not added to
-    the queue if it can not be immediately started and it is not pushed back into
-    the queue in case its execution fails/stops. If the queue is in the LOOP mode,
-    the executed item is not added to the back of the queue after completion.
-    The API request does not alter the sequence of enqueued plans.
+    If the request succeeds, the item is executed once. The item is never added to
+    the queue. If the queue is in the LOOP mode, the executed item is not added
+    to the back of the queue after completion. The API request does not alter
+    the sequence of enqueued plans. The item is added to history after completion.
 
     Parameters
     ----------
     item: dict, BItem, BPlan or BInst
-        Dictionary or an instance of ``BItem``, ``BPlan`` or ``BInst`` representing
-        a plan or an instruction.
+        Dictionary of item parameters or an instance of ``BItem``, ``BPlan`` or ``BInst``
+        representing a plan or an instruction.
 
     Returns
     -------
-    dict
-        Dictionary with item parameters. Dictionary keys: ``success`` (*boolean*),
-        ``msg`` (*str*) - error message in case the request was rejected by RE Manager,
-        ``item`` (*dict*) - the dictionary of item parameters, ``None`` if the
-        request contains no ``item`` parameter, ``qsize`` - the size of the queue.
+
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``qsize``: *int* - the size of the queue.
+
+        - ``item``: *dict*, *BItem*, *BPlan*, *BInst* - the dictionary of item parameters.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -870,19 +954,26 @@ _doc_api_item_execute = """
 
 
 _doc_api_queue_start = """
-    Start execution of the queue. If the request is accepted, the ``manager_state``
-    status parameter is expected to change to ``starting_queue``, then ``executing_queue``
-    and change back to ``idle`` when the queue is completed or stopped.
+    Start execution of the queue. If the request is accepted, the status parameter
+    ``manager_state`` is expected to change from ``"idle"`` to ``"starting_queue"``,
+    then ``"executing_queue"``. Once queue execution is completed or stopped,
+    the manager state returns to ``"idle"``.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -899,18 +990,25 @@ _doc_api_queue_start = """
 _doc_api_queue_stop = """
     Request RE Manager to stop execution of the queue after completion of the currently
     running plan. The request succeeds only if the queue is currently running (``manager_state``
-    status field has value ``executing_queue``). The ``queue_stop_pending`` status field
-    can be used at any time to verify if the request is pending.
+    status field has value ``executing_queue``). Use the status field ``queue_stop_pending``
+    to verify if the request is pending.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager.
+
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -927,16 +1025,23 @@ _doc_api_queue_stop = """
 
 _doc_api_queue_stop_cancel = """
     Cancel the pending request to stop execution of the queue after the currently running plan.
+    Use the status field ``queue_stop_pending``  to check if the request is pending.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -953,18 +1058,24 @@ _doc_api_queue_stop_cancel = """
 
 _doc_api_queue_clear = """
     Remove all items from the plan queue. The currently running plan does not belong
-    to the queue and is not affected by this operation. If the plan fails or its
-    execution is stopped, it will be pushed to the beginning of the queue.
+    to the queue and is not affected by this operation. Failed or stopped plans are
+    pushed to the front of the queue.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -980,11 +1091,12 @@ _doc_api_queue_clear = """
 
 
 _doc_api_queue_mode_set = """
-    Sets parameters that define the mode of plan queue execution. Individual
-    mode parameters may be changed by using respective kwargs (currently only
-    ``loop`` parameter is supported) or passing dictionary using ``mode`` kwarg.
-    The mode may be reset to default by passing ``mode="default"``. If ``mode``
-    kwarg is used, other kwargs are ignored.
+    Set parameters that define the mode of plan queue execution. Only the parameters
+    that are specified in the API call are changed. The parameters are set by passing
+    kwargs with respective names or passing the dictionary of parameters using ``mode``
+    kwarg. Pass ``mode="default"`` to reset all parameters to the default values.
+    Supported mode parameter: ``loop`` (default ``False``). Current values of queue
+    mode parameters may be found as part of RE Manager status (``plan_queue_mode``).
 
     Parameters
     ----------
@@ -993,17 +1105,23 @@ _doc_api_queue_mode_set = """
         to reset all mode parameters to default values. All other kwargs are
         ignored if ``mode`` kwarg is passed.
     loop: boolean
-        Turns **loop** mode ON and OFF
+        Turns LOOP mode ON and OFF
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1023,27 +1141,39 @@ _doc_api_queue_mode_set = """
 
 
 _doc_api_queue_get = """
-    Returns the list of items (plans and instructions) in the plan queue and currently running plan.
-    The function downloads the queue from the server if ``plan_queue_uid`` has changed, otherwise
-    the cached copy of the queue is returned.
+    Returns the list of items (plans and instructions) in the plan queue and currently
+    running plan. The function checks ``plan_queue_uid`` status parameter and downloads
+    the queue from the server if UID changed. Otherwise the copy of cached queue is
+    returned.
 
     Parameters
     ----------
-    reload: boolean
-        Status data is always reloaded from the server if ``True``, otherwise the cached
-        status is used to verify `plan_queue_uid`` if cache is up to date.
+    reload: boolean (optional)
+        Set the parameter ``True`` to force reloading of status from the server before
+        ``plan_queue_uid`` is checked. Otherwise cached status is used.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager, ``items`` - a list of queue items,
-        ``running_item`` - a dictionary with parameters of currently running plan (``{}`` if
-        the queue is not running), ``plan_queue_uid`` - UID of the plan queue.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``items``: *list(dict)* - list of dictionaries containing queue item parameters.
+
+        - ``running_item``: *dict* - dictionary with parameters of currently running plan,
+          ``{}`` if the queue is not running),
+
+        - ``plan_queue_uid``: *str* - UID of the plan queue
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1064,25 +1194,35 @@ _doc_api_queue_get = """
 """
 
 _doc_api_history_get = """
-    Returns the list of plans in the history. The function downloads the history from the server
-    if ``plan_history_uid`` has changed, otherwise the cached copy of the queue is returned.
+    Returns the list of plans in the history. The function checks ``plan_history_uid``
+    status parameter and downloads the history from the server if UID changed. Otherwise
+    the copy of cached history is returned.
 
     Parameters
     ----------
     reload: boolean
-        Status data is always reloaded from the server if ``True``, otherwise the cached
-        status is used to verify `plan_history_uid`` if cache is up to date.
+        Set the parameter ``True`` to force reloading of status from the server before
+        ``plan_history_uid`` is checked. Otherwise cached status is used.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager, ``items`` - a list of history items,
-        ``plan_history_uid`` - UID of the plan history.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``items``: *list(dict)* - list of dictionaries containing history item parameters.
+
+        - ``plan_history_uid``: *str* - UID of the plan queue
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1106,13 +1246,19 @@ _doc_api_history_clear = """
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1127,25 +1273,35 @@ _doc_api_history_clear = """
 """
 
 _doc_api_plans_allowed = """
-    Returns the list (dictionary) of allowed plans. The function downloads the list of allowed plans
-    from the server if ``plans_allowed_uid`` has changed, otherwise the cached copy is returned.
+    Returns the list (dictionary) of allowed plans. The function checks ``plans_allowed_uid``
+    status parameter and downloads the list of allowed plans from the server if UID changed.
+    Otherwise the copy of cached list of allowed plans is returned.
 
     Parameters
     ----------
     reload: boolean
-        Status data is always reloaded from the server if ``True``, otherwise the cached
-        status is used to verify `plans_allowed_uid`` if cache is up to date.
+        Set the parameter ``True`` to force reloading of status from the server before
+        ``plans_allowed_uid`` is checked. Otherwise cached status is used.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager, ``plans_allowed`` - a dictionary of
-        allowed plans, `plans_allowed_uid`` - UID of the dictionary of allowed plans.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``plans_allowed``: *dict* - list (dictionary) of allowed plans.
+
+        - ``plans_allowed_uid``: *str* - UID of the list of allowed plans.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1162,25 +1318,35 @@ _doc_api_plans_allowed = """
 """
 
 _doc_api_devices_allowed = """
-    Returns the list (dictionary) of allowed devices. The function downloads the list of allowed
-    devices the server if ``devices_allowed_uid`` has changed, otherwise the cached copy is returned.
+    Returns the list (dictionary) of allowed devices. The function checks ``devices_allowed_uid``
+    status parameter and downloads the list of allowed devices from the server if UID changed.
+    Otherwise the copy of cached list of allowed devices is returned.
 
     Parameters
     ----------
     reload: boolean
-        Status data is always reloaded from the server if ``True``, otherwise the cached
-        status is used to verify `plans_allowed_uid`` if cache is up to date.
+        Set the parameter ``True`` to force reloading of status from the server before
+        ``devices_allowed_uid`` is checked. Otherwise cached status is used.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager, ``devices_allowed`` - a dictionary of
-        allowed devices, `devices_allowed_uid`` - UID of the dictionary of allowed devices.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``devices_allowed``: *dict* - list (dictionary) of allowed devices.
+
+        - ``devices_allowed_uid``: *str* - UID of the list of allowed devices.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1197,25 +1363,35 @@ _doc_api_devices_allowed = """
 """
 
 _doc_api_plans_existing = """
-    Returns the list (dictionary) of existing plans. The function downloads the list of existing plans
-    from the server if ``plans_allowed_uid`` has changed, otherwise the cached copy is returned.
+    Returns the list (dictionary) of existing plans. The function checks ``plans_existing_uid``
+    status parameter and downloads the list of existing plans from the server if UID changed.
+    Otherwise the copy of cached list of existing plans is returned.
 
     Parameters
     ----------
     reload: boolean
-        Status data is always reloaded from the server if ``True``, otherwise the cached
-        status is used to verify `plans_existing_uid`` if cache is up to date.
+        Set the parameter ``True`` to force reloading of status from the server before
+        ``plans_existing_uid`` is checked. Otherwise cached status is used.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager, ``plans_existing`` - a dictionary of
-        existing plans, `plans_existing_uid`` - UID of the dictionary of allowed plans.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``plans_existing``: *dict* - list (dictionary) of existing plans.
+
+        - ``plans_existing_uid``: *str* - UID of the list of existing plans.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1232,25 +1408,35 @@ _doc_api_plans_existing = """
 """
 
 _doc_api_devices_existing = """
-    Returns the list (dictionary) of existing devices. The function downloads the list of existing
-    devices the server if ``devices_existing_uid`` has changed, otherwise the cached copy is returned.
+    Returns the list (dictionary) of existing devices. The function checks ``devices_existing_uid``
+    status parameter and downloads the list of existing devices from the server if UID changed.
+    Otherwise the copy of cached list of existing devices is returned.
 
     Parameters
     ----------
     reload: boolean
-        Status data is always reloaded from the server if ``True``, otherwise the cached
-        status is used to verify `plans_existing_uid`` if cache is up to date.
+        Set the parameter ``True`` to force reloading of status from the server before
+        ``devices_existing_uid`` is checked. Otherwise cached status is used.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager, ``devices_existing`` - a dictionary of
-        existing devices, `devices_existing_uid`` - UID of the dictionary of existing devices.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``devices_existing``: *dict* - list (dictionary) of existing devices.
+
+        - ``devices_existing_uid``: *str* - UID of the list of existing devices.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1267,13 +1453,13 @@ _doc_api_devices_existing = """
 """
 
 _doc_api_permissions_reload = """
-    Reload user group permissions from the default location or the location set using
-    command line parameters and generate lists of allowed plans and devices based on
-    the lists of existing plans and devices. By default, the method will use current
-    lists of existing plans and devices stored in memory. Optionally the method can
-    reload the lists from the disk file (see ``restore_plans_devices`` parameter).
-    The method always updates UIDs of the lists of allowed plans and devices even
-    if the contents remain the same.
+    Generate the new lists of allowed plans and devices based on current user group
+    permissions and the lists of existing plans and devices. User group permissions
+    and the lists of existing plans of devices may be restored from disk if the
+    parameters ``restore_permissions`` and ``restore_plans_devices`` are set ``True``.
+    By default, the method will use current lists of existing plans and devices
+    stored in memory and restores permissions from disk. The method always updates
+    UIDs of the lists of allowed plans and devices even if the contents remain the same.
 
     Parameters
     ----------
@@ -1286,13 +1472,19 @@ _doc_api_permissions_reload = """
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1312,14 +1504,21 @@ _doc_api_permissions_get = """
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager, ``user_group_permission`` -
-        the dictionary of user group permissions.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``user_group_permission`` - the dictionary of user group permissions.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1337,12 +1536,12 @@ _doc_api_permissions_get = """
 
 
 _doc_api_permissions_set = """
-    Uploads the dictionary of user group permissions. If the uploaded dictionary
-    contains a valid set of permissions different from currently used one,
-    the new permissions are set as current and the updated lists of allowed
-    plans and devices are generated. The method does nothing if the uploaded
-    permissions are identical to currently used permissions. The API request fails
-    if the uploaded dictionary does not pass validation.
+    Uploads the dictionary of user group permissions. If the uploaded permissions
+    dictionary is valid and different from currently used permissions, then
+    the new lists of allowed plans and devices are generated. The method has no
+    effect if the uploaded permissions are identical to currently used permissions.
+    The API request fails if the uploaded permissions dictionary does not pass
+    validation.
 
     Parameters
     ----------
@@ -1351,13 +1550,19 @@ _doc_api_permissions_set = """
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1382,18 +1587,24 @@ _doc_api_environment_open = """
     Open RE Worker environment. The API request only initiates the operation of
     opening an environment. If the request is accepted, the ``manager_state``
     status parameter is expected to change to ``creating_environment`` and then
-    changed back to ``idle`` when the operation is completed. Check
+    changed back to ``idle`` when the operation is complete. Check
     ``worker_environment_exists`` to see if the environment was opened successfully.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1409,21 +1620,27 @@ _doc_api_environment_open = """
 
 _doc_api_environment_close = """
     Close RE Worker environment. The API request only initiates the operation of
-    opening an environment. The environment can not be closed if any plans or
-    foreground tasks are running. If the request is accepted, the ``manager_state``
-    status parameter is expected to change to ``closing_environment`` and then
-    back to ``idle`` when the operation is completed. Check ``worker_environment_exists``
-    status flag to see if the environment was closed.
+    opening an environment. The request fails if a plans or foreground task is running.
+    If the request is accepted, the ``manager_state`` status parameter is expected
+    to change to ``closing_environment`` and then back to ``idle`` when the operation
+    is completed. Check ``worker_environment_exists`` status flag to see if
+    the environment was closed.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1441,23 +1658,28 @@ _doc_api_environment_destroy = """
     Destroy RE Worker environment. This is the last-resort operation that allows to
     recover the Queue Server if RE Worker environment becomes unresponsive and needs
     to be shut down. The operation kills RE Worker process, therefore it can be executed
-    with the environment in any state. The operation may be dangerous, since it kills any
-    running plans or tasks. After the operation is completed, a new environment
-    may be opened and operations countinued. The API request only initiates the operation
-    of destroying an environment. If the request is accepted, the ``manager_state``
-    status parameter is expected to change to ``destroying_environment`` and then
-    back to ``idle`` when the operation is completed. Check ``worker_environment_exists``
-    status flag to see if the environment was destroyed.
+    at any time. The operation may be dangerous, since it kills any running plans or tasks.
+    The API request only initiates the operation of destroying an environment.
+    If the request is accepted, the ``manager_state`` status parameter is expected
+    to change to ``destroying_environment`` and then to ``idle`` when the operation
+    is completed. Check ``worker_environment_exists`` status flag to see if
+    the environment was destroyed.
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1472,11 +1694,11 @@ _doc_api_environment_destroy = """
 """
 
 _doc_api_script_upload = r"""
-    Upload and execute script in RE Worker namespace. The script may add, change or
+    Upload and execute script in RE Worker namespace. The script may add, modify or
     replace objects defined in the namespace, including plans and devices. Dynamic
     modification of the worker namespace may be used to implement more flexible workflows.
-    The API call updates the lists of existing and allowed plans and devices if necessary.
-    Changes in the lists will be indicated by changed list UIDs. Use ``task_result`` API
+    The API call updates the lists of existing and allowed plans and devices if new plans
+    or devices are added, modified or deleted by the script. Use ``task_result`` API
     to check if the script was loaded correctly. Note, that if the task fails, the script
     is still executed to the point where the exception is raised and the respective changes
     to the environment are applied.
@@ -1484,18 +1706,18 @@ _doc_api_script_upload = r"""
     Parameters
     ----------
     script: str
-        The string that contains the Python script. The rules for the script are the same
-        as for Bluesky startup scripts. The script can use objects already existing in
-        the RE Worker namespace.
+        The string that contains the Python script. The script should satisfy the same
+        requirements as Bluesky startup scripts. The script can use objects already
+        existing in the RE Worker namespace.
     update_re: boolean (optional, default False)
         The uploaded scripts may replace Run Engine (``RE``) and Data Broker (``db``)
         instances in the namespace. In most cases this operation should not be allowed,
-        therefore it is disabled by default (``update_re`` is ``False``), i.e. if the script
-        creates new ``RE`` and ``db`` objects, those objects are discarded. Set this parameter
-        True to allow the server to replace RE and db objects. This parameter has no
-        effect if the script is not creating new instances of ``RE`` and/or ``db``.
+        therefore it is disabled by default, i.e. if the script creates new ``RE`` and
+        ``db`` objects, those objects are discarded. Set this parameter ``True`` to allow
+        the server to replace RE and db objects. This parameter has no effect if the script
+        is not creating new instances of ``RE`` and/or ``db``.
     run_in_background: boolean (optional, default False)
-        Set this parameter True to upload and execute the script in the background
+        Set this parameter ``True`` to upload and execute the script in the background
         (while a plan or another foreground task is running). Generally, it is not
         recommended to update RE Worker namespace in the background. Background tasks
         are executed in separate threads and only thread-safe scripts should be uploaded
@@ -1504,14 +1726,21 @@ _doc_api_script_upload = r"""
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager, ``task_uid`` - UID of the started
-        task.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``task_uid`` - UID of the started task.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1529,12 +1758,12 @@ _doc_api_script_upload = r"""
 
 _doc_api_function_execute = """
     Start execution of a function in RE Worker namespace. The function must be defined in the
-    namespace (in startup code or a script uploaded using *script_upload* method. The function
-    may be executed as a foreground task (only if RE Manager and RE Worker environment are idle)
+    namespace (in startup code or a script uploaded using *script_upload* method). The function
+    may be executed as a foreground task (only if RE Manager and RE Worker environment are IDLE)
     or as a background task. Background tasks are executed in separate threads and may
     consume processing or memory resources and interfere with running plans or other tasks.
     RE Manager does not guarantee thread safety of the user code running in the background.
-    Developers of startup code are fully responsible for preventing threading issues.
+    Developers of startup scripts are fully responsible for preventing threading issues.
 
     The method allows to pass parameters (*args* and *kwargs*) to the function. Once the task
     is completed, the results of the function execution, including the return value, can be
@@ -1543,17 +1772,17 @@ _doc_api_function_execute = """
     values must be JSON serializable. The task fails if the return value can not be serialized.
 
     The method only **initiates** execution of the function. If the request is successful
-    (*success=True*), the server starts the task, which attempts to execute the function
-    with given name and parameters. The function may still fail start (e.g. if the user is
+    (``"success": True``), the server starts the task, which attempts to execute the function
+    with given name and parameters. The function may still fail to start (e.g. if the user is
     permitted to execute function with the given name, but the function is not defined
-    in the namespace). Use *'task_result'* method with the returned *task_uid* to
-    check the status of the tasks and load the result upon completion.
+    in the namespace). Use ``task_result`` API with the returned ``task_uid`` to
+    check the status of the tasks and load the result after the task is completed.
 
     Parameters
     ----------
     item: BItem, BFunc or dict
         BItem, BFunc or dictionary with function name, *args* and *kwargs*. The structure of
-        dictionary is identical to item representing a plan or an instruction, except that
+        dictionary is the same as for items representing plans and instructions, except that
         ``item_type`` is ``"function"``.
     run_in_background: boolean (optional, default False)
         Set this parameter True to upload and execute the script in the background
@@ -1565,14 +1794,23 @@ _doc_api_function_execute = """
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager, ``item`` - dictionary of function
-        parameters (may be ``None`` if operation fails), ``task_uid`` - UID of the started task.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``item`` - dictionary of function parameters (may be ``None`` if operation fails).
+
+        - ``task_uid`` - UID of the started task.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1607,18 +1845,27 @@ _doc_api_task_status = """
 
     Returns
     -------
-    dict
-        Dictionary keys: ``success`` (*boolean*), ``msg`` (*str*) - error message
-        in case the request was rejected by RE Manager, ``task_uid`` - returns UID(s)
-        passed as input parameter, ``status`` - status of the task(s) or ``None``
-        if the request (not task) failed. If task_uid is a string representing single UID,
-        then status is a string that may be one of ``running``, ``completed`` or
-        ``not_found``. If task_uid is a list of strings, then ``status`` is a dictionary
-        that maps task UIDs to status of the respective tasks.
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``task_uid`` - returns UID(s) passed to the function.
+
+        - ``status`` - status of the task(s) or ``None`` if the request (not task) failed.
+          If ``task_uid`` is a string representing single UID, then the status is a string
+          from the set {``"running"``, ``"completed"``, ``"not_found"``}. If ``task_uid`` is
+          a list of strings, then ``status`` is a dictionary that maps task UIDs to status
+          of the respective tasks.
 
     Raises
     ------
-    Reraises the exceptions raised by ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1654,7 +1901,7 @@ _doc_api_task_result = """
     the server at least for the period determined by retention time (currently
     120 seconds after completion of the task). The expired results could be
     automatically deleted at any time and the method will return the task status
-    as ``not_found``.
+    as ``"not_found"``.
 
     Parameters
     ----------
@@ -1666,27 +1913,27 @@ _doc_api_task_result = """
     dict
         Dictionary keys:
 
-        - **success**: *boolean* - success of the request.
+        - ``success``: *boolean* - success of the request.
 
-        - **msg**: *str* - error message in case the request is rejected by RE Manager.
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager.
 
-        - **task_uid**: *str* - task UID.
+        - ``task_uid``: *str* - task UID.
 
-        - **status**: *str ("running", "completed", "not_found") or None* - status of the task
-          or *None* if the request (not task) fails.
+        - ``status``: *str* or *None* - status of the task (*"running"*, *"completed"*,
+          *"not_found"*) or *None* if the request (not task) fails.
 
-        - **result**: *dict or None* - dictionary containing the information on a running task,
-          results of execution of the completed task or *None* if the request failed.
-          The contents of the dictionary depends on the returned **status**: "running"
-          (keys: **task_uid**, **start_time** and **run_in_background**), **completed** (keys:
-          **task_uid**, **success** - True/False, **msg** - error message, **return_value** -
+        - ``result``: *dict or None* - dictionary containing the information on a running task,
+          results of execution of the completed task or ``None`` if the request failed.
+          The contents of the dictionary depends on the returned ``status``: ``"running"``
+          (keys: ``task_uid``, ``start_time`` and ``run_in_background``), ``"completed"``
+          (keys: ``task_uid``, ``success`` - True/False, ``msg`` - error message, ``return_value`` -
           value returned by the function or a string with full traceback if the task failed,
-          **time_start** and **time_stop**), **not_found** - empty dictionary.
+          ``time_start`` and ``time_stop``), ``"not_found"`` - empty dictionary.
 
     Raises
     ------
-    Exception
-        Reraises the exceptions from ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1713,10 +1960,10 @@ _doc_api_task_result = """
 
 _doc_api_re_runs = """
     Request the list of active runs generated by the currently executed plans. The full list
-    of active runs includes the runs that are currently open (``open`` runs) and the runs
-    that were already closed (``closed`` runs). Simple single-run plans will have at most one
+    of active runs includes the runs that are currently open (``"option": "open"``) and the runs
+    that were already closed (``"option": "closed"``). Simple single-run plans will have at most one
     run in the list. Monitor ``run_list_uid`` RE Manager status field and retrieve the updated
-    list once UID is changed. The UID of the retrieved list is included in the returned parameters
+    list once UID is changed. The UID of the retrieved list is included in the returned parameters.
 
     Parameters
     ----------
@@ -1726,24 +1973,23 @@ _doc_api_re_runs = """
 
     Returns
     -------
-    dict
+    response: dict
         Dictionary keys:
 
-        - **success**: *boolean* - success of the request.
+        - ``success``: *boolean* - success of the request.
 
-        - **msg**: *str* - error message in case the request is rejected by RE Manager.
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager.
 
-        - **run_list**: *list(dict)* - the requested list of runs. List items are dictionaries
-          with the following keys: **uid** (*str*), **is_open** (*boolean*) and **exit_status**
+        - ``run_list``: *list(dict)* - the requested list of runs. List items are dictionaries
+          with the following keys: ``uid`` (*str*), ``is_open`` (*boolean*) and ``exit_status``
           (*str* or *None*). See Bluesky documentation for values of *exit_status*.
 
-        - **run_list_uid**: *str*
-          Run list UID.
+        - ``run_list_uid``: *str* - run list UID.
 
     Raises
     ------
-    Exception
-        Reraises the exceptions from ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
@@ -1776,9 +2022,9 @@ _doc_api_re_pause = """
 
     If deferred pause is requested past the last checkpoint of the plan, the plan is run
     to completion and the queue is stopped. The stopped queue can not be resumed using
-    **re_resume** method, instead queue_start method should be used to restart the queue.
-    Check manager_state status flag to determine if the queue is stopped (*'idle'* state)
-    or Run Engine is paused (*'paused'* state).
+    ``re_resume`` method, instead queue_start method should be used to restart the queue.
+    Check manager_state status flag to determine if the queue is stopped (``"idle"`` state)
+    or Run Engine is paused (``"paused"`` state).
 
     The pause_pending status flag is set if pause request is successfully passed to Run Engine.
     It may take significant time for deferred pause to be processed. The flag is cleared once
@@ -1789,21 +2035,21 @@ _doc_api_re_pause = """
     ----------
     option: str ('immediate' or 'deferred', optional)
         Pause the plan immediately (roll back to the previous checkpoint) or continue to
-        the next checkpoint. Default: *'deferred'*.
+        the next checkpoint. Default: ``"deferred"``.
 
     Returns
     -------
     dict
         Dictionary keys:
 
-        - **success**: *boolean* - success of the request.
+        - ``success``: *boolean* - success of the request.
 
-        - **msg**: *str* - error message in case the request is rejected by RE Manager.
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager.
 
     Raises
     ------
-    Exception
-        Reraises the exceptions from ``send_request`` API.
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 
     Examples
     --------
