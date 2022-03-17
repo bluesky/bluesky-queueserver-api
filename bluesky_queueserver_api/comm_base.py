@@ -8,6 +8,8 @@ from ._defaults import (
     default_zmq_request_timeout_send,
     default_http_request_timeout,
     default_http_server_uri,
+    default_console_monitor_poll_timeout,
+    default_console_monitor_max_msgs,
 )
 
 
@@ -118,14 +120,20 @@ class ReManagerAPI_Base:
             if not isinstance(response, Mapping) or not response.get("success", True):
                 raise self.RequestFailedError(request, response)
 
+    def __del__(self):
+        self.console_monitor_disable()
+
 
 class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
     def __init__(
         self,
         *,
         zmq_server_address=None,
+        zmq_subscribe_addr=None,
         timeout_recv=default_zmq_request_timeout_recv,
         timeout_send=default_zmq_request_timeout_send,
+        console_monitor_poll_timeout=default_console_monitor_poll_timeout,
+        console_monitor_max_msgs=default_console_monitor_max_msgs,
         server_public_key=None,
         request_fail_exceptions=default_allow_request_fail_exceptions,
         loop=None,
@@ -133,7 +141,12 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
 
         # TODO: check env. variable for 'zmq_server_address'
+        # TODO: check env. variable for 'zmq_subscribe_address'
         # TODO: check env. variable for 'server_public_key'
+
+        self._zmq_subscribe_addr = zmq_subscribe_addr
+        self._console_monitor_poll_timeout = console_monitor_poll_timeout
+        self._console_monitor_max_msgs = console_monitor_max_msgs
 
         self._client = self._create_client(
             zmq_server_address=zmq_server_address,
@@ -142,6 +155,9 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
             server_public_key=server_public_key,
             loop=loop,
         )
+
+        self._console_monitor = None
+        self._init_console_monitor()
 
     def _create_client(
         self,
@@ -159,6 +175,13 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
             raise
         except CommTimeoutError as ex:
             raise self.RequestTimeoutError(ex, {"method": method, "params": params}) from ex
+
+    def _init_console_monitor(self):
+        raise NotImplementedError()
+
+    @property
+    def console_monitor(self):
+        return self._console_monitor
 
 
 class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):

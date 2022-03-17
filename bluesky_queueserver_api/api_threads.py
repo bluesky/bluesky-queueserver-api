@@ -548,6 +548,10 @@ class API_Threads_Mixin(API_Base):
         self._clear_status_timestamp()
         return self.send_request(method="re_halt")
 
+    # =======================================================================================
+    #                            Console monitor
+    # =======================================================================================
+
 
 API_Threads_Mixin.status.__doc__ = _doc_api_status
 API_Threads_Mixin.ping.__doc__ = _doc_api_ping
