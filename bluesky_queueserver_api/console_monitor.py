@@ -12,10 +12,10 @@ class _ConsoleMonitor_ZMQ_Threads:
     ----------
     zmq_subscribe_addr: str
         Address of 0MQ PUB socket. The monitor subscribes to this address once enabled.
-    console_monitor_poll_timeout: float
+    poll_timeout: float
         Timeout used for polling 0MQ socket. The value does not influence performance,
         except that longer timeout may require longer to disable polling.
-    console_monitor_max_msgs: int
+    max_msgs: int
         Maximum number of messages in the buffer. New messages are ignored if the buffer
         is full. This could happen only if console monitoring is enabled, but messages
         are not read from the buffer.

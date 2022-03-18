@@ -120,9 +120,6 @@ class ReManagerAPI_Base:
             if not isinstance(response, Mapping) or not response.get("success", True):
                 raise self.RequestFailedError(request, response)
 
-    def __del__(self):
-        self.console_monitor_disable()
-
 
 class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
     def __init__(
@@ -177,7 +174,8 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
             raise self.RequestTimeoutError(ex, {"method": method, "params": params}) from ex
 
     def _init_console_monitor(self):
-        raise NotImplementedError()
+        # raise NotImplementedError()
+        pass
 
     @property
     def console_monitor(self):

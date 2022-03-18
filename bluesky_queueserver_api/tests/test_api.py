@@ -1953,7 +1953,7 @@ def test_wait_for_idle_02(re_manager, fastapi_server, protocol, library):  # noq
 
         async def testing():
             async def cancel_wait():
-                asyncio.sleep(timeout)
+                await asyncio.sleep(timeout)
                 monitor.cancel()
 
             RM = rm_api_class()
@@ -2016,7 +2016,7 @@ def test_wait_for_idle_03(protocol, library):  # noqa: F811
 
         async def testing():
             async def cancel_wait():
-                asyncio.sleep(timeout)
+                await asyncio.sleep(timeout)
                 monitor.cancel()
 
             RM = rm_api_class()
