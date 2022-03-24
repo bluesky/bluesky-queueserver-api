@@ -29,7 +29,8 @@ class _ConsoleMonitor_ZMQ_Threads:
 
         self._monitor_enabled = False
         self._monitor_thread = None  # Thread or asyncio task
-        self._monitor_thread_stop = False
+        self._monitor_thread_running = False
+        self._monitor_thread_lock = threading.Lock()
 
         self._monitor_init()
 
@@ -39,11 +40,20 @@ class _ConsoleMonitor_ZMQ_Threads:
         )
 
     def _thread_receive_msgs(self):
+        with self._monitor_thread_lock:
+            if self._monitor_thread_running:
+                return
+            self._monitor_thread_running = True
+            self.clear()
+
         self._rco.subscribe()
 
         while True:
-            if self._monitor_thread_stop:
-                break
+            with self._monitor_thread_lock:
+                if not self._monitor_enabled:
+                    self._monitor_thread_running = False
+                    self._rco.unsubscribe()
+                    break
             try:
                 msg = self._rco.recv()
                 self._msg_queue.put(msg, block=False)
@@ -53,10 +63,6 @@ class _ConsoleMonitor_ZMQ_Threads:
             except queue.Full:
                 # Queue is full, ignore the new messages
                 pass
-
-        self._monitor_enabled = False
-        self._rco.unsubscribe()
-        self._msg_queue.queue.clear()
 
     @property
     def enabled(self):
@@ -69,24 +75,31 @@ class _ConsoleMonitor_ZMQ_Threads:
         self._monitor_thread = threading.Thread(
             target=self._thread_receive_msgs, name="QS API - Console monitoring", daemon=True
         )
-        self._monitor_thread_stop = False
+        self._monitor_enabled = True
         self._monitor_thread.start()
 
     def enable(self):
         """
         Enable monitoring of the console output. Received messages are accumulated in the buffer
         and need to be continuosly read using ``next_msg()`` to prevent buffer from overflowing.
+        This method clears the buffer that contains the cached messages.
         """
         if not self._monitor_enabled:
             self._monitor_enable()
 
     def disable(self):
         """
-        Disable monitoring of the console output. This operation clears the buffer once completed.
-        The operation is not instant. Check ``enabled`` property to detect when the operation is
-        completed. Monitoring can not be restarted before the operation is completed.
+        Disable monitoring of the console output. The operation is not instant. Check ``enabled``
+        property to detect when the operation is completed. Monitoring can not be restarted before
+        the operation is completed.
         """
-        self._monitor_thread_stop = True
+        self._monitor_enabled = False
+
+    def clear(self):
+        """
+        Immediately clear all messages stored in the buffer
+        """
+        self._msg_queue.queue.clear()
 
     def next_msg(self, timeout=None):
         """
