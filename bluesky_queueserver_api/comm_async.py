@@ -4,9 +4,17 @@ from .comm_base import ReManagerAPI_ZMQ_Base, ReManagerAPI_HTTP_Base
 from bluesky_queueserver import ZMQCommSendAsync
 
 from .api_docstrings import _doc_send_request, _doc_close
+from .console_monitor import _ConsoleMonitor_ZMQ_Async
 
 
 class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
+    def _init_console_monitor(self):
+        self._console_monitor = _ConsoleMonitor_ZMQ_Async(
+            zmq_subscribe_addr=self._zmq_subscribe_addr,
+            poll_timeout=self._console_monitor_poll_timeout,
+            max_msgs=self._console_monitor_max_msgs,
+        )
+
     def _create_client(
         self,
         *,

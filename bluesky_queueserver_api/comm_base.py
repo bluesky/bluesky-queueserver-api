@@ -174,8 +174,7 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
             raise self.RequestTimeoutError(ex, {"method": method, "params": params}) from ex
 
     def _init_console_monitor(self):
-        # raise NotImplementedError()
-        pass
+        raise NotImplementedError()
 
     @property
     def console_monitor(self):
