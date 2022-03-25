@@ -133,7 +133,6 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         console_monitor_max_msgs=default_console_monitor_max_msgs,
         server_public_key=None,
         request_fail_exceptions=default_allow_request_fail_exceptions,
-        loop=None,
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
 
@@ -150,7 +149,6 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
             timeout_recv=timeout_recv,
             timeout_send=timeout_send,
             server_public_key=server_public_key,
-            loop=loop,
         )
 
         self._console_monitor = None
@@ -163,7 +161,6 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         timeout_recv,
         timeout_send,
         server_public_key,
-        loop,
     ):
         raise NotImplementedError()
 

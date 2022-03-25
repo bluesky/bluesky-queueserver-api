@@ -23,7 +23,6 @@ class REManagerAPI(ReManagerComm_ZMQ_Async, API_Async_Mixin):
         request_fail_exceptions=default_allow_request_fail_exceptions,
         status_expiration_period=default_status_expiration_period,
         status_polling_period=default_status_polling_period,
-        loop=None,
     ):
         ReManagerComm_ZMQ_Async.__init__(
             self,
@@ -32,7 +31,6 @@ class REManagerAPI(ReManagerComm_ZMQ_Async, API_Async_Mixin):
             timeout_send=timeout_send,
             server_public_key=server_public_key,
             request_fail_exceptions=request_fail_exceptions,
-            loop=loop,
         )
         API_Async_Mixin.__init__(
             self,

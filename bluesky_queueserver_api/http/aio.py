@@ -20,7 +20,6 @@ class REManagerAPI(ReManagerComm_HTTP_Async, API_Async_Mixin):
         request_fail_exceptions=default_allow_request_fail_exceptions,
         status_expiration_period=default_status_expiration_period,
         status_polling_period=default_status_polling_period,
-        loop=None,  # Ignored, used here for compatibility with 0MQ asyncio API
     ):
         ReManagerComm_HTTP_Async.__init__(
             self,

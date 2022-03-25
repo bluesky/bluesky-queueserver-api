@@ -148,8 +148,6 @@ _doc_REManagerAPI_ZMQ = """
     status_polling_period: float
         Polling period for RE Manager status used by 'wait' operations,
         default value: 1 second
-    loop: asyncio.Loop
-        ``asyncio`` event loop (use only with Async version of the API).
 
     Examples
     --------
@@ -200,10 +198,6 @@ _doc_REManagerAPI_HTTP = """
     status_polling_period: float
         Polling period for RE Manager status used by 'wait' operations,
         default value: 1 second
-    loop: asyncio.Loop
-        ``asyncio`` event loop (use only with Async version of the API).
-        The parameter is included only for compatibility with 0MQ version
-        of the API and is ignored in HTTP version.
 
     Examples
     --------

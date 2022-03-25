@@ -22,7 +22,6 @@ class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
         timeout_recv,
         timeout_send,
         server_public_key,
-        loop,  # Ignored in sync version
     ):
         return ZMQCommSendThreads(
             zmq_server_address=zmq_server_address,
