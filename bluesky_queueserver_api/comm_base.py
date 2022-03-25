@@ -94,6 +94,7 @@ class ReManagerAPI_Base:
         # Raise exceptions if request fails (success=False)
         self._request_fail_exceptions = request_fail_exceptions
         self._pass_user_info = True
+        self._console_monitor = None
 
     @property
     def request_fail_exceptions_enabled(self):
@@ -119,6 +120,20 @@ class ReManagerAPI_Base:
             #   then consider the request successful (this only happens for 'status' requests).
             if not isinstance(response, Mapping) or not response.get("success", True):
                 raise self.RequestFailedError(request, response)
+
+    @property
+    def console_monitor(self):
+        """
+        Reference to a ``console_monitor``. Console monitor is an instance of
+        a matching ``ConsoleMonitor_...`` class and supports methods ``enable()``,
+        ``disable()``, ``clear()``, ``next_msg()`` and property ``enabled``.
+        See documentation for the appropriate class for more details.
+        """
+        return self._console_monitor
+
+    def _init_console_monitor(self):
+        # raise NotImplementedError()
+        pass
 
 
 class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
@@ -151,7 +166,6 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
             server_public_key=server_public_key,
         )
 
-        self._console_monitor = None
         self._init_console_monitor()
 
     def _create_client(
@@ -169,13 +183,6 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
             raise
         except CommTimeoutError as ex:
             raise self.RequestTimeoutError(ex, {"method": method, "params": params}) from ex
-
-    def _init_console_monitor(self):
-        raise NotImplementedError()
-
-    @property
-    def console_monitor(self):
-        return self._console_monitor
 
 
 class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):

@@ -7,8 +7,9 @@ from bluesky_queueserver import ReceiveConsoleOutput, ReceiveConsoleOutputAsync
 from .comm_base import RequestTimeoutError
 
 _doc_ConsoleMonitor_ZMQ = """
-    A class for monitoring of console output messages published by RE Manager over 0MQ.
-    The asynchronous version of the class must be instantiated in the loop.
+    Console Monitor API (0MQ). The class implements a monitor for console output
+    published by RE Manager over 0MQ. The asynchronous version of the class must
+    be instantiated in the loop.
 
     Parameters
     ----------
@@ -25,7 +26,8 @@ _doc_ConsoleMonitor_ZMQ = """
 """
 
 _doc_ConsoleMonitor_enabled = """
-    Returns ``True`` if monitoring is enabled, ``False`` otherwise.
+    Indicates if monitoring is enabled. Returns ``True`` if monitoring is enabled,
+    ``False`` otherwise.
 
     Examples
     --------
@@ -73,7 +75,7 @@ _doc_ConsoleMonitor_disable = """
 """
 
 _doc_ConsoleMonitor_clear = """
-    Immediately remove all messages from the buffer.
+    Clear the message buffer. Removes all messages from the buffer.
 
     Examples
     --------
@@ -110,7 +112,7 @@ _doc_ConsoleMonitor_next_msg = """
 
     .. code-block:: python
 
-        # Make sure RE Manager is started with option '--zmq-publish-consol=ON'
+        # Make sure RE Manager is started with option '--zmq-publish-console=ON'
 
         RM = REManagerAPI()
         RM.console_output.enable()
@@ -132,7 +134,7 @@ _doc_ConsoleMonitor_next_msg = """
 
     .. code-block:: python
 
-        # Make sure RE Manager is started with option '--zmq-publish-consol=ON'
+        # Make sure RE Manager is started with option '--zmq-publish-console=ON'
 
         RM = REManagerAPI()
         RM.console_output.enable()
