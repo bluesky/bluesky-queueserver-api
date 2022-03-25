@@ -4,12 +4,12 @@ from .comm_base import ReManagerAPI_ZMQ_Base, ReManagerAPI_HTTP_Base
 from bluesky_queueserver import ZMQCommSendThreads
 
 from .api_docstrings import _doc_send_request, _doc_close
-from .console_monitor import _ConsoleMonitor_ZMQ_Threads
+from .console_monitor import ConsoleMonitor_ZMQ_Threads
 
 
 class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
     def _init_console_monitor(self):
-        self._console_monitor = _ConsoleMonitor_ZMQ_Threads(
+        self._console_monitor = ConsoleMonitor_ZMQ_Threads(
             zmq_subscribe_addr=self._zmq_subscribe_addr,
             poll_timeout=self._console_monitor_poll_timeout,
             max_msgs=self._console_monitor_max_msgs,
