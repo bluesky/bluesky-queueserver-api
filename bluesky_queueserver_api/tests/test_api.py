@@ -2058,12 +2058,10 @@ lines
 
 
 # fmt: off
-# @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-# @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 @pytest.mark.parametrize("read_timeout", [None, 1.0])
 @pytest.mark.parametrize("option", ["single_enable", "disable", "disable_with_pause"])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-@pytest.mark.parametrize("protocol", ["ZMQ"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
 def test_console_monitor_01(re_manager_cmd, fastapi_server, read_timeout, option, library, protocol):  # noqa: F811
 
@@ -2120,8 +2118,8 @@ def test_console_monitor_01(re_manager_cmd, fastapi_server, read_timeout, option
                 break
 
         text = "".join(text)
-        print(f"============= text=\n{text}")
-        print(f"============= expected_output=\n{expected_output}")
+        print(f"============= text=\n'{text}'")
+        print(f"============= expected_output=\n'{expected_output}'")
         assert expected_output in text
 
         RM.console_monitor.disable()
@@ -2194,10 +2192,8 @@ def test_console_monitor_01(re_manager_cmd, fastapi_server, read_timeout, option
 
 
 # fmt: off
-# @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-# @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-@pytest.mark.parametrize("protocol", ["ZMQ"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
 def test_console_monitor_02(re_manager_cmd, fastapi_server, library, protocol):  # noqa: F811
     """
@@ -2248,11 +2244,9 @@ def test_console_monitor_02(re_manager_cmd, fastapi_server, library, protocol): 
 
 
 # fmt: off
-# @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-# @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 @pytest.mark.parametrize("pause_before_enable", [False, True])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-@pytest.mark.parametrize("protocol", ["ZMQ"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
 def test_console_monitor_03(re_manager_cmd, fastapi_server, pause_before_enable, library, protocol):  # noqa: F811
     """
@@ -2315,10 +2309,8 @@ def test_console_monitor_03(re_manager_cmd, fastapi_server, pause_before_enable,
 
 
 # fmt: off
-# @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-# @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-@pytest.mark.parametrize("protocol", ["ZMQ"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
 def test_console_monitor_04(re_manager_cmd, fastapi_server, library, protocol):  # noqa: F811
     """

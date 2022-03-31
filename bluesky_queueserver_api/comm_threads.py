@@ -4,7 +4,7 @@ from .comm_base import ReManagerAPI_ZMQ_Base, ReManagerAPI_HTTP_Base
 from bluesky_queueserver import ZMQCommSendThreads
 
 from .api_docstrings import _doc_send_request, _doc_close
-from .console_monitor import ConsoleMonitor_ZMQ_Threads
+from .console_monitor import ConsoleMonitor_ZMQ_Threads, ConsoleMonitor_HTTP_Threads
 
 
 class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
@@ -41,10 +41,18 @@ class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
         return response
 
     def close(self):
+        self._console_monitor.disable()
         self._client.close()
 
 
 class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
+    def _init_console_monitor(self):
+        self._console_monitor = ConsoleMonitor_HTTP_Threads(
+            parent=self,
+            poll_period=self._console_monitor_poll_period,
+            max_msgs=self._console_monitor_max_msgs,
+        )
+
     def _create_client(self, http_server_uri, timeout):
         return httpx.Client(base_url=http_server_uri, timeout=timeout)
 
@@ -63,6 +71,7 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         return response
 
     def close(self):
+        self._console_monitor.disable()
         self._client.close()
 
 

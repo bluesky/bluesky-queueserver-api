@@ -9,6 +9,7 @@ from ._defaults import (
     default_http_request_timeout,
     default_http_server_uri,
     default_console_monitor_poll_timeout,
+    default_console_monitor_poll_period,
     default_console_monitor_max_msgs,
 )
 
@@ -191,6 +192,8 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         *,
         http_server_uri=None,
         timeout=default_http_request_timeout,
+        console_monitor_poll_period=default_console_monitor_poll_period,
+        console_monitor_max_msgs=default_console_monitor_max_msgs,
         request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
@@ -205,10 +208,14 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
         self._timeout = timeout
         self._request_fail_exceptions = request_fail_exceptions
+        self._console_monitor_poll_period = console_monitor_poll_period
+        self._console_monitor_max_msgs = console_monitor_max_msgs
 
         self._rest_api_method_map = rest_api_method_map
 
         self._client = self._create_client(http_server_uri=http_server_uri, timeout=timeout)
+
+        self._init_console_monitor()
 
     def _create_client(self, http_server_uri, timeout):
         raise NotImplementedError()
