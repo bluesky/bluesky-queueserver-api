@@ -127,8 +127,9 @@ class ReManagerAPI_Base:
         """
         Reference to a ``console_monitor``. Console monitor is an instance of
         a matching ``ConsoleMonitor_...`` class and supports methods ``enable()``,
-        ``disable()``, ``clear()``, ``next_msg()`` and property ``enabled``.
-        See documentation for the appropriate class for more details.
+        ``disable()``, ``disable_wait()``, ``clear()``, ``next_msg()`` and
+        property ``enabled``. See documentation for the appropriate class
+        for more details.
         """
         return self._console_monitor
 

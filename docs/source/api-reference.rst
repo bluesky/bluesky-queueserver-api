@@ -194,6 +194,7 @@ HTTP communication), which expose identical API. The class for monitoring consol
     console_monitor.ConsoleMonitor_ZMQ_Threads.enabled
     console_monitor.ConsoleMonitor_ZMQ_Threads.enable
     console_monitor.ConsoleMonitor_ZMQ_Threads.disable
+    console_monitor.ConsoleMonitor_ZMQ_Threads.disable_wait
     console_monitor.ConsoleMonitor_ZMQ_Threads.clear
     console_monitor.ConsoleMonitor_ZMQ_Threads.next_msg
 
@@ -204,6 +205,8 @@ Other console monitor classes support identical API:
    :toctree: generated
 
     console_monitor.ConsoleMonitor_ZMQ_Async
+    console_monitor.ConsoleMonitor_HTTP_Threads
+    console_monitor.ConsoleMonitor_HTTP_Async
 
 Asynchronous Communication with 0MQ Server
 ------------------------------------------

@@ -41,7 +41,7 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
         return response
 
     async def close(self):
-        self._console_monitor.disable()
+        await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_timeout * 10)
         self._client.close()
 
 
@@ -71,7 +71,7 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         return response
 
     async def close(self):
-        self._console_monitor.disable()
+        await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_period * 10)
         await self._client.aclose()
 
 
