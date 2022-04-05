@@ -2,6 +2,21 @@
 Release History
 ===============
 
+
+v0.0.4 (2022-04-05)
+===================
+
+Added
+-----
+
+- API for monitoring of console output: ``REManagerAPI.console_monitor``
+
+Changed
+-------
+
+- Updated API docstrings.
+
+
 v0.0.3 (2022-03-08)
 ===================
 
