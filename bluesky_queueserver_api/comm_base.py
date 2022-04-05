@@ -134,8 +134,7 @@ class ReManagerAPI_Base:
         return self._console_monitor
 
     def _init_console_monitor(self):
-        # raise NotImplementedError()
-        pass
+        raise NotImplementedError()
 
 
 class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
