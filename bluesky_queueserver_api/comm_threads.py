@@ -4,9 +4,17 @@ from .comm_base import ReManagerAPI_ZMQ_Base, ReManagerAPI_HTTP_Base
 from bluesky_queueserver import ZMQCommSendThreads
 
 from .api_docstrings import _doc_send_request, _doc_close
+from .console_monitor import ConsoleMonitor_ZMQ_Threads, ConsoleMonitor_HTTP_Threads
 
 
 class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
+    def _init_console_monitor(self):
+        self._console_monitor = ConsoleMonitor_ZMQ_Threads(
+            zmq_subscribe_addr=self._zmq_subscribe_addr,
+            poll_timeout=self._console_monitor_poll_timeout,
+            max_msgs=self._console_monitor_max_msgs,
+        )
+
     def _create_client(
         self,
         *,
@@ -14,7 +22,6 @@ class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
         timeout_recv,
         timeout_send,
         server_public_key,
-        loop,  # Ignored in sync version
     ):
         return ZMQCommSendThreads(
             zmq_server_address=zmq_server_address,
@@ -34,10 +41,18 @@ class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
         return response
 
     def close(self):
+        self._console_monitor.disable_wait(timeout=self._console_monitor_poll_timeout * 10)
         self._client.close()
 
 
 class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
+    def _init_console_monitor(self):
+        self._console_monitor = ConsoleMonitor_HTTP_Threads(
+            parent=self,
+            poll_period=self._console_monitor_poll_period,
+            max_msgs=self._console_monitor_max_msgs,
+        )
+
     def _create_client(self, http_server_uri, timeout):
         return httpx.Client(base_url=http_server_uri, timeout=timeout)
 
@@ -56,6 +71,7 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         return response
 
     def close(self):
+        self._console_monitor.disable_wait(timeout=self._console_monitor_poll_period * 10)
         self._client.close()
 
 

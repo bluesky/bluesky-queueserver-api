@@ -128,10 +128,22 @@ _doc_REManagerAPI_ZMQ = """
     zmq_server_address: str or None
         Address of control 0MQ socket of RE Manager. If ``None``,
         then the default address ``"tcp://localhost:60615"`` is used.
+    zmq_subscribe_addr: str or None
+        Address of 0MQ socket used for publishing console output.
+        If ``None``, then the default address ``"tcp://localhost:60625"``
+        is used.
     timeout_recv: float
         ``recv`` timeout for 0MQ socket. Default value is 2.0 seconds.
     timeout_send: float
         ``send`` timeout for 0MQ socket. Default value is 0.5 seconds.
+    console_monitor_poll_timeout: float
+        Timeout used internally by console monitor. The value does not
+        influence the rate of message updates. Longer timeout increases
+        the maximum time it takes to disable the console monitor.
+        Default: 1.0 s.
+    console_monitor_max_msgs: int
+        Maximum number of messages in the internal message queue of
+        the console monitor. Default: 10000.
     server_public_key: str or None
         Public key of RE Manager if the encryption is enabled. Set to ``None``
         if encryption is not enabled
@@ -148,8 +160,6 @@ _doc_REManagerAPI_ZMQ = """
     status_polling_period: float
         Polling period for RE Manager status used by 'wait' operations,
         default value: 1 second
-    loop: asyncio.Loop
-        ``asyncio`` event loop (use only with Async version of the API).
 
     Examples
     --------
@@ -187,6 +197,12 @@ _doc_REManagerAPI_HTTP = """
         `"http://localhost:60610"`` is used.
     timeout: float
         Request timeout. Default value is 5.0 seconds.
+    console_monitor_poll_period: float
+        Polling period defines interval between consecutive HTTP requests
+        to the server. Default: 0.5 s.
+    console_monitor_max_msgs: int
+        Maximum number of messages in the internal message buffer.
+        Default: 10000.
     request_fail_exceptions: boolean
         If ``True`` (default) then API functions that communicate with
         RE Manager are raising the ``RequestFailError`` exception if
@@ -200,10 +216,6 @@ _doc_REManagerAPI_HTTP = """
     status_polling_period: float
         Polling period for RE Manager status used by 'wait' operations,
         default value: 1 second
-    loop: asyncio.Loop
-        ``asyncio`` event loop (use only with Async version of the API).
-        The parameter is included only for compatibility with 0MQ version
-        of the API and is ignored in HTTP version.
 
     Examples
     --------

@@ -8,6 +8,9 @@ from ._defaults import (
     default_zmq_request_timeout_send,
     default_http_request_timeout,
     default_http_server_uri,
+    default_console_monitor_poll_timeout,
+    default_console_monitor_poll_period,
+    default_console_monitor_max_msgs,
 )
 
 
@@ -92,6 +95,7 @@ class ReManagerAPI_Base:
         # Raise exceptions if request fails (success=False)
         self._request_fail_exceptions = request_fail_exceptions
         self._pass_user_info = True
+        self._console_monitor = None
 
     @property
     def request_fail_exceptions_enabled(self):
@@ -118,30 +122,52 @@ class ReManagerAPI_Base:
             if not isinstance(response, Mapping) or not response.get("success", True):
                 raise self.RequestFailedError(request, response)
 
+    @property
+    def console_monitor(self):
+        """
+        Reference to a ``console_monitor``. Console monitor is an instance of
+        a matching ``ConsoleMonitor_...`` class and supports methods ``enable()``,
+        ``disable()``, ``disable_wait()``, ``clear()``, ``next_msg()`` and
+        property ``enabled``. See documentation for the appropriate class
+        for more details.
+        """
+        return self._console_monitor
+
+    def _init_console_monitor(self):
+        raise NotImplementedError()
+
 
 class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
     def __init__(
         self,
         *,
         zmq_server_address=None,
+        zmq_subscribe_addr=None,
         timeout_recv=default_zmq_request_timeout_recv,
         timeout_send=default_zmq_request_timeout_send,
+        console_monitor_poll_timeout=default_console_monitor_poll_timeout,
+        console_monitor_max_msgs=default_console_monitor_max_msgs,
         server_public_key=None,
         request_fail_exceptions=default_allow_request_fail_exceptions,
-        loop=None,
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
 
         # TODO: check env. variable for 'zmq_server_address'
+        # TODO: check env. variable for 'zmq_subscribe_address'
         # TODO: check env. variable for 'server_public_key'
+
+        self._zmq_subscribe_addr = zmq_subscribe_addr
+        self._console_monitor_poll_timeout = console_monitor_poll_timeout
+        self._console_monitor_max_msgs = console_monitor_max_msgs
 
         self._client = self._create_client(
             zmq_server_address=zmq_server_address,
             timeout_recv=timeout_recv,
             timeout_send=timeout_send,
             server_public_key=server_public_key,
-            loop=loop,
         )
+
+        self._init_console_monitor()
 
     def _create_client(
         self,
@@ -150,7 +176,6 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         timeout_recv,
         timeout_send,
         server_public_key,
-        loop,
     ):
         raise NotImplementedError()
 
@@ -167,6 +192,8 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         *,
         http_server_uri=None,
         timeout=default_http_request_timeout,
+        console_monitor_poll_period=default_console_monitor_poll_period,
+        console_monitor_max_msgs=default_console_monitor_max_msgs,
         request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
@@ -181,10 +208,14 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
         self._timeout = timeout
         self._request_fail_exceptions = request_fail_exceptions
+        self._console_monitor_poll_period = console_monitor_poll_period
+        self._console_monitor_max_msgs = console_monitor_max_msgs
 
         self._rest_api_method_map = rest_api_method_map
 
         self._client = self._create_client(http_server_uri=http_server_uri, timeout=timeout)
+
+        self._init_console_monitor()
 
     def _create_client(self, http_server_uri, timeout):
         raise NotImplementedError()

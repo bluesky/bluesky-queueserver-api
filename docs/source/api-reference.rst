@@ -169,6 +169,45 @@ API for controlling Run Engine
     zmq.REManagerAPI.re_abort
     zmq.REManagerAPI.re_halt
 
+API for monitoring console output of RE manager
+***********************************************
+
+Each instance of ``REManagerAPI`` holds a reference to a Console Monitor. The reference
+is accessible using the ``console_monitor`` property. The Console Monitor is initialized as
+part of ``REManagerAPI`` instantiation and ready for use.
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    zmq.REManagerAPI.console_monitor
+
+The package implements multiple console monitors (synchronous/asynchronous monitors for 0MQ and
+HTTP communication), which expose identical API. The class for monitoring console output using
+0MQ for synchronous applications:
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    console_monitor.ConsoleMonitor_ZMQ_Threads
+    console_monitor.ConsoleMonitor_ZMQ_Threads.enabled
+    console_monitor.ConsoleMonitor_ZMQ_Threads.enable
+    console_monitor.ConsoleMonitor_ZMQ_Threads.disable
+    console_monitor.ConsoleMonitor_ZMQ_Threads.disable_wait
+    console_monitor.ConsoleMonitor_ZMQ_Threads.clear
+    console_monitor.ConsoleMonitor_ZMQ_Threads.next_msg
+
+Other console monitor classes support identical API:
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    console_monitor.ConsoleMonitor_ZMQ_Async
+    console_monitor.ConsoleMonitor_HTTP_Threads
+    console_monitor.ConsoleMonitor_HTTP_Async
+
 Asynchronous Communication with 0MQ Server
 ------------------------------------------
 

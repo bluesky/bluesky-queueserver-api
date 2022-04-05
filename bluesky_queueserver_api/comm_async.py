@@ -4,9 +4,17 @@ from .comm_base import ReManagerAPI_ZMQ_Base, ReManagerAPI_HTTP_Base
 from bluesky_queueserver import ZMQCommSendAsync
 
 from .api_docstrings import _doc_send_request, _doc_close
+from .console_monitor import ConsoleMonitor_ZMQ_Async, ConsoleMonitor_HTTP_Async
 
 
 class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
+    def _init_console_monitor(self):
+        self._console_monitor = ConsoleMonitor_ZMQ_Async(
+            zmq_subscribe_addr=self._zmq_subscribe_addr,
+            poll_timeout=self._console_monitor_poll_timeout,
+            max_msgs=self._console_monitor_max_msgs,
+        )
+
     def _create_client(
         self,
         *,
@@ -14,10 +22,8 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
         timeout_recv,
         timeout_send,
         server_public_key,
-        loop,
     ):
         return ZMQCommSendAsync(
-            loop=loop,
             zmq_server_address=zmq_server_address,
             timeout_recv=int(timeout_recv * 1000),  # Convert to ms
             timeout_send=int(timeout_send * 1000),  # Convert to ms
@@ -35,10 +41,18 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
         return response
 
     async def close(self):
+        await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_timeout * 10)
         self._client.close()
 
 
 class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
+    def _init_console_monitor(self):
+        self._console_monitor = ConsoleMonitor_HTTP_Async(
+            parent=self,
+            poll_period=self._console_monitor_poll_period,
+            max_msgs=self._console_monitor_max_msgs,
+        )
+
     def _create_client(self, http_server_uri, timeout):
         return httpx.AsyncClient(base_url=http_server_uri, timeout=timeout)
 
@@ -57,6 +71,7 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         return response
 
     async def close(self):
+        await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_period * 10)
         await self._client.aclose()
 
 
