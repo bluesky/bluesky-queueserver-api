@@ -209,13 +209,9 @@ _doc_ConsoleMonitor_next_msg = """
 """
 
 
-class ConsoleMonitor_ZMQ_Threads:
-    # Docstring is maintained separately
-
-    def __init__(self, *, zmq_subscribe_addr, poll_timeout, max_msgs):
-        self._zmq_subscribe_addr = zmq_subscribe_addr
-        self._monitor_poll_timeout = poll_timeout
-
+class _ConsoleMonitor_Threads:
+    def __init__(self, *, max_msgs):
+        self._msg_queue_max = max_msgs
         self._msg_queue = queue.Queue(maxsize=max_msgs)
 
         self._monitor_enabled = False
@@ -226,6 +222,63 @@ class ConsoleMonitor_ZMQ_Threads:
         self._monitor_thread_lock = threading.Lock()
 
         self._monitor_init()
+
+    def _monitor_init(self):
+        raise NotImplementedError()
+
+    def _clear(self):
+        raise NotImplementedError()
+
+    @property
+    def enabled(self):
+        # Docstring is maintained separately
+        return self._monitor_enabled
+
+    def _monitor_enable(self):
+        self._monitor_thread = threading.Thread(
+            target=self._thread_receive_msgs, name="QS API - Console monitoring", daemon=True
+        )
+        self._monitor_enabled = True
+        self._monitor_thread.start()
+
+    def enable(self):
+        # Docstring is maintained separately
+        if not self._monitor_enabled:
+            self._monitor_enable()
+
+    def disable(self):
+        # Docstring is maintained separately
+        self._monitor_enabled = False
+
+    def disable_wait(self, *, timeout=2):
+        # Docstring is maintained separately
+        self.disable()
+        if not self._monitor_thread_running.wait(timeout=timeout):
+            raise TimeoutError(f"Timeout occurred while disabling console monitor: timeout={timeout}")
+
+    def clear(self):
+        # Docstring is maintained separately
+        self._clear()
+
+    def next_msg(self, timeout=None):
+        # Docstring is maintained separately
+        block = bool(timeout)
+        try:
+            return self._msg_queue.get(block=block, timeout=timeout)
+        except queue.Empty:
+            raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
+
+    def __del__(self):
+        self.disable()
+
+
+class ConsoleMonitor_ZMQ_Threads(_ConsoleMonitor_Threads):
+    # Docstring is maintained separately
+
+    def __init__(self, *, zmq_subscribe_addr, poll_timeout, max_msgs):
+        self._zmq_subscribe_addr = zmq_subscribe_addr
+        self._monitor_poll_timeout = poll_timeout
+        super().__init__(max_msgs=max_msgs)
 
     def _monitor_init(self):
         self._rco = ReceiveConsoleOutput(
@@ -257,50 +310,11 @@ class ConsoleMonitor_ZMQ_Threads:
                 # Queue is full, ignore the new messages
                 pass
 
-    @property
-    def enabled(self):
-        # Docstring is maintained separately
-        return self._monitor_enabled
-
-    def _monitor_enable(self):
-        self._monitor_thread = threading.Thread(
-            target=self._thread_receive_msgs, name="QS API - Console monitoring", daemon=True
-        )
-        self._monitor_enabled = True
-        self._monitor_thread.start()
-
-    def enable(self):
-        # Docstring is maintained separately
-        if not self._monitor_enabled:
-            self._monitor_enable()
-
-    def disable(self):
-        # Docstring is maintained separately
-        self._monitor_enabled = False
-
-    def disable_wait(self, *, timeout=2):
-        # Docstring is maintained separately
-        self.disable()
-        if not self._monitor_thread_running.wait(timeout=timeout):
-            raise TimeoutError(f"Timeout occurred while disabling console monitor: timeout={timeout}")
-
-    def clear(self):
-        # Docstring is maintained separately
+    def _clear(self):
         self._msg_queue.queue.clear()
 
-    def next_msg(self, timeout=None):
-        # Docstring is maintained separately
-        block = bool(timeout)
-        try:
-            return self._msg_queue.get(block=block, timeout=timeout)
-        except queue.Empty:
-            raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
 
-    def __del__(self):
-        self.disable()
-
-
-class ConsoleMonitor_HTTP_Threads:
+class ConsoleMonitor_HTTP_Threads(_ConsoleMonitor_Threads):
     # Docstring is maintained separately
 
     def __init__(self, *, parent, poll_period, max_msgs):
@@ -309,17 +323,7 @@ class ConsoleMonitor_HTTP_Threads:
         self._parent = parent  # Reference to the parent class
         self._monitor_poll_period = poll_period
         self._console_output_last_msg_uid = ""
-
-        self._msg_queue = queue.Queue(maxsize=max_msgs)
-
-        self._monitor_enabled = False
-        self._monitor_thread = None  # Thread or asyncio task
-        self._monitor_thread_running = threading.Event()
-        self._monitor_thread_running.set()
-
-        self._monitor_thread_lock = threading.Lock()
-
-        self._monitor_init()
+        super().__init__(max_msgs=max_msgs)
 
     def _monitor_init(self):
         ...
@@ -357,57 +361,14 @@ class ConsoleMonitor_HTTP_Threads:
                 # Ignore communication errors. More detailed processing may be added later.
                 pass
 
-    @property
-    def enabled(self):
-        # Docstring is maintained separately
-        return self._monitor_enabled
-
-    def _monitor_enable(self):
-        self._monitor_thread = threading.Thread(
-            target=self._thread_receive_msgs, name="QS API - Console monitoring", daemon=True
-        )
-        self._monitor_enabled = True
-        self._monitor_thread.start()
-
-    def enable(self):
-        # Docstring is maintained separately
-        if not self._monitor_enabled:
-            self._monitor_enable()
-
-    def disable(self):
-        # Docstring is maintained separately
-        self._monitor_enabled = False
-
-    def disable_wait(self, *, timeout=2):
-        # Docstring is maintained separately
-        self.disable()
-        if not self._monitor_thread_running.wait(timeout=timeout):
-            raise TimeoutError(f"Timeout occurred while disabling console monitor: timeout={timeout}")
-
-    def clear(self):
-        # Docstring is maintained separately
+    def _clear(self):
         self._console_output_last_msg_uid = ""
         self._msg_queue.queue.clear()
 
-    def next_msg(self, timeout=None):
-        # Docstring is maintained separately
-        block = bool(timeout)
-        try:
-            return self._msg_queue.get(block=block, timeout=timeout)
-        except queue.Empty:
-            raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
 
-    def __del__(self):
-        self.disable()
-
-
-class ConsoleMonitor_ZMQ_Async:
-    # Docstring is maintained separately
-
-    def __init__(self, *, zmq_subscribe_addr, poll_timeout, max_msgs):
-        self._zmq_subscribe_addr = zmq_subscribe_addr
-        self._monitor_poll_timeout = poll_timeout
-
+class _ConsoleMonitor_Async:
+    def __init__(self, *, max_msgs):
+        self._msg_queue_max = max_msgs
         self._msg_queue = asyncio.Queue(maxsize=max_msgs)
 
         self._monitor_enabled = False
@@ -418,6 +379,58 @@ class ConsoleMonitor_ZMQ_Async:
         self._monitor_task_lock = asyncio.Lock()
 
         self._monitor_init()
+
+    @property
+    def enabled(self):
+        # Docstring is maintained separately
+        return self._monitor_enabled
+
+    def _monitor_enable(self):
+        self._monitor_task = asyncio.create_task(self._task_receive_msgs())
+        self._monitor_enabled = True
+
+    def _clear(self):
+        raise NotImplementedError()
+
+    def enable(self):
+        # Docstring is maintained separately
+        if not self._monitor_enabled:
+            self._monitor_enable()
+
+    def disable(self):
+        # Docstring is maintained separately
+        self._monitor_enabled = False
+
+    async def disable_wait(self, *, timeout=2):
+        # Docstring is maintained separately
+        self.disable()
+        await asyncio.wait_for(self._monitor_task_running.wait(), timeout=timeout)
+
+    def clear(self):
+        # Docstring is maintained separately
+        self._clear()
+
+    async def next_msg(self, timeout=None):
+        # Docstring is maintained separately
+        try:
+            if timeout:
+                return await asyncio.wait_for(self._msg_queue.get(), timeout=timeout)
+            else:
+                return self._msg_queue.get_nowait()
+        except (asyncio.QueueEmpty, asyncio.TimeoutError):
+            raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
+
+    def __del__(self):
+        self.disable()
+
+
+class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
+    # Docstring is maintained separately
+
+    def __init__(self, *, zmq_subscribe_addr, poll_timeout, max_msgs):
+        self._zmq_subscribe_addr = zmq_subscribe_addr
+        self._monitor_poll_timeout = poll_timeout
+        super().__init__(max_msgs=max_msgs)
 
     def _monitor_init(self):
         self._rco = ReceiveConsoleOutputAsync(
@@ -450,52 +463,15 @@ class ConsoleMonitor_ZMQ_Async:
                 # Queue is full, ignore the new messages
                 pass
 
-    @property
-    def enabled(self):
-        # Docstring is maintained separately
-        return self._monitor_enabled
-
-    def _monitor_enable(self):
-        self._monitor_task = asyncio.create_task(self._task_receive_msgs())
-        self._monitor_enabled = True
-
-    def enable(self):
-        # Docstring is maintained separately
-        if not self._monitor_enabled:
-            self._monitor_enable()
-
-    def disable(self):
-        # Docstring is maintained separately
-        self._monitor_enabled = False
-
-    async def disable_wait(self, *, timeout=2):
-        # Docstring is maintained separately
-        self.disable()
-        await asyncio.wait_for(self._monitor_task_running.wait(), timeout=timeout)
-
-    def clear(self):
-        # Docstring is maintained separately
+    def _clear(self):
         try:
             while True:
                 self._msg_queue.get_nowait()
         except asyncio.QueueEmpty:
             pass
 
-    async def next_msg(self, timeout=None):
-        # Docstring is maintained separately
-        try:
-            if timeout:
-                return await asyncio.wait_for(self._msg_queue.get(), timeout=timeout)
-            else:
-                return self._msg_queue.get_nowait()
-        except (asyncio.QueueEmpty, asyncio.TimeoutError):
-            raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
 
-    def __del__(self):
-        self.disable()
-
-
-class ConsoleMonitor_HTTP_Async:
+class ConsoleMonitor_HTTP_Async(_ConsoleMonitor_Async):
     # Docstring is maintained separately
 
     def __init__(self, *, parent, poll_period, max_msgs):
@@ -504,17 +480,7 @@ class ConsoleMonitor_HTTP_Async:
         self._parent = parent  # Reference to the parent class
         self._monitor_poll_period = poll_period
         self._console_output_last_msg_uid = ""
-
-        self._msg_queue = asyncio.Queue(maxsize=max_msgs)
-
-        self._monitor_enabled = False
-        self._monitor_task = None  # Thread or asyncio task
-        self._monitor_task_running = asyncio.Event()
-        self._monitor_task_running.set()
-
-        self._monitor_task_lock = asyncio.Lock()
-
-        self._monitor_init()
+        super().__init__(max_msgs=max_msgs)
 
     def _monitor_init(self):
         ...
@@ -553,31 +519,7 @@ class ConsoleMonitor_HTTP_Async:
                 # Ignore communication errors. More detailed processing may be added later.
                 pass
 
-    @property
-    def enabled(self):
-        # Docstring is maintained separately
-        return self._monitor_enabled
-
-    def _monitor_enable(self):
-        self._monitor_task = asyncio.create_task(self._task_receive_msgs())
-        self._monitor_enabled = True
-
-    def enable(self):
-        # Docstring is maintained separately
-        if not self._monitor_enabled:
-            self._monitor_enable()
-
-    def disable(self):
-        # Docstring is maintained separately
-        self._monitor_enabled = False
-
-    async def disable_wait(self, *, timeout=2):
-        # Docstring is maintained separately
-        self.disable()
-        await asyncio.wait_for(self._monitor_task_running.wait(), timeout=timeout)
-
-    def clear(self):
-        # Docstring is maintained separately
+    def _clear(self):
         try:
             self._console_output_last_msg_uid = ""
             while True:
@@ -585,48 +527,23 @@ class ConsoleMonitor_HTTP_Async:
         except asyncio.QueueEmpty:
             pass
 
-    async def next_msg(self, timeout=None):
-        # Docstring is maintained separately
-        try:
-            if timeout:
-                return await asyncio.wait_for(self._msg_queue.get(), timeout=timeout)
-            else:
-                return self._msg_queue.get_nowait()
-        except (asyncio.QueueEmpty, asyncio.TimeoutError):
-            raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
 
-    def __del__(self):
-        self.disable()
-
+_ConsoleMonitor_Threads.enabled.__doc__ = _doc_ConsoleMonitor_enabled
+_ConsoleMonitor_Threads.enable.__doc__ = _doc_ConsoleMonitor_enable
+_ConsoleMonitor_Threads.disable.__doc__ = _doc_ConsoleMonitor_disable
+_ConsoleMonitor_Threads.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
+_ConsoleMonitor_Threads.clear.__doc__ = _doc_ConsoleMonitor_clear
+_ConsoleMonitor_Threads.next_msg.__doc__ = _doc_ConsoleMonitor_next_msg
 
 ConsoleMonitor_ZMQ_Threads.__doc__ = _doc_ConsoleMonitor_ZMQ
-ConsoleMonitor_ZMQ_Threads.enabled.__doc__ = _doc_ConsoleMonitor_enabled
-ConsoleMonitor_ZMQ_Threads.enable.__doc__ = _doc_ConsoleMonitor_enable
-ConsoleMonitor_ZMQ_Threads.disable.__doc__ = _doc_ConsoleMonitor_disable
-ConsoleMonitor_ZMQ_Threads.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
-ConsoleMonitor_ZMQ_Threads.clear.__doc__ = _doc_ConsoleMonitor_clear
-ConsoleMonitor_ZMQ_Threads.next_msg.__doc__ = _doc_ConsoleMonitor_next_msg
-
 ConsoleMonitor_HTTP_Threads.__doc__ = _doc_ConsoleMonitor_HTTP
-ConsoleMonitor_HTTP_Threads.enabled.__doc__ = _doc_ConsoleMonitor_enabled
-ConsoleMonitor_HTTP_Threads.enable.__doc__ = _doc_ConsoleMonitor_enable
-ConsoleMonitor_HTTP_Threads.disable.__doc__ = _doc_ConsoleMonitor_disable
-ConsoleMonitor_HTTP_Threads.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
-ConsoleMonitor_HTTP_Threads.clear.__doc__ = _doc_ConsoleMonitor_clear
-ConsoleMonitor_HTTP_Threads.next_msg.__doc__ = _doc_ConsoleMonitor_next_msg
+
+_ConsoleMonitor_Async.enabled.__doc__ = _doc_ConsoleMonitor_enabled
+_ConsoleMonitor_Async.enable.__doc__ = _doc_ConsoleMonitor_enable
+_ConsoleMonitor_Async.disable.__doc__ = _doc_ConsoleMonitor_disable
+_ConsoleMonitor_Async.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
+_ConsoleMonitor_Async.clear.__doc__ = _doc_ConsoleMonitor_clear
+_ConsoleMonitor_Async.next_msg.__doc__ = _doc_ConsoleMonitor_next_msg
 
 ConsoleMonitor_ZMQ_Async.__doc__ = _doc_ConsoleMonitor_ZMQ
-ConsoleMonitor_ZMQ_Async.enabled.__doc__ = _doc_ConsoleMonitor_enabled
-ConsoleMonitor_ZMQ_Async.enable.__doc__ = _doc_ConsoleMonitor_enable
-ConsoleMonitor_ZMQ_Async.disable.__doc__ = _doc_ConsoleMonitor_disable
-ConsoleMonitor_ZMQ_Async.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
-ConsoleMonitor_ZMQ_Async.clear.__doc__ = _doc_ConsoleMonitor_clear
-ConsoleMonitor_ZMQ_Async.next_msg.__doc__ = _doc_ConsoleMonitor_next_msg
-
 ConsoleMonitor_HTTP_Async.__doc__ = _doc_ConsoleMonitor_HTTP
-ConsoleMonitor_HTTP_Async.enabled.__doc__ = _doc_ConsoleMonitor_enabled
-ConsoleMonitor_HTTP_Async.enable.__doc__ = _doc_ConsoleMonitor_enable
-ConsoleMonitor_HTTP_Async.disable.__doc__ = _doc_ConsoleMonitor_disable
-ConsoleMonitor_HTTP_Async.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
-ConsoleMonitor_HTTP_Async.clear.__doc__ = _doc_ConsoleMonitor_clear
-ConsoleMonitor_HTTP_Async.next_msg.__doc__ = _doc_ConsoleMonitor_next_msg
