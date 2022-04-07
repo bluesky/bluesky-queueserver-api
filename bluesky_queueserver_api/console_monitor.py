@@ -208,9 +208,107 @@ _doc_ConsoleMonitor_next_msg = """
         await RM.close()
 """
 
+_doc_ConsoleMonitor_text_updated = """
+    Indicates if console text was updated. The property returns ``True`` if
+    the text buffer with console output contains new data and updated text
+    could be loaded using ``text()`` API. Otherwise ``text()`` API returns
+    'old' unchanged console output. Calling ``text()`` API resets the property
+    to ``False``.
+
+    Examples
+    --------
+    Synchronous API
+
+    .. code-block:: python
+
+        RM.console_monitor.enable()
+
+        while True:
+            # Polling for updated text (console output)
+            if RM.console_monitor.text_updated:
+                text = RM.console_monitor.text()
+                # Use 'text'
+            ttime.sleep(0.1)
+
+    Asynchronous API
+
+    .. code-block:: python
+
+        RM.console_monitor.enable()
+
+        while True:
+            # Polling for updated text (console output)
+            if RM.console_monitor.text_updated:
+                text = await RM.console_monitor.text()
+                # Use 'text'
+            asyncio.sleep(0.1)
+"""
+
+_doc_ConsoleMonitor_text_max_lines = """
+    Get/set the maximum size of the text buffer. The new buffer size is
+    applied to the existing buffer, removing extra messages if necessary.
+
+    Examples
+    --------
+    Synchronous and asynchronous API
+
+    .. code-block:: python
+
+        # Get the maximum number of lines
+        n_lines = RM.console_monitor.text_max_lines
+
+        # Set the maximum number of lines
+        RM.console_monitor.text_max_lines = 1000
+"""
+
+_doc_ConsoleMonitor_text = """
+    Returns text representation of console output. Monitor ``text_updated``
+    property to check if text buffer was modified since the last call to
+    ``text()`` API.
+
+    Returns
+    -------
+    text: str
+        String representing recent console output. The maximum number of
+        lines is determined by ``text_max_lines``.
+
+    Examples
+    --------
+    Synchronous API
+
+    .. code-block:: python
+
+        RM = REManagerAPI()
+        RM.console_monitor.enable()
+
+        # Wait for RE Manager to produce some output
+        ttime.sleep(20)
+
+        text = RM.console_monitor.text()
+        print(text)
+
+        RM.console_monitor.disable()
+
+    Asynchronous API
+
+    .. code-block:: python
+
+        RM = REManagerAPI()
+        RM.console_monitor.enable()
+
+        # Wait for RE Manager to produce some output
+        await asyncio.sleep(20)
+
+        text = await RM.console_monitor.text()
+        print(text)
+
+        RM.console_monitor.disable()
+
+"""
+
 
 class _ConsoleMonitor:
-    def __init__(self, *, text_max_lines):
+    def __init__(self, *, max_lines):
         self._monitor_enabled = False
         self._monitor_init()
 
@@ -218,11 +316,7 @@ class _ConsoleMonitor:
 
         self._text_buffer = []
         self._text_clear()
-        self._text_max_lines = text_max_lines
-
-    @property
-    def text_updated(self):
-        return self._text_updated
+        self._text_max_lines = max_lines
 
     def _text_generate(self):
         if self._text_buffer and self._text_buffer[-1] == "":
@@ -231,21 +325,12 @@ class _ConsoleMonitor:
             self._text = "\n".join(self._text_buffer)
         self._text_updated = False
 
-    @property
-    def text_max_lines(self):
-        return self._text_max_lines
-
-    @text_max_lines.setter
-    def text_max_lines(self, max_lines):
-        max_lines = max(max_lines, 0)
-        self._text_max_lines = max_lines
-        self._adjust_text_buffer_size()
-
     def _text_clear(self):
-        self._text_updated = True
         self._text = ""
-        self._text_buffer.clear()
         self._text_line = 0
+        self._text_pos = 0
+        self._text_buffer.clear()
+        self._text_updated = True
 
     def _add_msg_to_text_buffer(self, response):
         _, msg = response
@@ -265,6 +350,7 @@ class _ConsoleMonitor:
             if not self._text_buffer:
                 self._text_buffer = [""]
                 self._text_line = 0
+                self._text_pos = 0
 
             if next_ind != 0:
                 # Add a line to the current line and position
@@ -273,23 +359,23 @@ class _ConsoleMonitor:
 
                 # Extend the current line with spaces if needed
                 line_len = len(self._text_buffer[self._text_line])
-                if line_len < self._text_ind:
-                    self._text_buffer[self._text_line] += " " * self._text_ind - line_len
+                if line_len < self._text_pos:
+                    self._text_buffer[self._text_line] += " " * self._text_pos - line_len
 
                 line = self._text_buffer[self._text_line]
                 self._text_buffer[self._text_line] = (
-                    line[: self._text_ind] + substr + line[self._text_ind + len(substr) :]
+                    line[: self._text_pos] + substr + line[self._text_pos + len(substr) :]
                 )
 
             elif indices["new_line"] == 0:
                 self._text_line += 1
                 if self._text_line >= len(self._text_buffer):
                     self._text_buffer.insert(self._text_line, "")
-                self._text_ind = 0
+                self._text_pos = 0
                 msg = msg[len(patterns["new_line"]) :]
 
             elif indices["cr"] == 0:
-                self._text_ind = 0
+                self._text_pos = 0
                 msg = msg[len(patterns["cr"]) :]
 
             elif indices["one_line_up"] == 0:
@@ -322,6 +408,23 @@ class _ConsoleMonitor:
         raise NotImplementedError()
 
     @property
+    def text_updated(self):
+        # Docstring is maintained separately
+        return self._text_updated
+
+    @property
+    def text_max_lines(self):
+        # Docstring is maintained separately
+        return self._text_max_lines
+
+    @text_max_lines.setter
+    def text_max_lines(self, max_lines):
+        # Docstring is maintained separately
+        max_lines = max(max_lines, 0)
+        self._text_max_lines = max_lines
+        self._adjust_text_buffer_size()
+
+    @property
     def enabled(self):
         # Docstring is maintained separately
         return self._monitor_enabled
@@ -344,7 +447,7 @@ class _ConsoleMonitor:
 
 
 class _ConsoleMonitor_Threads(_ConsoleMonitor):
-    def __init__(self, *, max_msgs):
+    def __init__(self, *, max_msgs, max_lines):
         self._msg_queue_max = max_msgs
         self._msg_queue = queue.Queue(maxsize=max_msgs)
 
@@ -356,7 +459,7 @@ class _ConsoleMonitor_Threads(_ConsoleMonitor):
         self._monitor_thread_lock = threading.Lock()
         self._text_buffer_lock = threading.Lock()
 
-        super().__init__()
+        super().__init__(max_lines=max_lines)
 
     def _monitor_enable(self):
         self._monitor_thread = threading.Thread(
@@ -380,6 +483,7 @@ class _ConsoleMonitor_Threads(_ConsoleMonitor):
             raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
 
     def text(self):
+        # Docstring is maintained separately
         if self._text_updated:
             with self._text_buffer_lock:
                 self._text_generate()
@@ -389,10 +493,10 @@ class _ConsoleMonitor_Threads(_ConsoleMonitor):
 class ConsoleMonitor_ZMQ_Threads(_ConsoleMonitor_Threads):
     # Docstring is maintained separately
 
-    def __init__(self, *, zmq_subscribe_addr, poll_timeout, max_msgs):
+    def __init__(self, *, zmq_subscribe_addr, poll_timeout, max_msgs, max_lines):
         self._zmq_subscribe_addr = zmq_subscribe_addr
         self._monitor_poll_timeout = poll_timeout
-        super().__init__(max_msgs=max_msgs)
+        super().__init__(max_msgs=max_msgs, max_lines=max_lines)
 
     def _monitor_init(self):
         self._rco = ReceiveConsoleOutput(
@@ -437,13 +541,13 @@ class ConsoleMonitor_ZMQ_Threads(_ConsoleMonitor_Threads):
 class ConsoleMonitor_HTTP_Threads(_ConsoleMonitor_Threads):
     # Docstring is maintained separately
 
-    def __init__(self, *, parent, poll_period, max_msgs):
+    def __init__(self, *, parent, poll_period, max_msgs, max_lines):
         # The parent class is must have ``_client`` attribute with
         #   active httpx client.
         self._parent = parent  # Reference to the parent class
         self._monitor_poll_period = poll_period
         self._console_output_last_msg_uid = ""
-        super().__init__(max_msgs=max_msgs)
+        super().__init__(max_msgs=max_msgs, max_lines=max_lines)
 
     def _monitor_init(self):
         ...
@@ -493,11 +597,10 @@ class ConsoleMonitor_HTTP_Threads(_ConsoleMonitor_Threads):
 
 
 class _ConsoleMonitor_Async(_ConsoleMonitor):
-    def __init__(self, *, max_msgs):
+    def __init__(self, *, max_msgs, max_lines):
         self._msg_queue_max = max_msgs
         self._msg_queue = asyncio.Queue(maxsize=max_msgs)
 
-        self._monitor_enabled = False
         self._monitor_task = None  # Thread or asyncio task
         self._monitor_task_running = asyncio.Event()
         self._monitor_task_running.set()
@@ -505,7 +608,7 @@ class _ConsoleMonitor_Async(_ConsoleMonitor):
         self._monitor_task_lock = asyncio.Lock()
         self._text_buffer_lock = asyncio.Lock()
 
-        self._monitor_init()
+        super().__init__(max_lines=max_lines)
 
     def _monitor_enable(self):
         self._monitor_task = asyncio.create_task(self._task_receive_msgs())
@@ -527,8 +630,9 @@ class _ConsoleMonitor_Async(_ConsoleMonitor):
             raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
 
     async def text(self):
+        # Docstring is maintained separately
         if self._text_updated:
-            async with self._text_buffer_lock():
+            async with self._text_buffer_lock:
                 self._text_generate()
         return self._text
 
@@ -536,10 +640,10 @@ class _ConsoleMonitor_Async(_ConsoleMonitor):
 class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
     # Docstring is maintained separately
 
-    def __init__(self, *, zmq_subscribe_addr, poll_timeout, max_msgs):
+    def __init__(self, *, zmq_subscribe_addr, poll_timeout, max_msgs, max_lines):
         self._zmq_subscribe_addr = zmq_subscribe_addr
         self._monitor_poll_timeout = poll_timeout
-        super().__init__(max_msgs=max_msgs)
+        super().__init__(max_msgs=max_msgs, max_lines=max_lines)
 
     def _monitor_init(self):
         self._rco = ReceiveConsoleOutputAsync(
@@ -565,7 +669,7 @@ class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
             try:
                 msg = await self._rco.recv()
 
-                async with self._text_buffer_lock():
+                async with self._text_buffer_lock:
                     self._msg_queue.put_nowait(msg)
                     self._add_msg_to_text_buffer(msg)
                     self._adjust_text_buffer_size()
@@ -589,13 +693,13 @@ class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
 class ConsoleMonitor_HTTP_Async(_ConsoleMonitor_Async):
     # Docstring is maintained separately
 
-    def __init__(self, *, parent, poll_period, max_msgs):
+    def __init__(self, *, parent, poll_period, max_msgs, max_lines):
         # The parent class is must have ``_client`` attribute with
         #   active httpx client.
         self._parent = parent  # Reference to the parent class
         self._monitor_poll_period = poll_period
         self._console_output_last_msg_uid = ""
-        super().__init__(max_msgs=max_msgs)
+        super().__init__(max_msgs=max_msgs, max_lines=max_lines)
 
     def _monitor_init(self):
         ...
@@ -625,7 +729,7 @@ class ConsoleMonitor_HTTP_Async(_ConsoleMonitor_Async):
                 console_output_msgs = response.get("console_output_msgs", [])
                 self._console_output_last_msg_uid = response.get("last_msg_uid", "")
 
-                async with self._text_buffer_lock():
+                async with self._text_buffer_lock:
                     for m in console_output_msgs:
                         self._msg_queue.put_nowait(m)
                         self._add_msg_to_text_buffer(m)
@@ -653,15 +757,19 @@ _ConsoleMonitor.enabled.__doc__ = _doc_ConsoleMonitor_enabled
 _ConsoleMonitor.enable.__doc__ = _doc_ConsoleMonitor_enable
 _ConsoleMonitor.disable.__doc__ = _doc_ConsoleMonitor_disable
 _ConsoleMonitor.clear.__doc__ = _doc_ConsoleMonitor_clear
+_ConsoleMonitor.text_updated.__doc__ = _doc_ConsoleMonitor_text_updated
+_ConsoleMonitor.text_max_lines.__doc__ = _doc_ConsoleMonitor_text_max_lines
 
 _ConsoleMonitor_Threads.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
 _ConsoleMonitor_Threads.next_msg.__doc__ = _doc_ConsoleMonitor_next_msg
+_ConsoleMonitor_Threads.text.__doc__ = _doc_ConsoleMonitor_text
 
 ConsoleMonitor_ZMQ_Threads.__doc__ = _doc_ConsoleMonitor_ZMQ
 ConsoleMonitor_HTTP_Threads.__doc__ = _doc_ConsoleMonitor_HTTP
 
 _ConsoleMonitor_Async.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
 _ConsoleMonitor_Async.next_msg.__doc__ = _doc_ConsoleMonitor_next_msg
+_ConsoleMonitor_Async.text.__doc__ = _doc_ConsoleMonitor_text
 
 ConsoleMonitor_ZMQ_Async.__doc__ = _doc_ConsoleMonitor_ZMQ
 ConsoleMonitor_HTTP_Async.__doc__ = _doc_ConsoleMonitor_HTTP

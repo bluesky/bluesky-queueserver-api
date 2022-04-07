@@ -11,6 +11,7 @@ from ._defaults import (
     default_console_monitor_poll_timeout,
     default_console_monitor_poll_period,
     default_console_monitor_max_msgs,
+    default_console_monitor_max_lines,
 )
 
 
@@ -147,6 +148,7 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         timeout_send=default_zmq_request_timeout_send,
         console_monitor_poll_timeout=default_console_monitor_poll_timeout,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
+        console_monitor_max_lines=default_console_monitor_max_lines,
         server_public_key=None,
         request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
@@ -159,6 +161,7 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         self._zmq_subscribe_addr = zmq_subscribe_addr
         self._console_monitor_poll_timeout = console_monitor_poll_timeout
         self._console_monitor_max_msgs = console_monitor_max_msgs
+        self._console_monitor_max_lines = console_monitor_max_lines
 
         self._client = self._create_client(
             zmq_server_address=zmq_server_address,
@@ -194,6 +197,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         timeout=default_http_request_timeout,
         console_monitor_poll_period=default_console_monitor_poll_period,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
+        console_monitor_max_lines=default_console_monitor_max_lines,
         request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
@@ -210,6 +214,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self._request_fail_exceptions = request_fail_exceptions
         self._console_monitor_poll_period = console_monitor_poll_period
         self._console_monitor_max_msgs = console_monitor_max_msgs
+        self._console_monitor_max_lines = console_monitor_max_lines
 
         self._rest_api_method_map = rest_api_method_map
 

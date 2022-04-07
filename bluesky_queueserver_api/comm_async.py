@@ -13,6 +13,7 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
             zmq_subscribe_addr=self._zmq_subscribe_addr,
             poll_timeout=self._console_monitor_poll_timeout,
             max_msgs=self._console_monitor_max_msgs,
+            max_lines=self._console_monitor_max_lines,
         )
 
     def _create_client(
@@ -51,6 +52,7 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
             parent=self,
             poll_period=self._console_monitor_poll_period,
             max_msgs=self._console_monitor_max_msgs,
+            max_lines=self._console_monitor_max_lines,
         )
 
     def _create_client(self, http_server_uri, timeout):
