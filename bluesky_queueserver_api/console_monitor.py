@@ -210,9 +210,107 @@ _doc_ConsoleMonitor_next_msg = """
 
 
 class _ConsoleMonitor:
-    def __init__(self):
+    def __init__(self, *, text_max_lines):
         self._monitor_enabled = False
         self._monitor_init()
+
+        self._buffers_modified_event = threading.Event()
+
+        self._text_buffer = []
+        self._text_clear()
+        self._text_max_lines = text_max_lines
+
+    @property
+    def text_updated(self):
+        return self._text_updated
+
+    def _text_generate(self):
+        if self._text_buffer and self._text_buffer[-1] == "":
+            self._text = "\n".join(self._text_buffer[:-1])
+        else:
+            self._text = "\n".join(self._text_buffer)
+        self._text_updated = False
+
+    @property
+    def text_max_lines(self):
+        return self._text_max_lines
+
+    @text_max_lines.setter
+    def text_max_lines(self, max_lines):
+        max_lines = max(max_lines, 0)
+        self._text_max_lines = max_lines
+        self._adjust_text_buffer_size()
+
+    def _text_clear(self):
+        self._text_updated = True
+        self._text = ""
+        self._text_buffer.clear()
+        self._text_line = 0
+
+    def _add_msg_to_text_buffer(self, response):
+        _, msg = response
+
+        pattern_new_line = "\n"
+        pattern_cr = "\r"
+        pattern_up_one_line = "\x1B\x5B\x41"  # ESC [#A
+
+        patterns = {"new_line": pattern_new_line, "cr": pattern_cr, "one_line_up": pattern_up_one_line}
+
+        while msg:
+            indices = {k: msg.find(v) for k, v in patterns.items()}
+            indices_nonzero = [_ for _ in indices.values() if (_ >= 0)]
+            next_ind = min(indices_nonzero) if indices_nonzero else len(msg)
+
+            # The following algorithm requires that there is at least one line in the list.
+            if not self._text_buffer:
+                self._text_buffer = [""]
+                self._text_line = 0
+
+            if next_ind != 0:
+                # Add a line to the current line and position
+                substr = msg[:next_ind]
+                msg = msg[next_ind:]
+
+                # Extend the current line with spaces if needed
+                line_len = len(self._text_buffer[self._text_line])
+                if line_len < self._text_ind:
+                    self._text_buffer[self._text_line] += " " * self._text_ind - line_len
+
+                line = self._text_buffer[self._text_line]
+                self._text_buffer[self._text_line] = (
+                    line[: self._text_ind] + substr + line[self._text_ind + len(substr) :]
+                )
+
+            elif indices["new_line"] == 0:
+                self._text_line += 1
+                if self._text_line >= len(self._text_buffer):
+                    self._text_buffer.insert(self._text_line, "")
+                self._text_ind = 0
+                msg = msg[len(patterns["new_line"]) :]
+
+            elif indices["cr"] == 0:
+                self._text_ind = 0
+                msg = msg[len(patterns["cr"]) :]
+
+            elif indices["one_line_up"] == 0:
+                if self._text_line:
+                    self._text_line -= 1
+                msg = msg[len(patterns["one_line_up"]) :]
+
+        self._text_updated = True
+
+    def _adjust_text_buffer_size(self):
+        max_lines = self._text_max_lines
+
+        if len(self._text_buffer) > max_lines:
+            # Remove extra lines from the beginning of the list
+            n_remove = len(self._text_buffer) - max_lines
+            # In majority of cases only 1 (or a few) elements are removed
+            for _ in range(n_remove):
+                self._text_buffer.pop(0)
+            self._text_line = max(self._text_line - n_remove, 0)
+
+        self._text_updated = True
 
     def _monitor_init(self):
         raise NotImplementedError()
@@ -256,6 +354,8 @@ class _ConsoleMonitor_Threads(_ConsoleMonitor):
         self._monitor_thread_running.set()
 
         self._monitor_thread_lock = threading.Lock()
+        self._text_buffer_lock = threading.Lock()
+
         super().__init__()
 
     def _monitor_enable(self):
@@ -278,6 +378,12 @@ class _ConsoleMonitor_Threads(_ConsoleMonitor):
             return self._msg_queue.get(block=block, timeout=timeout)
         except queue.Empty:
             raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
+
+    def text(self):
+        if self._text_updated:
+            with self._text_buffer_lock:
+                self._text_generate()
+        return self._text
 
 
 class ConsoleMonitor_ZMQ_Threads(_ConsoleMonitor_Threads):
@@ -310,7 +416,12 @@ class ConsoleMonitor_ZMQ_Threads(_ConsoleMonitor_Threads):
                     break
             try:
                 msg = self._rco.recv()
-                self._msg_queue.put(msg, block=False)
+
+                with self._text_buffer_lock:
+                    self._msg_queue.put(msg, block=False)
+                    self._add_msg_to_text_buffer(msg)
+                    self._adjust_text_buffer_size()
+
             except TimeoutError:
                 # No published messages are detected
                 pass
@@ -320,6 +431,7 @@ class ConsoleMonitor_ZMQ_Threads(_ConsoleMonitor_Threads):
 
     def _clear(self):
         self._msg_queue.queue.clear()
+        self._text_clear()
 
 
 class ConsoleMonitor_HTTP_Threads(_ConsoleMonitor_Threads):
@@ -359,8 +471,13 @@ class ConsoleMonitor_HTTP_Threads(_ConsoleMonitor_Threads):
                 response = client_response.json()
                 console_output_msgs = response.get("console_output_msgs", [])
                 self._console_output_last_msg_uid = response.get("last_msg_uid", "")
-                for m in console_output_msgs:
-                    self._msg_queue.put(m, block=False)
+
+                with self._text_buffer_lock:
+                    for m in console_output_msgs:
+                        self._msg_queue.put(m, block=False)
+                        self._add_msg_to_text_buffer(m)
+                    self._adjust_text_buffer_size()
+
                 ttime.sleep(self._monitor_poll_period)
             except queue.Full:
                 # Queue is full, ignore the new messages
@@ -372,6 +489,7 @@ class ConsoleMonitor_HTTP_Threads(_ConsoleMonitor_Threads):
     def _clear(self):
         self._console_output_last_msg_uid = ""
         self._msg_queue.queue.clear()
+        self._text_clear()
 
 
 class _ConsoleMonitor_Async(_ConsoleMonitor):
@@ -385,6 +503,7 @@ class _ConsoleMonitor_Async(_ConsoleMonitor):
         self._monitor_task_running.set()
 
         self._monitor_task_lock = asyncio.Lock()
+        self._text_buffer_lock = asyncio.Lock()
 
         self._monitor_init()
 
@@ -406,6 +525,12 @@ class _ConsoleMonitor_Async(_ConsoleMonitor):
                 return self._msg_queue.get_nowait()
         except (asyncio.QueueEmpty, asyncio.TimeoutError):
             raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
+
+    async def text(self):
+        if self._text_updated:
+            async with self._text_buffer_lock():
+                self._text_generate()
+        return self._text
 
 
 class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
@@ -439,7 +564,12 @@ class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
 
             try:
                 msg = await self._rco.recv()
-                self._msg_queue.put_nowait(msg)
+
+                async with self._text_buffer_lock():
+                    self._msg_queue.put_nowait(msg)
+                    self._add_msg_to_text_buffer(msg)
+                    self._adjust_text_buffer_size()
+
             except TimeoutError:
                 # No published messages are detected
                 pass
@@ -448,6 +578,7 @@ class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
                 pass
 
     def _clear(self):
+        self._text_clear()
         try:
             while True:
                 self._msg_queue.get_nowait()
@@ -493,8 +624,13 @@ class ConsoleMonitor_HTTP_Async(_ConsoleMonitor_Async):
                 response = client_response.json()
                 console_output_msgs = response.get("console_output_msgs", [])
                 self._console_output_last_msg_uid = response.get("last_msg_uid", "")
-                for m in console_output_msgs:
-                    self._msg_queue.put_nowait(m)
+
+                async with self._text_buffer_lock():
+                    for m in console_output_msgs:
+                        self._msg_queue.put_nowait(m)
+                        self._add_msg_to_text_buffer(m)
+                    self._adjust_text_buffer_size()
+
                 await asyncio.sleep(self._monitor_poll_period)
             except asyncio.QueueFull:
                 # Queue is full, ignore the new messages
@@ -504,6 +640,7 @@ class ConsoleMonitor_HTTP_Async(_ConsoleMonitor_Async):
                 pass
 
     def _clear(self):
+        self._text_clear()
         try:
             self._console_output_last_msg_uid = ""
             while True:
