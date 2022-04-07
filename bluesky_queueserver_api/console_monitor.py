@@ -333,7 +333,7 @@ class _ConsoleMonitor:
         self._text_updated = True
 
     def _add_msg_to_text_buffer(self, response):
-        _, msg = response
+        msg = response["msg"]
 
         pattern_new_line = "\n"
         pattern_cr = "\r"
@@ -360,12 +360,13 @@ class _ConsoleMonitor:
                 # Extend the current line with spaces if needed
                 line_len = len(self._text_buffer[self._text_line])
                 if line_len < self._text_pos:
-                    self._text_buffer[self._text_line] += " " * self._text_pos - line_len
+                    self._text_buffer[self._text_line] += " " * (self._text_pos - line_len)
 
                 line = self._text_buffer[self._text_line]
                 self._text_buffer[self._text_line] = (
                     line[: self._text_pos] + substr + line[self._text_pos + len(substr) :]
                 )
+                self._text_pos = self._text_pos + len(substr)
 
             elif indices["new_line"] == 0:
                 self._text_line += 1
@@ -386,7 +387,11 @@ class _ConsoleMonitor:
         self._text_updated = True
 
     def _adjust_text_buffer_size(self):
-        max_lines = self._text_max_lines
+        if self._text_buffer and self._text_buffer[-1] == "":
+            # Do not count an empty string at the end
+            max_lines = self._text_max_lines + 1
+        else:
+            max_lines = self._text_max_lines
 
         if len(self._text_buffer) > max_lines:
             # Remove extra lines from the beginning of the list

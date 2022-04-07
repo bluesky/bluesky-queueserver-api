@@ -2118,9 +2118,12 @@ def test_console_monitor_01(re_manager_cmd, fastapi_server, read_timeout, option
                 break
 
         text = "".join(text)
+        text2 = RM.console_monitor.text()
         print(f"============= text=\n'{text}'")
+        print(f"============= text2=\n'{text2}'")
         print(f"============= expected_output=\n'{expected_output}'")
         assert expected_output in text
+        assert expected_output in text2
 
         RM.console_monitor.disable()
         assert RM.console_monitor.enabled is False
@@ -2175,9 +2178,12 @@ def test_console_monitor_01(re_manager_cmd, fastapi_server, read_timeout, option
                     break
 
             text = "".join(text)
+            text2 = await RM.console_monitor.text()
             print(f"============= text=\n{text}")
+            print(f"============= text2=\n'{text2}'")
             print(f"============= expected_output=\n{expected_output}")
             assert expected_output in text
+            assert expected_output in text2
 
             RM.console_monitor.disable()
             assert RM.console_monitor.enabled is False
@@ -2218,6 +2224,9 @@ def test_console_monitor_02(re_manager_cmd, fastapi_server, library, protocol): 
             RM.console_monitor.next_msg(timeout=2)  # Raises an exception after 2 sec. timeout
         assert ttime.time() - t0 > 1.9
 
+        # There should be no accumulated output
+        assert RM.console_monitor.text() == ""
+
         RM.close()
 
     else:
@@ -2237,6 +2246,9 @@ def test_console_monitor_02(re_manager_cmd, fastapi_server, library, protocol): 
             with pytest.raises(RM.RequestTimeoutError):
                 await RM.console_monitor.next_msg(timeout=2)  # Raises an exception after 2 sec. timeout
             assert ttime.time() - t0 > 1.9
+
+            # There should be no accumulated output
+            assert await RM.console_monitor.text() == ""
 
             await RM.close()
 
@@ -2332,6 +2344,7 @@ def test_console_monitor_04(re_manager_cmd, fastapi_server, library, protocol): 
 
         with pytest.raises(RM.RequestTimeoutError):
             RM.console_monitor.next_msg()
+        assert RM.console_monitor.text() == ""
 
         RM.close()
 
@@ -2350,6 +2363,7 @@ def test_console_monitor_04(re_manager_cmd, fastapi_server, library, protocol): 
 
             with pytest.raises(RM.RequestTimeoutError):
                 await RM.console_monitor.next_msg()
+            assert await RM.console_monitor.text() == ""
 
             await RM.close()
 
