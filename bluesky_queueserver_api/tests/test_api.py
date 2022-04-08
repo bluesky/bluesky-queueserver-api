@@ -2368,3 +2368,93 @@ def test_console_monitor_04(re_manager_cmd, fastapi_server, library, protocol): 
             await RM.close()
 
         asyncio.run(testing())
+
+
+_script_escape_1 = r"""
+# Patterns to check
+pattern_new_line = "\n"
+pattern_cr = "\r"
+pattern_up_one_line = "\x1B\x5B\x41"  # ESC [#A
+
+import sys
+sys.stdout.write("One two three four five\nOne two three four five")
+sys.stdout.write(pattern_cr)
+sys.stdout.write(f"Six {pattern_up_one_line}six\n\n")
+"""
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_console_monitor_05(re_manager_cmd, fastapi_server, library, protocol):  # noqa: F811
+    """
+    RM.console_monitor: generating text output with escape sequences.
+    """
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    params = ["--zmq-publish-console", "ON"]
+    re_manager_cmd(params)
+
+    text_expected = "One six three four five\nSix two three four five\n"
+
+    script = _script_escape_1
+
+    if not _is_async(library):
+
+        RM = rm_api_class()
+
+        RM.environment_open()
+        RM.wait_for_idle(timeout=10)
+
+        RM.console_monitor.enable()
+        assert RM.console_monitor.enabled is True
+        ttime.sleep(1)
+
+        RM.script_upload(script)
+        ttime.sleep(2)
+        RM.wait_for_idle(timeout=10)
+
+        text = RM.console_monitor.text()
+        print(f"===== text={text}")
+        assert text_expected in text
+
+        RM.console_monitor.disable()
+        assert RM.console_monitor.enabled is False
+
+        RM.environment_close()
+        RM.wait_for_idle(timeout=10)
+
+        RM.close()
+
+    else:
+
+        async def testing():
+
+            RM = rm_api_class()
+
+            await RM.environment_open()
+            await RM.wait_for_idle(timeout=10)
+
+            RM.console_monitor.enable()
+            assert RM.console_monitor.enabled is True
+            asyncio.sleep(1)
+
+            await RM.script_upload(script)
+            asyncio.sleep(2)
+            await RM.wait_for_idle(timeout=10)
+
+            text = await RM.console_monitor.text()
+            print(f"===== text={text}")
+            assert text_expected in text
+
+            RM.console_monitor.disable()
+            assert RM.console_monitor.enabled is False
+
+            await RM.environment_close()
+            await RM.wait_for_idle(timeout=10)
+
+            await RM.close()
+
+        asyncio.run(testing())
