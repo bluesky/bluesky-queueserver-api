@@ -2570,3 +2570,93 @@ def test_console_monitor_06(re_manager_cmd, fastapi_server, library, protocol, n
             await RM.close()
 
         asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("zero_max_msgs, zero_max_lines", [
+    (False, False),
+    (False, True),
+    (True, False),
+    (True, True),
+])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_console_monitor_07(
+    re_manager_cmd, fastapi_server, library, protocol, zero_max_msgs, zero_max_lines  # noqa: F811
+):
+    """
+    RM.console_monitor: test if message buffer and text buffer are disabled if the respective
+    buffer length is set to 0.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    params = ["--zmq-publish-console", "ON"]
+    re_manager_cmd(params)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    params = {}
+    if zero_max_msgs:
+        params["console_monitor_max_msgs"] = 0
+    if zero_max_lines:
+        params["console_monitor_max_lines"] = 0
+
+    if not _is_async(library):
+        RM = rm_api_class(**params)
+
+        RM.console_monitor.enable()
+        assert RM.console_monitor.enabled is True
+        ttime.sleep(1)
+
+        check_resp(RM.environment_open())
+        RM.wait_for_idle(timeout=10)
+        check_resp(RM.environment_close())
+        RM.wait_for_idle(timeout=10)
+
+        if zero_max_msgs:
+            with pytest.raises(RM.RequestTimeoutError):
+                RM.console_monitor.next_msg()
+        else:
+            RM.console_monitor.next_msg()
+
+        text = RM.console_monitor.text()
+        if zero_max_lines:
+            assert text == ""
+        else:
+            assert text != ""
+
+        RM.close()
+
+    else:
+
+        async def testing():
+
+            RM = rm_api_class(**params)
+
+            RM.console_monitor.enable()
+            assert RM.console_monitor.enabled is True
+            asyncio.sleep(1)
+
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle(timeout=10)
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle(timeout=10)
+
+            if zero_max_msgs:
+                with pytest.raises(RM.RequestTimeoutError):
+                    await RM.console_monitor.next_msg()
+            else:
+                await RM.console_monitor.next_msg()
+
+            text = await RM.console_monitor.text()
+            if zero_max_lines:
+                assert text == ""
+            else:
+                assert text != ""
+
+            await RM.close()
+
+        asyncio.run(testing())
