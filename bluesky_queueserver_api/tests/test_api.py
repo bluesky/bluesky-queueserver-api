@@ -2628,6 +2628,10 @@ def test_console_monitor_07(
         else:
             assert text != ""
 
+            RM.console_monitor.text_max_lines = 3
+            text2 = RM.console_monitor.text()
+            assert len(text2.split("\n")) == 3, text2
+
         RM.close()
 
     else:
@@ -2656,6 +2660,10 @@ def test_console_monitor_07(
                 assert text == ""
             else:
                 assert text != ""
+
+                RM.console_monitor.text_max_lines = 3
+                text2 = await RM.console_monitor.text()
+                assert len(text2.split("\n")) == 3, text2
 
             await RM.close()
 
