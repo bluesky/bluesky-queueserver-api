@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+import re
 import threading
 import time as ttime
 
@@ -2118,9 +2119,12 @@ def test_console_monitor_01(re_manager_cmd, fastapi_server, read_timeout, option
                 break
 
         text = "".join(text)
+        text2 = RM.console_monitor.text()
         print(f"============= text=\n'{text}'")
+        print(f"============= text2=\n'{text2}'")
         print(f"============= expected_output=\n'{expected_output}'")
         assert expected_output in text
+        assert expected_output in text2
 
         RM.console_monitor.disable()
         assert RM.console_monitor.enabled is False
@@ -2175,9 +2179,12 @@ def test_console_monitor_01(re_manager_cmd, fastapi_server, read_timeout, option
                     break
 
             text = "".join(text)
+            text2 = await RM.console_monitor.text()
             print(f"============= text=\n{text}")
+            print(f"============= text2=\n'{text2}'")
             print(f"============= expected_output=\n{expected_output}")
             assert expected_output in text
+            assert expected_output in text2
 
             RM.console_monitor.disable()
             assert RM.console_monitor.enabled is False
@@ -2218,6 +2225,9 @@ def test_console_monitor_02(re_manager_cmd, fastapi_server, library, protocol): 
             RM.console_monitor.next_msg(timeout=2)  # Raises an exception after 2 sec. timeout
         assert ttime.time() - t0 > 1.9
 
+        # There should be no accumulated output
+        assert RM.console_monitor.text() == ""
+
         RM.close()
 
     else:
@@ -2237,6 +2247,9 @@ def test_console_monitor_02(re_manager_cmd, fastapi_server, library, protocol): 
             with pytest.raises(RM.RequestTimeoutError):
                 await RM.console_monitor.next_msg(timeout=2)  # Raises an exception after 2 sec. timeout
             assert ttime.time() - t0 > 1.9
+
+            # There should be no accumulated output
+            assert await RM.console_monitor.text() == ""
 
             await RM.close()
 
@@ -2332,6 +2345,7 @@ def test_console_monitor_04(re_manager_cmd, fastapi_server, library, protocol): 
 
         with pytest.raises(RM.RequestTimeoutError):
             RM.console_monitor.next_msg()
+        assert RM.console_monitor.text() == ""
 
         RM.close()
 
@@ -2350,6 +2364,306 @@ def test_console_monitor_04(re_manager_cmd, fastapi_server, library, protocol): 
 
             with pytest.raises(RM.RequestTimeoutError):
                 await RM.console_monitor.next_msg()
+            assert await RM.console_monitor.text() == ""
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+_script_special_1 = r"""
+# Patterns to check
+pattern_new_line = "\n"
+pattern_cr = "\r"
+pattern_up_one_line = "\x1B\x5B\x41"  # ESC [#A
+
+import sys
+sys.stdout.write("One two three four five\nOne two three four five")
+sys.stdout.write(pattern_cr)
+sys.stdout.write(f"Six {pattern_up_one_line}six\n\n")
+"""
+
+_script_special_1_text_expected = "One six three four five\nSix two three four five\n"
+
+
+# fmt: off
+@pytest.mark.parametrize("script, text_expected", [(_script_special_1, _script_special_1_text_expected)])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_console_monitor_05(
+    re_manager_cmd, fastapi_server, library, protocol, script, text_expected  # noqa: F811
+):
+    """
+    RM.console_monitor: generating text output from messages that contain control characters.
+    """
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    params = ["--zmq-publish-console", "ON"]
+    re_manager_cmd(params)
+
+    if not _is_async(library):
+
+        RM = rm_api_class()
+
+        RM.environment_open()
+        RM.wait_for_idle(timeout=10)
+
+        RM.console_monitor.enable()
+        assert RM.console_monitor.enabled is True
+        ttime.sleep(1)
+
+        RM.script_upload(script)
+        ttime.sleep(2)
+        RM.wait_for_idle(timeout=10)
+
+        text = RM.console_monitor.text()
+        print(f"===== text={text}")
+        assert text_expected in text
+
+        RM.console_monitor.disable()
+        assert RM.console_monitor.enabled is False
+
+        RM.environment_close()
+        RM.wait_for_idle(timeout=10)
+
+        RM.close()
+
+    else:
+
+        async def testing():
+
+            RM = rm_api_class()
+
+            await RM.environment_open()
+            await RM.wait_for_idle(timeout=10)
+
+            RM.console_monitor.enable()
+            assert RM.console_monitor.enabled is True
+            asyncio.sleep(1)
+
+            await RM.script_upload(script)
+            asyncio.sleep(2)
+            await RM.wait_for_idle(timeout=10)
+
+            text = await RM.console_monitor.text()
+            print(f"===== text={text}")
+            assert text_expected in text
+
+            RM.console_monitor.disable()
+            assert RM.console_monitor.enabled is False
+
+            await RM.environment_close()
+            await RM.wait_for_idle(timeout=10)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("n_progress_bars", [1, 3, 5])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_console_monitor_06(re_manager_cmd, fastapi_server, library, protocol, n_progress_bars):  # noqa: F811
+    """
+    RM.console_monitor: generating text output with progress bars. The test is using ``plan_test_progress_bars``
+    defined in built-in simulated startup code of ``bluesky-queueserver``.
+    """
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    params = ["--zmq-publish-console", "ON"]
+    re_manager_cmd(params)
+
+    def check_status(status, manager_state, items_in_queue):
+        assert status["manager_state"] == manager_state
+        assert status["items_in_queue"] == items_in_queue
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    if not _is_async(library):
+        RM = rm_api_class()
+
+        check_resp(RM.environment_open())
+        RM.wait_for_idle(timeout=10)
+
+        RM.console_monitor.enable()
+        assert RM.console_monitor.enabled is True
+        ttime.sleep(1)
+
+        check_resp(RM.item_add(BPlan("plan_test_progress_bars", n_progress_bars)))
+        check_status(RM.status(), "idle", 1)
+
+        check_resp(RM.queue_start())
+        RM.wait_for_idle(timeout=30)
+        check_status(RM.status(), "idle", 0)
+
+        text = RM.console_monitor.text()
+        print(f"===== text={text}")
+
+        s_start = f"TESTING {n_progress_bars} PROGRESS BARS"
+        s_stop = "TEST COMPLETED"
+        assert text.count(s_start) == 1, s_start
+        assert text.count(s_stop) == 1, s_stop
+
+        match = re.search(s_start + "(.|\n)+" + s_stop, text)
+        assert match
+        text_substr = match[0]
+        for n in range(n_progress_bars):
+            s = f"TEST{n + 1}"
+            assert text_substr.count(s) == 1
+
+        RM.console_monitor.disable()
+        assert RM.console_monitor.enabled is False
+
+        RM.environment_close()
+        RM.wait_for_idle(timeout=10)
+
+        RM.close()
+
+    else:
+
+        async def testing():
+
+            RM = rm_api_class()
+
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle(timeout=10)
+
+            RM.console_monitor.enable()
+            assert RM.console_monitor.enabled is True
+            asyncio.sleep(1)
+
+            check_resp(await RM.item_add(BPlan("plan_test_progress_bars", n_progress_bars)))
+            check_status(await RM.status(), "idle", 1)
+
+            check_resp(await RM.queue_start())
+            await RM.wait_for_idle(timeout=30)
+            check_status(await RM.status(), "idle", 0)
+
+            text = await RM.console_monitor.text()
+            print(f"===== text={text}")
+
+            s_start = f"TESTING {n_progress_bars} PROGRESS BARS"
+            s_stop = "TEST COMPLETED"
+            assert text.count(s_start) == 1, s_start
+            assert text.count(s_stop) == 1, s_stop
+
+            match = re.search(s_start + "(.|\n)+" + s_stop, text)
+            assert match
+            text_substr = match[0]
+            for n in range(n_progress_bars):
+                s = f"TEST{n + 1}"
+                assert text_substr.count(s) == 1
+
+            RM.console_monitor.disable()
+            assert RM.console_monitor.enabled is False
+
+            await RM.environment_close()
+            await RM.wait_for_idle(timeout=10)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("zero_max_msgs, zero_max_lines", [
+    (False, False),
+    (False, True),
+    (True, False),
+    (True, True),
+])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_console_monitor_07(
+    re_manager_cmd, fastapi_server, library, protocol, zero_max_msgs, zero_max_lines  # noqa: F811
+):
+    """
+    RM.console_monitor: test if message buffer and text buffer are disabled if the respective
+    buffer length is set to 0.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    params = ["--zmq-publish-console", "ON"]
+    re_manager_cmd(params)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    params = {}
+    if zero_max_msgs:
+        params["console_monitor_max_msgs"] = 0
+    if zero_max_lines:
+        params["console_monitor_max_lines"] = 0
+
+    if not _is_async(library):
+        RM = rm_api_class(**params)
+
+        RM.console_monitor.enable()
+        assert RM.console_monitor.enabled is True
+        ttime.sleep(1)
+
+        check_resp(RM.environment_open())
+        RM.wait_for_idle(timeout=10)
+        check_resp(RM.environment_close())
+        RM.wait_for_idle(timeout=10)
+
+        if zero_max_msgs:
+            with pytest.raises(RM.RequestTimeoutError):
+                RM.console_monitor.next_msg()
+        else:
+            RM.console_monitor.next_msg()
+
+        text = RM.console_monitor.text()
+        if zero_max_lines:
+            assert text == ""
+        else:
+            assert text != ""
+
+            RM.console_monitor.text_max_lines = 3
+            text2 = RM.console_monitor.text()
+            assert len(text2.split("\n")) == 3, text2
+
+        RM.close()
+
+    else:
+
+        async def testing():
+
+            RM = rm_api_class(**params)
+
+            RM.console_monitor.enable()
+            assert RM.console_monitor.enabled is True
+            asyncio.sleep(1)
+
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle(timeout=10)
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle(timeout=10)
+
+            if zero_max_msgs:
+                with pytest.raises(RM.RequestTimeoutError):
+                    await RM.console_monitor.next_msg()
+            else:
+                await RM.console_monitor.next_msg()
+
+            text = await RM.console_monitor.text()
+            if zero_max_lines:
+                assert text == ""
+            else:
+                assert text != ""
+
+                RM.console_monitor.text_max_lines = 3
+                text2 = await RM.console_monitor.text()
+                assert len(text2.split("\n")) == 3, text2
 
             await RM.close()
 

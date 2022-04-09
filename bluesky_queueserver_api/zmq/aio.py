@@ -6,6 +6,7 @@ from .._defaults import (
     default_zmq_request_timeout_send,
     default_console_monitor_poll_timeout,
     default_console_monitor_max_msgs,
+    default_console_monitor_max_lines,
     default_status_expiration_period,
     default_status_polling_period,
 )
@@ -24,6 +25,7 @@ class REManagerAPI(ReManagerComm_ZMQ_Async, API_Async_Mixin):
         timeout_send=default_zmq_request_timeout_send,
         console_monitor_poll_timeout=default_console_monitor_poll_timeout,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
+        console_monitor_max_lines=default_console_monitor_max_lines,
         server_public_key=None,
         request_fail_exceptions=default_allow_request_fail_exceptions,
         status_expiration_period=default_status_expiration_period,
@@ -37,6 +39,7 @@ class REManagerAPI(ReManagerComm_ZMQ_Async, API_Async_Mixin):
             timeout_send=timeout_send,
             console_monitor_poll_timeout=console_monitor_poll_timeout,
             console_monitor_max_msgs=console_monitor_max_msgs,
+            console_monitor_max_lines=console_monitor_max_lines,
             server_public_key=server_public_key,
             request_fail_exceptions=request_fail_exceptions,
         )
