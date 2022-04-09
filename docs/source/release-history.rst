@@ -2,6 +2,14 @@
 Release History
 ===============
 
+v0.0.5 (2022-04-09)
+===================
+
+Added
+-----
+
+- Support for text buffer in ``RE.console_monitor``.
+
 
 v0.0.4 (2022-04-05)
 ===================
