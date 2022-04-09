@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+import re
 import threading
 import time as ttime
 
@@ -2370,7 +2371,7 @@ def test_console_monitor_04(re_manager_cmd, fastapi_server, library, protocol): 
         asyncio.run(testing())
 
 
-_script_escape_1 = r"""
+_script_special_1 = r"""
 # Patterns to check
 pattern_new_line = "\n"
 pattern_cr = "\r"
@@ -2382,24 +2383,25 @@ sys.stdout.write(pattern_cr)
 sys.stdout.write(f"Six {pattern_up_one_line}six\n\n")
 """
 
+_script_special_1_text_expected = "One six three four five\nSix two three four five\n"
+
 
 # fmt: off
+@pytest.mark.parametrize("script, text_expected", [(_script_special_1, _script_special_1_text_expected)])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
-def test_console_monitor_05(re_manager_cmd, fastapi_server, library, protocol):  # noqa: F811
+def test_console_monitor_05(
+    re_manager_cmd, fastapi_server, library, protocol, script, text_expected  # noqa: F811
+):
     """
-    RM.console_monitor: generating text output with escape sequences.
+    RM.console_monitor: generating text output from messages that contain control characters.
     """
 
     rm_api_class = _select_re_manager_api(protocol, library)
 
     params = ["--zmq-publish-console", "ON"]
     re_manager_cmd(params)
-
-    text_expected = "One six three four five\nSix two three four five\n"
-
-    script = _script_escape_1
 
     if not _is_async(library):
 
@@ -2448,6 +2450,116 @@ def test_console_monitor_05(re_manager_cmd, fastapi_server, library, protocol): 
             text = await RM.console_monitor.text()
             print(f"===== text={text}")
             assert text_expected in text
+
+            RM.console_monitor.disable()
+            assert RM.console_monitor.enabled is False
+
+            await RM.environment_close()
+            await RM.wait_for_idle(timeout=10)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("n_progress_bars", [1, 3, 5])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_console_monitor_06(re_manager_cmd, fastapi_server, library, protocol, n_progress_bars):  # noqa: F811
+    """
+    RM.console_monitor: generating text output with progress bars. The test is using ``plan_test_progress_bars``
+    defined in built-in simulated startup code of ``bluesky-queueserver``.
+    """
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    params = ["--zmq-publish-console", "ON"]
+    re_manager_cmd(params)
+
+    def check_status(status, manager_state, items_in_queue):
+        assert status["manager_state"] == manager_state
+        assert status["items_in_queue"] == items_in_queue
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    if not _is_async(library):
+        RM = rm_api_class()
+
+        check_resp(RM.environment_open())
+        RM.wait_for_idle(timeout=10)
+
+        RM.console_monitor.enable()
+        assert RM.console_monitor.enabled is True
+        ttime.sleep(1)
+
+        check_resp(RM.item_add(BPlan("plan_test_progress_bars", n_progress_bars)))
+        check_status(RM.status(), "idle", 1)
+
+        check_resp(RM.queue_start())
+        RM.wait_for_idle(timeout=30)
+        check_status(RM.status(), "idle", 0)
+
+        text = RM.console_monitor.text()
+        print(f"===== text={text}")
+
+        s_start = f"TESTING {n_progress_bars} PROGRESS BARS"
+        s_stop = "TEST COMPLETED"
+        assert text.count(s_start) == 1, s_start
+        assert text.count(s_stop) == 1, s_stop
+
+        match = re.search(s_start + "(.|\n)+" + s_stop, text)
+        assert match
+        text_substr = match[0]
+        for n in range(n_progress_bars):
+            s = f"TEST{n + 1}"
+            assert text_substr.count(s) == 1
+
+        RM.console_monitor.disable()
+        assert RM.console_monitor.enabled is False
+
+        RM.environment_close()
+        RM.wait_for_idle(timeout=10)
+
+        RM.close()
+
+    else:
+
+        async def testing():
+
+            RM = rm_api_class()
+
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle(timeout=10)
+
+            RM.console_monitor.enable()
+            assert RM.console_monitor.enabled is True
+            asyncio.sleep(1)
+
+            check_resp(await RM.item_add(BPlan("plan_test_progress_bars", n_progress_bars)))
+            check_status(await RM.status(), "idle", 1)
+
+            check_resp(await RM.queue_start())
+            await RM.wait_for_idle(timeout=30)
+            check_status(await RM.status(), "idle", 0)
+
+            text = await RM.console_monitor.text()
+            print(f"===== text={text}")
+
+            s_start = f"TESTING {n_progress_bars} PROGRESS BARS"
+            s_stop = "TEST COMPLETED"
+            assert text.count(s_start) == 1, s_start
+            assert text.count(s_stop) == 1, s_stop
+
+            match = re.search(s_start + "(.|\n)+" + s_stop, text)
+            assert match
+            text_substr = match[0]
+            for n in range(n_progress_bars):
+                s = f"TEST{n + 1}"
+                assert text_substr.count(s) == 1
 
             RM.console_monitor.disable()
             assert RM.console_monitor.enabled is False

@@ -26,7 +26,11 @@ _doc_ConsoleMonitor_ZMQ = """
     max_msgs: int
         Maximum number of messages in the buffer. New messages are ignored if the buffer
         is full. This could happen only if console monitoring is enabled, but messages
-        are not read from the buffer.
+        are not read from the buffer. Setting the value to 0 disables collection of messages
+        in the buffer.
+    max_lines: int
+        Maximum number of lines in the text buffer. Setting the value to 0 disables processing
+        of text messages and generation of text output.
 """
 
 _doc_ConsoleMonitor_HTTP = """
@@ -44,7 +48,11 @@ _doc_ConsoleMonitor_HTTP = """
     max_msgs: int
         Maximum number of messages in the buffer. New messages are ignored if the buffer
         is full. This could happen only if console monitoring is enabled, but messages
-        are not read from the buffer.
+        are not read from the buffer. Setting the value to 0 disables collection of messages
+        in the buffer.
+    max_lines: int
+        Maximum number of lines in the text buffer. Setting the value to 0 disables processing
+        of text messages and generation of text output.
 """
 
 _doc_ConsoleMonitor_enabled = """
@@ -316,7 +324,7 @@ class _ConsoleMonitor:
 
         self._text_buffer = []
         self._text_clear()
-        self._text_max_lines = max_lines
+        self._text_max_lines = max(max_lines, 0)
 
     def _text_generate(self):
         if self._text_buffer and self._text_buffer[-1] == "":
@@ -333,6 +341,10 @@ class _ConsoleMonitor:
         self._text_updated = True
 
     def _add_msg_to_text_buffer(self, response):
+        # Setting max number of lines to 0 disables text processing
+        if not self._text_max_lines:
+            return
+
         msg = response["msg"]
 
         pattern_new_line = "\n"
@@ -453,7 +465,7 @@ class _ConsoleMonitor:
 
 class _ConsoleMonitor_Threads(_ConsoleMonitor):
     def __init__(self, *, max_msgs, max_lines):
-        self._msg_queue_max = max_msgs
+        self._msg_queue_max = max(max_msgs, 0)
         self._msg_queue = queue.Queue(maxsize=max_msgs)
 
         self._monitor_enabled = False
@@ -472,6 +484,10 @@ class _ConsoleMonitor_Threads(_ConsoleMonitor):
         )
         self._monitor_enabled = True
         self._monitor_thread.start()
+
+    def _add_msg_to_queue(self, msg):
+        if self._msg_queue_max:
+            self._msg_queue.put_nowait(msg)
 
     def disable_wait(self, *, timeout=2):
         # Docstring is maintained separately
@@ -527,7 +543,7 @@ class ConsoleMonitor_ZMQ_Threads(_ConsoleMonitor_Threads):
                 msg = self._rco.recv()
 
                 with self._text_buffer_lock:
-                    self._msg_queue.put(msg, block=False)
+                    self._add_msg_to_queue(msg)
                     self._add_msg_to_text_buffer(msg)
                     self._adjust_text_buffer_size()
 
@@ -583,7 +599,7 @@ class ConsoleMonitor_HTTP_Threads(_ConsoleMonitor_Threads):
 
                 with self._text_buffer_lock:
                     for m in console_output_msgs:
-                        self._msg_queue.put(m, block=False)
+                        self._add_msg_to_queue(m)
                         self._add_msg_to_text_buffer(m)
                     self._adjust_text_buffer_size()
 
@@ -614,6 +630,10 @@ class _ConsoleMonitor_Async(_ConsoleMonitor):
         self._text_buffer_lock = asyncio.Lock()
 
         super().__init__(max_lines=max_lines)
+
+    def _add_msg_to_queue(self, msg):
+        if self._msg_queue_max:
+            self._msg_queue.put_nowait(msg)
 
     def _monitor_enable(self):
         self._monitor_task = asyncio.create_task(self._task_receive_msgs())
@@ -675,7 +695,7 @@ class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
                 msg = await self._rco.recv()
 
                 async with self._text_buffer_lock:
-                    self._msg_queue.put_nowait(msg)
+                    self._add_msg_to_queue(msg)
                     self._add_msg_to_text_buffer(msg)
                     self._adjust_text_buffer_size()
 
@@ -736,7 +756,7 @@ class ConsoleMonitor_HTTP_Async(_ConsoleMonitor_Async):
 
                 async with self._text_buffer_lock:
                     for m in console_output_msgs:
-                        self._msg_queue.put_nowait(m)
+                        self._add_msg_to_queue(m)
                         self._add_msg_to_text_buffer(m)
                     self._adjust_text_buffer_size()
 
