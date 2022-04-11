@@ -144,6 +144,8 @@ _doc_REManagerAPI_ZMQ = """
     console_monitor_max_msgs: int
         Maximum number of messages in the internal message queue of
         the console monitor. Default: 10000.
+    console_monitor_max_lines: int
+        Maximum number of lines in the internal text buffer. Default: 1000.
     server_public_key: str or None
         Public key of RE Manager if the encryption is enabled. Set to ``None``
         if encryption is not enabled
@@ -203,6 +205,8 @@ _doc_REManagerAPI_HTTP = """
     console_monitor_max_msgs: int
         Maximum number of messages in the internal message buffer.
         Default: 10000.
+    console_monitor_max_lines: int
+        Maximum number of lines in the internal text buffer. Default: 1000.
     request_fail_exceptions: boolean
         If ``True`` (default) then API functions that communicate with
         RE Manager are raising the ``RequestFailError`` exception if

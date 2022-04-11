@@ -2407,12 +2407,12 @@ def test_console_monitor_05(
 
         RM = rm_api_class()
 
-        RM.environment_open()
-        RM.wait_for_idle(timeout=10)
-
         RM.console_monitor.enable()
         assert RM.console_monitor.enabled is True
         ttime.sleep(1)
+
+        RM.environment_open()
+        RM.wait_for_idle(timeout=10)
 
         RM.script_upload(script)
         ttime.sleep(2)
@@ -2436,12 +2436,12 @@ def test_console_monitor_05(
 
             RM = rm_api_class()
 
-            await RM.environment_open()
-            await RM.wait_for_idle(timeout=10)
-
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
             asyncio.sleep(1)
+
+            await RM.environment_open()
+            await RM.wait_for_idle(timeout=10)
 
             await RM.script_upload(script)
             asyncio.sleep(2)
@@ -2664,6 +2664,140 @@ def test_console_monitor_07(
                 RM.console_monitor.text_max_lines = 3
                 text2 = await RM.console_monitor.text()
                 assert len(text2.split("\n")) == 3, text2
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# @pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol):  # noqa: F811
+    """
+    RM.console_monitor.text(): test all modes of operation.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    params = ["--zmq-publish-console", "ON"]
+    re_manager_cmd(params)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    if not _is_async(library):
+        RM = rm_api_class()
+
+        RM.console_monitor.enable()
+        assert RM.console_monitor.enabled is True
+        ttime.sleep(1)
+        text_uid0 = RM.console_monitor.text_uid
+
+        # Generate some console output
+        check_resp(RM.environment_open())
+        RM.wait_for_idle(timeout=10)
+        check_resp(RM.environment_close())
+        RM.wait_for_idle(timeout=10)
+        ttime.sleep(1)  # Wait until all console output is loaded
+
+        text_uid1 = RM.console_monitor.text_uid
+        text1 = RM.console_monitor.text()
+        assert text_uid1 != text_uid0
+        n_text1 = len(text1.split("\n"))
+        assert n_text1 > 0
+        assert RM.console_monitor.text() == text1
+
+        assert RM.console_monitor.text(n_text1) == text1
+        assert RM.console_monitor.text(n_text1 + 1) == text1
+        assert RM.console_monitor.text(100000) == text1
+
+        text2 = RM.console_monitor.text(n_text1 - 1)
+        assert len(text2.split("\n")) == n_text1 - 1
+
+        text3 = RM.console_monitor.text(2)
+        assert len(text3.split("\n")) == 2
+
+        text4 = RM.console_monitor.text(1)
+        assert len(text4.split("\n")) == 1
+
+        assert RM.console_monitor.text(0) == ""
+        assert RM.console_monitor.text(-1) == ""
+
+        assert RM.console_monitor.text() == text1
+
+        assert RM.console_monitor.text_uid == text_uid1
+
+        RM.console_monitor.clear()
+        text_uid2 = RM.console_monitor.text_uid
+        assert text_uid2 != text_uid1
+
+        assert RM.console_monitor.text() == ""
+        assert RM.console_monitor.text(100000) == ""
+        assert RM.console_monitor.text(0) == ""
+        assert RM.console_monitor.text(-1) == ""
+
+        assert RM.console_monitor.text_uid == text_uid2
+
+        RM.close()
+
+    else:
+
+        async def testing():
+
+            RM = rm_api_class()
+
+            RM.console_monitor.enable()
+            assert RM.console_monitor.enabled is True
+            asyncio.sleep(1)
+            text_uid0 = RM.console_monitor.text_uid
+
+            # Generate some console output
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle(timeout=10)
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle(timeout=10)
+            asyncio.sleep(1)
+
+            text_uid1 = RM.console_monitor.text_uid
+            text1 = await RM.console_monitor.text()
+            assert text_uid1 != text_uid0
+            n_text1 = len(text1.split("\n"))
+            assert n_text1 > 0
+            assert await RM.console_monitor.text() == text1
+
+            assert await RM.console_monitor.text(n_text1) == text1
+            assert await RM.console_monitor.text(n_text1 + 1) == text1
+            assert await RM.console_monitor.text(100000) == text1
+
+            text2 = await RM.console_monitor.text(n_text1 - 1)
+            assert len(text2.split("\n")) == n_text1 - 1
+
+            text3 = await RM.console_monitor.text(2)
+            assert len(text3.split("\n")) == 2
+
+            text4 = await RM.console_monitor.text(1)
+            assert len(text4.split("\n")) == 1
+
+            assert await RM.console_monitor.text(0) == ""
+            assert await RM.console_monitor.text(-1) == ""
+
+            assert await RM.console_monitor.text() == text1
+
+            assert RM.console_monitor.text_uid == text_uid1
+
+            RM.console_monitor.clear()
+            text_uid2 = RM.console_monitor.text_uid
+            assert text_uid2 != text_uid1
+
+            assert await RM.console_monitor.text() == ""
+            assert await RM.console_monitor.text(100000) == ""
+            assert await RM.console_monitor.text(0) == ""
+            assert await RM.console_monitor.text(-1) == ""
+
+            assert RM.console_monitor.text_uid == text_uid2
 
             await RM.close()
 

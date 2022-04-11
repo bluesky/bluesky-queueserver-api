@@ -2,6 +2,7 @@ import asyncio
 import queue
 import threading
 import time as ttime
+import uuid
 
 from bluesky_queueserver import ReceiveConsoleOutput, ReceiveConsoleOutputAsync
 
@@ -216,12 +217,10 @@ _doc_ConsoleMonitor_next_msg = """
         await RM.close()
 """
 
-_doc_ConsoleMonitor_text_updated = """
-    Indicates if console text was updated. The property returns ``True`` if
-    the text buffer with console output contains new data and updated text
-    could be loaded using ``text()`` API. Otherwise ``text()`` API returns
-    'old' unchanged console output. Calling ``text()`` API resets the property
-    to ``False``.
+_doc_ConsoleMonitor_text_uid = """
+    Returns UID of the current text buffer. UID is changed whenever the contents
+    of the buffer is changed. Monitor UID to minimize the number of data reloads
+    (if necessary).
 
     Examples
     --------
@@ -231,9 +230,11 @@ _doc_ConsoleMonitor_text_updated = """
 
         RM.console_monitor.enable()
 
+        uid = RM.console_monitor.text_uid
         while True:
-            # Polling for updated text (console output)
-            if RM.console_monitor.text_updated:
+            uid_new = RM.console_monitor.text_uid
+            if uid_new != uid:
+                uid = uid_new
                 text = RM.console_monitor.text()
                 # Use 'text'
             ttime.sleep(0.1)
@@ -244,9 +245,11 @@ _doc_ConsoleMonitor_text_updated = """
 
         RM.console_monitor.enable()
 
+        uid = RM.console_monitor.text_uid
         while True:
-            # Polling for updated text (console output)
-            if RM.console_monitor.text_updated:
+            uid_new = RM.console_monitor.text_uid
+            if uid_new != uid:
+                uid = uid_new
                 text = await RM.console_monitor.text()
                 # Use 'text'
             asyncio.sleep(0.1)
@@ -270,9 +273,16 @@ _doc_ConsoleMonitor_text_max_lines = """
 """
 
 _doc_ConsoleMonitor_text = """
-    Returns text representation of console output. Monitor ``text_updated``
-    property to check if text buffer was modified since the last call to
-    ``text()`` API.
+    Returns text representation of console output. Monitor ``text_uid``
+    property to check if text buffer was modified. The parameter ``nlines``
+    determines the maximum number of lines of text returned by the function.
+
+    Parameters
+    ----------
+    nlines: int
+        Number of lines to return. The value determines the maximum number of lines
+        of text returned by the function. The function returns ``""`` (empty string)
+        if the value is ``0`` or negative.
 
     Returns
     -------
@@ -295,6 +305,10 @@ _doc_ConsoleMonitor_text = """
         text = RM.console_monitor.text()
         print(text)
 
+        # Return the last 10 lines
+        text = RM.console_monitor.text(10)
+        print(text)
+
         RM.console_monitor.disable()
 
     Asynchronous API
@@ -310,8 +324,11 @@ _doc_ConsoleMonitor_text = """
         text = await RM.console_monitor.text()
         print(text)
 
-        RM.console_monitor.disable()
+        # Return the last 10 lines
+        text = await RM.console_monitor.text(10)
+        print(text)
 
+        RM.console_monitor.disable()
 """
 
 
@@ -322,23 +339,43 @@ class _ConsoleMonitor:
 
         self._buffers_modified_event = threading.Event()
 
+        self._text = {}
+        self._set_new_text_uid()
+
         self._text_buffer = []
         self._text_clear()
         self._text_max_lines = max(max_lines, 0)
 
-    def _text_generate(self):
+    def _text_generate(self, nlines):
+        n_text_buffer = len(self._text_buffer)
+        nlines = max(nlines, 0) if (nlines is not None) else n_text_buffer
+
         if self._text_buffer and self._text_buffer[-1] == "":
-            self._text = "\n".join(self._text_buffer[:-1])
+            nlines = min(nlines, n_text_buffer - 1)
+            if nlines not in self._text:
+                text = "\n".join(self._text_buffer[-nlines - 1 : -1])
+                self._text[nlines] = text
+            else:
+                text = self._text[nlines]
         else:
-            self._text = "\n".join(self._text_buffer)
-        self._text_updated = False
+            nlines = min(nlines, n_text_buffer)
+            if nlines not in self._text:
+                text = "\n".join(self._text_buffer[-nlines:])
+                self._text[nlines] = text
+            else:
+                text = self._text[nlines]
+        return text
+
+    def _set_new_text_uid(self):
+        self._text_uid = str(uuid.uuid4())
 
     def _text_clear(self):
-        self._text = ""
+        self._text.clear()
+        self._set_new_text_uid()
+
         self._text_line = 0
         self._text_pos = 0
         self._text_buffer.clear()
-        self._text_updated = True
 
     def _add_msg_to_text_buffer(self, response):
         # Setting max number of lines to 0 disables text processing
@@ -396,7 +433,7 @@ class _ConsoleMonitor:
                     self._text_line -= 1
                 msg = msg[len(patterns["one_line_up"]) :]
 
-        self._text_updated = True
+        self._set_new_text_uid()
 
     def _adjust_text_buffer_size(self):
         if self._text_buffer and self._text_buffer[-1] == "":
@@ -413,7 +450,7 @@ class _ConsoleMonitor:
                 self._text_buffer.pop(0)
             self._text_line = max(self._text_line - n_remove, 0)
 
-        self._text_updated = True
+        self._set_new_text_uid()
 
     def _monitor_init(self):
         raise NotImplementedError()
@@ -425,9 +462,9 @@ class _ConsoleMonitor:
         raise NotImplementedError()
 
     @property
-    def text_updated(self):
+    def text_uid(self):
         # Docstring is maintained separately
-        return self._text_updated
+        return self._text_uid
 
     @property
     def text_max_lines(self):
@@ -503,12 +540,11 @@ class _ConsoleMonitor_Threads(_ConsoleMonitor):
         except queue.Empty:
             raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
 
-    def text(self):
+    def text(self, nlines=None):
         # Docstring is maintained separately
-        if self._text_updated:
-            with self._text_buffer_lock:
-                self._text_generate()
-        return self._text
+        with self._text_buffer_lock:
+            text = self._text_generate(nlines=nlines)
+        return text
 
 
 class ConsoleMonitor_ZMQ_Threads(_ConsoleMonitor_Threads):
@@ -654,12 +690,11 @@ class _ConsoleMonitor_Async(_ConsoleMonitor):
         except (asyncio.QueueEmpty, asyncio.TimeoutError):
             raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
 
-    async def text(self):
+    async def text(self, nlines=None):
         # Docstring is maintained separately
-        if self._text_updated:
-            async with self._text_buffer_lock:
-                self._text_generate()
-        return self._text
+        async with self._text_buffer_lock:
+            text = self._text_generate(nlines=nlines)
+        return text
 
 
 class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
@@ -782,7 +817,7 @@ _ConsoleMonitor.enabled.__doc__ = _doc_ConsoleMonitor_enabled
 _ConsoleMonitor.enable.__doc__ = _doc_ConsoleMonitor_enable
 _ConsoleMonitor.disable.__doc__ = _doc_ConsoleMonitor_disable
 _ConsoleMonitor.clear.__doc__ = _doc_ConsoleMonitor_clear
-_ConsoleMonitor.text_updated.__doc__ = _doc_ConsoleMonitor_text_updated
+_ConsoleMonitor.text_uid.__doc__ = _doc_ConsoleMonitor_text_uid
 _ConsoleMonitor.text_max_lines.__doc__ = _doc_ConsoleMonitor_text_max_lines
 
 _ConsoleMonitor_Threads.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
