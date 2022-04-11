@@ -198,7 +198,7 @@ HTTP communication), which expose identical API. The class for monitoring consol
     console_monitor.ConsoleMonitor_ZMQ_Threads.clear
     console_monitor.ConsoleMonitor_ZMQ_Threads.next_msg
     console_monitor.ConsoleMonitor_ZMQ_Threads.text_max_lines
-    console_monitor.ConsoleMonitor_ZMQ_Threads.text_updated
+    console_monitor.ConsoleMonitor_ZMQ_Threads.text_uid
     console_monitor.ConsoleMonitor_ZMQ_Threads.text
 
 Other console monitor classes support identical API:

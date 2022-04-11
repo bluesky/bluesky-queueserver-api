@@ -2673,6 +2673,7 @@ def test_console_monitor_07(
 # fmt: off
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# @pytest.mark.parametrize("protocol", ["HTTP"])
 # fmt: on
 def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol):  # noqa: F811
     """
@@ -2693,6 +2694,7 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
         RM.console_monitor.enable()
         assert RM.console_monitor.enabled is True
         ttime.sleep(1)
+        text_uid0 = RM.console_monitor.text_uid
 
         # Generate some console output
         check_resp(RM.environment_open())
@@ -2701,11 +2703,11 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
         RM.wait_for_idle(timeout=10)
         ttime.sleep(1)  # Wait until all console output is loaded
 
-        assert RM.console_monitor.text_updated is True
+        text_uid1 = RM.console_monitor.text_uid
         text1 = RM.console_monitor.text()
+        assert text_uid1 != text_uid0
         n_text1 = len(text1.split("\n"))
         assert n_text1 > 0
-        assert RM.console_monitor.text_updated is False
         assert RM.console_monitor.text() == text1
 
         assert RM.console_monitor.text(n_text1) == text1
@@ -2726,13 +2728,18 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
 
         assert RM.console_monitor.text() == text1
 
+        assert RM.console_monitor.text_uid == text_uid1
+
         RM.console_monitor.clear()
-        assert RM.console_monitor.text_updated is True
+        text_uid2 = RM.console_monitor.text_uid
+        assert text_uid2 != text_uid1
 
         assert RM.console_monitor.text() == ""
         assert RM.console_monitor.text(100000) == ""
         assert RM.console_monitor.text(0) == ""
         assert RM.console_monitor.text(-1) == ""
+
+        assert RM.console_monitor.text_uid == text_uid2
 
         RM.close()
 
@@ -2745,6 +2752,7 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
             asyncio.sleep(1)
+            text_uid0 = RM.console_monitor.text_uid
 
             # Generate some console output
             check_resp(await RM.environment_open())
@@ -2753,11 +2761,11 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
             await RM.wait_for_idle(timeout=10)
             asyncio.sleep(1)
 
-            assert RM.console_monitor.text_updated is True
+            text_uid1 = RM.console_monitor.text_uid
             text1 = await RM.console_monitor.text()
+            assert text_uid1 != text_uid0
             n_text1 = len(text1.split("\n"))
             assert n_text1 > 0
-            assert RM.console_monitor.text_updated is False
             assert await RM.console_monitor.text() == text1
 
             assert await RM.console_monitor.text(n_text1) == text1
@@ -2778,13 +2786,18 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
 
             assert await RM.console_monitor.text() == text1
 
+            assert RM.console_monitor.text_uid == text_uid1
+
             RM.console_monitor.clear()
-            assert RM.console_monitor.text_updated is True
+            text_uid2 = RM.console_monitor.text_uid
+            assert text_uid2 != text_uid1
 
             assert await RM.console_monitor.text() == ""
             assert await RM.console_monitor.text(100000) == ""
             assert await RM.console_monitor.text(0) == ""
             assert await RM.console_monitor.text(-1) == ""
+
+            assert RM.console_monitor.text_uid == text_uid2
 
             await RM.close()
 
