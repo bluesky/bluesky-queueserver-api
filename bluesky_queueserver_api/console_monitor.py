@@ -272,7 +272,15 @@ _doc_ConsoleMonitor_text_max_lines = """
 _doc_ConsoleMonitor_text = """
     Returns text representation of console output. Monitor ``text_updated``
     property to check if text buffer was modified since the last call to
-    ``text()`` API.
+    ``text()`` API. The parameter ``nlines`` determines the maximum number
+    of lines of text returned by the function.
+
+    Parameters
+    ----------
+    nlines: int
+        Number of lines to return. The value determines the maximum number of lines
+        of text returned by the function. The function returns ``""`` (empty string)
+        if the value is ``0`` or negative.
 
     Returns
     -------
@@ -295,6 +303,10 @@ _doc_ConsoleMonitor_text = """
         text = RM.console_monitor.text()
         print(text)
 
+        # Return the last 10 lines
+        text = RM.console_monitor.text(10)
+        print(text)
+
         RM.console_monitor.disable()
 
     Asynchronous API
@@ -310,8 +322,11 @@ _doc_ConsoleMonitor_text = """
         text = await RM.console_monitor.text()
         print(text)
 
-        RM.console_monitor.disable()
+        # Return the last 10 lines
+        text = await RM.console_monitor.text(10)
+        print(text)
 
+        RM.console_monitor.disable()
 """
 
 
