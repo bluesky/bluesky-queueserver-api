@@ -2407,12 +2407,12 @@ def test_console_monitor_05(
 
         RM = rm_api_class()
 
-        RM.environment_open()
-        RM.wait_for_idle(timeout=10)
-
         RM.console_monitor.enable()
         assert RM.console_monitor.enabled is True
         ttime.sleep(1)
+
+        RM.environment_open()
+        RM.wait_for_idle(timeout=10)
 
         RM.script_upload(script)
         ttime.sleep(2)
@@ -2436,12 +2436,12 @@ def test_console_monitor_05(
 
             RM = rm_api_class()
 
-            await RM.environment_open()
-            await RM.wait_for_idle(timeout=10)
-
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
             asyncio.sleep(1)
+
+            await RM.environment_open()
+            await RM.wait_for_idle(timeout=10)
 
             await RM.script_upload(script)
             asyncio.sleep(2)
