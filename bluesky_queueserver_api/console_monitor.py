@@ -322,19 +322,35 @@ class _ConsoleMonitor:
 
         self._buffers_modified_event = threading.Event()
 
+        self._text = {}
         self._text_buffer = []
         self._text_clear()
         self._text_max_lines = max(max_lines, 0)
 
-    def _text_generate(self):
+    def _text_generate(self, nlines):
+        n_text_buffer = len(self._text_buffer)
+        nlines = max(nlines, 0) if (nlines is not None) else n_text_buffer
+
         if self._text_buffer and self._text_buffer[-1] == "":
-            self._text = "\n".join(self._text_buffer[:-1])
+            nlines = min(nlines, n_text_buffer - 1)
+            if nlines not in self._text:
+                text = "\n".join(self._text_buffer[-nlines - 1 : -1])
+                self._text[nlines] = text
+            else:
+                text = self._text[nlines]
         else:
-            self._text = "\n".join(self._text_buffer)
+            nlines = min(nlines, n_text_buffer)
+            if nlines not in self._text:
+                text = "\n".join(self._text_buffer[-nlines:])
+                self._text[nlines] = text
+            else:
+                text = self._text[nlines]
+
         self._text_updated = False
+        return text
 
     def _text_clear(self):
-        self._text = ""
+        self._text.clear()
         self._text_line = 0
         self._text_pos = 0
         self._text_buffer.clear()
@@ -503,12 +519,11 @@ class _ConsoleMonitor_Threads(_ConsoleMonitor):
         except queue.Empty:
             raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
 
-    def text(self):
+    def text(self, nlines=None):
         # Docstring is maintained separately
-        if self._text_updated:
-            with self._text_buffer_lock:
-                self._text_generate()
-        return self._text
+        with self._text_buffer_lock:
+            text = self._text_generate(nlines=nlines)
+        return text
 
 
 class ConsoleMonitor_ZMQ_Threads(_ConsoleMonitor_Threads):
@@ -654,12 +669,11 @@ class _ConsoleMonitor_Async(_ConsoleMonitor):
         except (asyncio.QueueEmpty, asyncio.TimeoutError):
             raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
 
-    async def text(self):
+    async def text(self, nlines=None):
         # Docstring is maintained separately
-        if self._text_updated:
-            async with self._text_buffer_lock:
-                self._text_generate()
-        return self._text
+        async with self._text_buffer_lock:
+            text = self._text_generate(nlines=nlines)
+        return text
 
 
 class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):

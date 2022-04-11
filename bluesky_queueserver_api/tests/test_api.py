@@ -2668,3 +2668,124 @@ def test_console_monitor_07(
             await RM.close()
 
         asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol):  # noqa: F811
+    """
+    RM.console_monitor.text(): test all modes of operation.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    params = ["--zmq-publish-console", "ON"]
+    re_manager_cmd(params)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    if not _is_async(library):
+        RM = rm_api_class()
+
+        RM.console_monitor.enable()
+        assert RM.console_monitor.enabled is True
+        ttime.sleep(1)
+
+        # Generate some console output
+        check_resp(RM.environment_open())
+        RM.wait_for_idle(timeout=10)
+        check_resp(RM.environment_close())
+        RM.wait_for_idle(timeout=10)
+        ttime.sleep(1)  # Wait until all console output is loaded
+
+        assert RM.console_monitor.text_updated is True
+        text1 = RM.console_monitor.text()
+        n_text1 = len(text1.split("\n"))
+        assert n_text1 > 0
+        assert RM.console_monitor.text_updated is False
+        assert RM.console_monitor.text() == text1
+
+        assert RM.console_monitor.text(n_text1) == text1
+        assert RM.console_monitor.text(n_text1 + 1) == text1
+        assert RM.console_monitor.text(100000) == text1
+
+        text2 = RM.console_monitor.text(n_text1 - 1)
+        assert len(text2.split("\n")) == n_text1 - 1
+
+        text3 = RM.console_monitor.text(2)
+        assert len(text3.split("\n")) == 2
+
+        text4 = RM.console_monitor.text(1)
+        assert len(text4.split("\n")) == 1
+
+        assert RM.console_monitor.text(0) == ""
+        assert RM.console_monitor.text(-1) == ""
+
+        assert RM.console_monitor.text() == text1
+
+        RM.console_monitor.clear()
+        assert RM.console_monitor.text_updated is True
+
+        assert RM.console_monitor.text() == ""
+        assert RM.console_monitor.text(100000) == ""
+        assert RM.console_monitor.text(0) == ""
+        assert RM.console_monitor.text(-1) == ""
+
+        RM.close()
+
+    else:
+
+        async def testing():
+
+            RM = rm_api_class()
+
+            RM.console_monitor.enable()
+            assert RM.console_monitor.enabled is True
+            asyncio.sleep(1)
+
+            # Generate some console output
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle(timeout=10)
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle(timeout=10)
+            asyncio.sleep(1)
+
+            assert RM.console_monitor.text_updated is True
+            text1 = await RM.console_monitor.text()
+            n_text1 = len(text1.split("\n"))
+            assert n_text1 > 0
+            assert RM.console_monitor.text_updated is False
+            assert await RM.console_monitor.text() == text1
+
+            assert await RM.console_monitor.text(n_text1) == text1
+            assert await RM.console_monitor.text(n_text1 + 1) == text1
+            assert await RM.console_monitor.text(100000) == text1
+
+            text2 = await RM.console_monitor.text(n_text1 - 1)
+            assert len(text2.split("\n")) == n_text1 - 1
+
+            text3 = await RM.console_monitor.text(2)
+            assert len(text3.split("\n")) == 2
+
+            text4 = await RM.console_monitor.text(1)
+            assert len(text4.split("\n")) == 1
+
+            assert await RM.console_monitor.text(0) == ""
+            assert await RM.console_monitor.text(-1) == ""
+
+            assert await RM.console_monitor.text() == text1
+
+            RM.console_monitor.clear()
+            assert RM.console_monitor.text_updated is True
+
+            assert await RM.console_monitor.text() == ""
+            assert await RM.console_monitor.text(100000) == ""
+            assert await RM.console_monitor.text(0) == ""
+            assert await RM.console_monitor.text(-1) == ""
+
+            await RM.close()
+
+        asyncio.run(testing())
