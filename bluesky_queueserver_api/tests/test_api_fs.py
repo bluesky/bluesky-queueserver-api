@@ -97,6 +97,7 @@ def test_ReManagerAPI_parameters_01(
             text = RM.console_monitor.text()
             assert "RE Environment is ready" in text, text
     else:
+
         async def testing():
             RM = rm_api_class(**params)
             if option == "default_addr":
