@@ -10,7 +10,7 @@ from .console_monitor import ConsoleMonitor_ZMQ_Threads, ConsoleMonitor_HTTP_Thr
 class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
     def _init_console_monitor(self):
         self._console_monitor = ConsoleMonitor_ZMQ_Threads(
-            zmq_subscribe_addr=self._zmq_subscribe_addr,
+            zmq_info_addr=self._zmq_info_addr,
             poll_timeout=self._console_monitor_poll_timeout,
             max_msgs=self._console_monitor_max_msgs,
             max_lines=self._console_monitor_max_lines,
@@ -19,17 +19,17 @@ class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
     def _create_client(
         self,
         *,
-        zmq_server_address,
+        zmq_control_addr,
         timeout_recv,
         timeout_send,
-        server_public_key,
+        zmq_public_key,
     ):
         return ZMQCommSendThreads(
-            zmq_server_address=zmq_server_address,
+            zmq_server_address=zmq_control_addr,
             timeout_recv=int(timeout_recv * 1000),  # Convert to ms
             timeout_send=int(timeout_send * 1000),  # Convert to ms
             raise_exceptions=True,
-            server_public_key=server_public_key,
+            server_public_key=zmq_public_key,
         )
 
     def send_request(self, *, method, params=None):

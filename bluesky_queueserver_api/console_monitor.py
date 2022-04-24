@@ -18,7 +18,7 @@ _doc_ConsoleMonitor_ZMQ = """
 
     Parameters
     ----------
-    zmq_subscribe_addr: str
+    zmq_info_addr: str
         Address of 0MQ PUB socket. The SUB socket of the monitor subscribes to this address
         once the class is instantiated.
     poll_timeout: float
@@ -550,8 +550,8 @@ class _ConsoleMonitor_Threads(_ConsoleMonitor):
 class ConsoleMonitor_ZMQ_Threads(_ConsoleMonitor_Threads):
     # Docstring is maintained separately
 
-    def __init__(self, *, zmq_subscribe_addr, poll_timeout, max_msgs, max_lines):
-        self._zmq_subscribe_addr = zmq_subscribe_addr
+    def __init__(self, *, zmq_info_addr, poll_timeout, max_msgs, max_lines):
+        self._zmq_subscribe_addr = zmq_info_addr
         self._monitor_poll_timeout = poll_timeout
         super().__init__(max_msgs=max_msgs, max_lines=max_lines)
 
@@ -700,8 +700,8 @@ class _ConsoleMonitor_Async(_ConsoleMonitor):
 class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
     # Docstring is maintained separately
 
-    def __init__(self, *, zmq_subscribe_addr, poll_timeout, max_msgs, max_lines):
-        self._zmq_subscribe_addr = zmq_subscribe_addr
+    def __init__(self, *, zmq_info_addr, poll_timeout, max_msgs, max_lines):
+        self._zmq_subscribe_addr = zmq_info_addr
         self._monitor_poll_timeout = poll_timeout
         super().__init__(max_msgs=max_msgs, max_lines=max_lines)
 

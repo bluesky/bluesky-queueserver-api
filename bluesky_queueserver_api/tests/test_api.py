@@ -7,34 +7,13 @@ import time as ttime
 
 from .common import re_manager, re_manager_cmd  # noqa: F401
 from .common import fastapi_server, fastapi_server_fs  # noqa: F401
+from .common import _is_async, _select_re_manager_api
 
-from bluesky_queueserver_api.zmq import REManagerAPI as REManagerAPI_zmq_threads
-from bluesky_queueserver_api.zmq.aio import REManagerAPI as REManagerAPI_zmq_async
-from bluesky_queueserver_api.http import REManagerAPI as REManagerAPI_http_threads
-from bluesky_queueserver_api.http.aio import REManagerAPI as REManagerAPI_http_async
 from bluesky_queueserver_api import BPlan, BFunc, WaitMonitor
 
 _plan1 = {"name": "count", "args": [["det1", "det2"]], "item_type": "plan"}
 _user = "Test User"
 _user_group = "admin"
-
-
-def _is_async(library):
-    if library == "ASYNC":
-        return True
-    elif library == "THREADS":
-        return False
-    else:
-        raise ValueError(f"Unknown library: {library!r}")
-
-
-def _select_re_manager_api(protocol, library):
-    if protocol == "ZMQ":
-        return REManagerAPI_zmq_async if _is_async(library) else REManagerAPI_zmq_threads
-    elif protocol == "HTTP":
-        return REManagerAPI_http_async if _is_async(library) else REManagerAPI_http_threads
-    else:
-        raise ValueError(f"Unknown protocol: {protocol!r}")
 
 
 # fmt: off
@@ -1799,7 +1778,7 @@ def test_re_pause_01(re_manager, fastapi_server, protocol, library, pause_option
 
         check_resp(RM.environment_close())
         RM.wait_for_idle()
-        check_status(RM.status(), 0 if continue_option == "resume" else 1, 1, "idle")
+        check_status(RM.status(), 0 if continue_option in ("resume", "stop") else 1, 1, "idle")
 
         RM.close()
     else:
@@ -1838,7 +1817,7 @@ def test_re_pause_01(re_manager, fastapi_server, protocol, library, pause_option
 
             check_resp(await RM.environment_close())
             await RM.wait_for_idle()
-            check_status(await RM.status(), 0 if continue_option == "resume" else 1, 1, "idle")
+            check_status(await RM.status(), 0 if continue_option in ("resume", "stop") else 1, 1, "idle")
 
             await RM.close()
 

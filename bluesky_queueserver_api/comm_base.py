@@ -1,5 +1,6 @@
 from bluesky_queueserver import CommTimeoutError
 from collections.abc import Mapping
+import os
 import httpx
 
 from ._defaults import (
@@ -142,32 +143,32 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
     def __init__(
         self,
         *,
-        zmq_server_address=None,
-        zmq_subscribe_addr=None,
+        zmq_control_addr=None,
+        zmq_info_addr=None,
         timeout_recv=default_zmq_request_timeout_recv,
         timeout_send=default_zmq_request_timeout_send,
         console_monitor_poll_timeout=default_console_monitor_poll_timeout,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
         console_monitor_max_lines=default_console_monitor_max_lines,
-        server_public_key=None,
+        zmq_public_key=None,
         request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
 
-        # TODO: check env. variable for 'zmq_server_address'
-        # TODO: check env. variable for 'zmq_subscribe_address'
-        # TODO: check env. variable for 'server_public_key'
+        zmq_control_addr = zmq_control_addr or os.environ.get("QSERVER_ZMQ_CONTROL_ADDRESS", None)
+        zmq_info_addr = zmq_info_addr or os.environ.get("QSERVER_ZMQ_INFO_ADDRESS", None)
+        zmq_public_key = zmq_public_key or os.environ.get("QSERVER_ZMQ_PUBLIC_KEY", None)
 
-        self._zmq_subscribe_addr = zmq_subscribe_addr
+        self._zmq_info_addr = zmq_info_addr
         self._console_monitor_poll_timeout = console_monitor_poll_timeout
         self._console_monitor_max_msgs = console_monitor_max_msgs
         self._console_monitor_max_lines = console_monitor_max_lines
 
         self._client = self._create_client(
-            zmq_server_address=zmq_server_address,
+            zmq_control_addr=zmq_control_addr,
             timeout_recv=timeout_recv,
             timeout_send=timeout_send,
-            server_public_key=server_public_key,
+            zmq_public_key=zmq_public_key,
         )
 
         self._init_console_monitor()
@@ -175,10 +176,10 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
     def _create_client(
         self,
         *,
-        zmq_server_address,
+        zmq_control_addr,
         timeout_recv,
         timeout_send,
-        server_public_key,
+        zmq_public_key,
     ):
         raise NotImplementedError()
 
@@ -202,13 +203,12 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
 
-        # TODO: check env. variable for 'http_server_uri'
+        http_server_uri = http_server_uri or os.environ.get("QSERVER_HTTP_SERVER_URI")
+        http_server_uri = http_server_uri or default_http_server_uri
 
         # Do not pass user info with request (e.g. user info is not required in REST API requests,
         #   because HTTP Server assigns user name and user group based on login information)
         self._pass_user_info = False
-
-        http_server_uri = http_server_uri or default_http_server_uri
 
         self._timeout = timeout
         self._request_fail_exceptions = request_fail_exceptions

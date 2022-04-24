@@ -125,10 +125,10 @@ _doc_REManagerAPI_ZMQ = """
 
     Parameters
     ----------
-    zmq_server_address: str or None
+    zmq_control_addr: str or None
         Address of control 0MQ socket of RE Manager. If ``None``,
         then the default address ``"tcp://localhost:60615"`` is used.
-    zmq_subscribe_addr: str or None
+    zmq_info_addr: str or None
         Address of 0MQ socket used for publishing console output.
         If ``None``, then the default address ``"tcp://localhost:60625"``
         is used.
@@ -146,7 +146,7 @@ _doc_REManagerAPI_ZMQ = """
         the console monitor. Default: 10000.
     console_monitor_max_lines: int
         Maximum number of lines in the internal text buffer. Default: 1000.
-    server_public_key: str or None
+    zmq_public_key: str or None
         Public key of RE Manager if the encryption is enabled. Set to ``None``
         if encryption is not enabled
     request_fail_exceptions: boolean
