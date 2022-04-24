@@ -96,13 +96,13 @@ def test_ReManagerComm_ZMQ_02(monkeypatch, re_manager_cmd):  # noqa: F811
     monkeypatch.setenv("QSERVER_ZMQ_PRIVATE_KEY", private_key)
     re_manager_cmd(["--zmq-addr", zmq_manager_addr])
 
-    RM = ReManagerComm_ZMQ_Threads(zmq_server_address=zmq_server_addr, server_public_key=public_key)
+    RM = ReManagerComm_ZMQ_Threads(zmq_control_addr=zmq_server_addr, zmq_public_key=public_key)
     result = RM.send_request(method="queue_item_add", params=params)
     assert result["success"] is True
     RM.close()
 
     async def testing():
-        RM = ReManagerComm_ZMQ_Async(zmq_server_address=zmq_server_addr, server_public_key=public_key)
+        RM = ReManagerComm_ZMQ_Async(zmq_control_addr=zmq_server_addr, zmq_public_key=public_key)
         result = await RM.send_request(method="queue_item_add", params=params)
         assert result["success"] is True
         await RM.close()
