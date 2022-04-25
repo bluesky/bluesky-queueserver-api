@@ -2,7 +2,7 @@ import asyncio
 import pytest
 import re
 
-from bluesky_queueserver.manager.comms import generate_new_zmq_key_pair
+from bluesky_queueserver import generate_zmq_keys
 
 from bluesky_queueserver_api.comm_base import ReManagerAPI_Base
 from bluesky_queueserver_api.comm_threads import ReManagerComm_ZMQ_Threads, ReManagerComm_HTTP_Threads
@@ -87,7 +87,7 @@ def test_ReManagerComm_ZMQ_02(monkeypatch, re_manager_cmd):  # noqa: F811
     zmq_server_addr = r"tcp://localhost:60650"
     params = {"item": _plan1, "user": _user, "user_group": _user_group}
 
-    public_key, private_key = generate_new_zmq_key_pair()
+    public_key, private_key = generate_zmq_keys()
 
     # Configure communication functions built into the test system
     set_qserver_zmq_public_key(monkeypatch, server_public_key=public_key)
