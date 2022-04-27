@@ -187,6 +187,41 @@ class API_Base:
         self._current_run_list = []
         self._current_run_list_uid = None
 
+    def _check_name(self, name, name_in_msg):
+        if not isinstance(name, str):
+            raise ValueError(f"{name_in_msg} {name!r} is not a string: type {type(name)!r}")
+        if not name:
+            raise ValueError(f"{name_in_msg} is an empty string.")
+
+    @property
+    def user(self):
+        """
+        Get and set the default user name. The default value is used if user name is not passed
+        explicitly as an API parameter (for API calls that require user name). User name is ignored
+        in HTTP API requests, since HTTP server is expected to manager user names.
+        """
+        return self._user
+
+    @user.setter
+    def user(self, user):
+        self._check_name(user, "User name")
+        self._user = user
+
+    @property
+    def user_group(self):
+        """
+        Get and set the default user group name. The default value is used if the group name is
+        not passed explicitly as an API parameter (for API calls that require user group name).
+        The group name is ignored in HTTP API requests, since HTTP server is expected to manage
+        user information including group names.
+        """
+        return self._user_group
+
+    @user_group.setter
+    def user_group(self, user_group):
+        self._check_name(user_group, "User group name")
+        self._user_group = user_group
+
     def _clear_status_timestamp(self):
         """
         Clearing status timestamp causes status to be reloaded from the server next time it is requested.
