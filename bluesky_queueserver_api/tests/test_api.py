@@ -2446,13 +2446,13 @@ def test_console_monitor_05(
 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
-            asyncio.sleep(1)
+            await asyncio.sleep(1)
 
             await RM.environment_open()
             await RM.wait_for_idle(timeout=10)
 
             await RM.script_upload(script)
-            asyncio.sleep(2)
+            await asyncio.sleep(2)
             await RM.wait_for_idle(timeout=10)
 
             text = await RM.console_monitor.text()
@@ -2545,7 +2545,7 @@ def test_console_monitor_06(re_manager_cmd, fastapi_server, library, protocol, n
 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
-            asyncio.sleep(1)
+            await asyncio.sleep(1)
 
             check_resp(await RM.item_add(BPlan("plan_test_progress_bars", n_progress_bars)))
             check_status(await RM.status(), "idle", 1)
@@ -2650,7 +2650,7 @@ def test_console_monitor_07(
 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
-            asyncio.sleep(1)
+            await asyncio.sleep(1)
 
             check_resp(await RM.environment_open())
             await RM.wait_for_idle(timeout=10)
@@ -2759,7 +2759,7 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
-            asyncio.sleep(1)
+            await asyncio.sleep(1)
             text_uid0 = RM.console_monitor.text_uid
 
             # Generate some console output
@@ -2767,7 +2767,7 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
             await RM.wait_for_idle(timeout=10)
             check_resp(await RM.environment_close())
             await RM.wait_for_idle(timeout=10)
-            asyncio.sleep(1)
+            await asyncio.sleep(1)
 
             text_uid1 = RM.console_monitor.text_uid
             text1 = await RM.console_monitor.text()

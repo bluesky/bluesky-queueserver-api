@@ -429,7 +429,7 @@ class API_Async_Mixin(API_Base):
         # Docstring is maintained separately
         status = await self._status(reload=reload)
         plans_allowed_uid = status["plans_allowed_uid"]
-        user_group = self._get_user_group_for_allowed_plans_devices(user_group)
+        user_group = self._get_user_group_for_allowed_plans_devices(user_group=user_group)
         if (plans_allowed_uid != self._current_plans_allowed_uid) or (
             user_group not in self._current_plans_allowed
         ):
@@ -444,7 +444,7 @@ class API_Async_Mixin(API_Base):
         # Docstring is maintained separately
         status = await self._status(reload=reload)
         devices_allowed_uid = status["devices_allowed_uid"]
-        user_group = self._get_user_group_for_allowed_plans_devices(user_group)
+        user_group = self._get_user_group_for_allowed_plans_devices(user_group=user_group)
         if (devices_allowed_uid != self._current_devices_allowed_uid) or (
             user_group not in self._current_devices_allowed
         ):

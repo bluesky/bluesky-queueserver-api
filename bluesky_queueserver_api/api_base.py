@@ -427,7 +427,7 @@ class API_Base:
         Prepare parameters for ``plans_allowed`` and ``devices_allowed`` operation.
         """
         request_params = {}
-        self._request_params_add_user_info(request_params, user_group=user_group)
+        self._request_params_add_user_info(request_params, user=None, user_group=user_group)
 
         # User name should not be includedin the request
         if "user" in request_params:
