@@ -428,24 +428,30 @@ class API_Threads_Mixin(API_Base):
         # Docstring is maintained separately
         status = self._status(reload=reload)
         plans_allowed_uid = status["plans_allowed_uid"]
-        if plans_allowed_uid != self._current_plans_allowed_uid:
+        user_group = self._get_user_group_for_allowed_plans_devices(user_group)
+        if (plans_allowed_uid != self._current_plans_allowed_uid) or (
+            user_group not in self._current_plans_allowed
+        ):
             request_params = self._prepare_plans_devices_allowed(user_group=user_group)
             response = self.send_request(method="plans_allowed", params=request_params)
-            self._process_response_plans_allowed(response)
+            self._process_response_plans_allowed(response, user_group=user_group)
         else:
-            response = self._generate_response_plans_allowed()
+            response = self._generate_response_plans_allowed(user_group=user_group)
         return response
 
     def devices_allowed(self, *, reload=False, user_group=None):
         # Docstring is maintained separately
         status = self._status(reload=reload)
         devices_allowed_uid = status["devices_allowed_uid"]
-        if devices_allowed_uid != self._current_devices_allowed_uid:
+        user_group = self._get_user_group_for_allowed_plans_devices(user_group)
+        if (devices_allowed_uid != self._current_devices_allowed_uid) or (
+            user_group not in self._current_devices_allowed
+        ):
             request_params = self._prepare_plans_devices_allowed(user_group=user_group)
             response = self.send_request(method="devices_allowed", params=request_params)
-            self._process_response_devices_allowed(response)
+            self._process_response_devices_allowed(response, user_group=user_group)
         else:
-            response = self._generate_response_devices_allowed()
+            response = self._generate_response_devices_allowed(user_group=user_group)
         return response
 
     def plans_existing(self, *, reload=False):

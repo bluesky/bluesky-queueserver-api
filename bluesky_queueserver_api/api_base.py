@@ -240,6 +240,16 @@ class API_Base:
         """
         self._status_timestamp = None
 
+    def _get_user_group_for_allowed_plans_devices(self, *, user_group):
+        """
+        Returns ``user_group`` used by ``plans_allowed`` and ``devices_allowed`` API.
+        """
+        if self._add_request_param:
+            user_group = user_group if user_group else self._user_group
+        else:
+            user_group = "http"  # Arbitrary group names, since it is not sent in the request
+        return user_group
+
     def _request_params_add_user_info(self, request_params, *, user, user_group):
         if self._pass_user_info:
             request_params["user"] = user if user else self._user
@@ -425,15 +435,20 @@ class API_Base:
 
         return request_params
 
-    def _process_response_plans_allowed(self, response):
+    def _invalidate_plans_allowed_cache(self):
+        self._current_plans_allowed.clear()
+
+    def _process_response_plans_allowed(self, response, *, user_group):
         """
         ``plans_allowed``: process response
         """
         if response["success"] is True:
-            self._current_plans_allowed = copy.deepcopy(response["plans_allowed"])
-            self._current_plans_allowed_uid = copy.deepcopy(response["plans_allowed_uid"])
+            if response["plans_allowed_uid"] != self._current_plans_allowed_uid:
+                self._invalidate_plans_allowed_cache()
+                self._current_plans_allowed_uid = response["plans_allowed_uid"]
+            self._current_plans_allowed[user_group] = copy.deepcopy(response["plans_allowed"])
 
-    def _generate_response_plans_allowed(self):
+    def _generate_response_plans_allowed(self, *, user_group):
         """
         ``plans_allowed``: generate response based on cached data
         """
@@ -441,19 +456,24 @@ class API_Base:
             "success": True,
             "msg": "",
             "plans_allowed_uid": self._current_plans_allowed_uid,
-            "plans_allowed": copy.deepcopy(self._current_plans_allowed),
+            "plans_allowed": copy.deepcopy(self._current_plans_allowed[user_group]),
         }
         return response
 
-    def _process_response_devices_allowed(self, response):
+    def _invalidate_devices_allowed_cache(self):
+        self._current_devices_allowed.clear()
+
+    def _process_response_devices_allowed(self, response, *, user_group):
         """
         ``devices_allowed``: process response
         """
         if response["success"] is True:
-            self._current_devices_allowed = copy.deepcopy(response["devices_allowed"])
-            self._current_devices_allowed_uid = copy.deepcopy(response["devices_allowed_uid"])
+            if response["devices_allowed_uid"] != self._current_devices_allowed_uid:
+                self._invalidate_devices_allowed_cache()
+                self._current_devices_allowed_uid = response["devices_allowed_uid"]
+            self._current_devices_allowed[user_group] = copy.deepcopy(response["devices_allowed"])
 
-    def _generate_response_devices_allowed(self):
+    def _generate_response_devices_allowed(self, *, user_group):
         """
         ``devices_allowed``: generate response based on cached data
         """
@@ -461,7 +481,7 @@ class API_Base:
             "success": True,
             "msg": "",
             "devices_allowed_uid": self._current_devices_allowed_uid,
-            "devices_allowed": copy.deepcopy(self._current_devices_allowed),
+            "devices_allowed": copy.deepcopy(self._current_devices_allowed[user_group]),
         }
         return response
 
@@ -471,7 +491,7 @@ class API_Base:
         """
         if response["success"] is True:
             self._current_plans_existing = copy.deepcopy(response["plans_existing"])
-            self._current_plans_existing_uid = copy.deepcopy(response["plans_existing_uid"])
+            self._current_plans_existing_uid = response["plans_existing_uid"]
 
     def _generate_response_plans_existing(self):
         """
@@ -491,7 +511,7 @@ class API_Base:
         """
         if response["success"] is True:
             self._current_devices_existing = copy.deepcopy(response["devices_existing"])
-            self._current_devices_existing_uid = copy.deepcopy(response["devices_existing_uid"])
+            self._current_devices_existing_uid = response["devices_existing_uid"]
 
     def _generate_response_devices_existing(self):
         """
