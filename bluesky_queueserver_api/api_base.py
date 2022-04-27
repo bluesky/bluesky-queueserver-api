@@ -240,7 +240,7 @@ class API_Base:
         """
         self._status_timestamp = None
 
-    def _request_params_add_user_info(self, request_params, *, user=None, user_group=None):
+    def _request_params_add_user_info(self, request_params, *, user, user_group):
         if self._pass_user_info:
             request_params["user"] = user if user else self._user
             request_params["user_group"] = user_group if user_group else self._user_group
@@ -252,7 +252,7 @@ class API_Base:
         if value is not None:
             request_params[name] = value
 
-    def _prepare_item_add(self, *, item, pos, before_uid, after_uid, user=None, user_group=None):
+    def _prepare_item_add(self, *, item, pos, before_uid, after_uid, user, user_group):
         """
         Prepare parameters for ``item_add`` operation.
         """
@@ -268,7 +268,7 @@ class API_Base:
         self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
-    def _prepare_item_add_batch(self, *, items, pos, before_uid, after_uid, user=None, user_group=None):
+    def _prepare_item_add_batch(self, *, items, pos, before_uid, after_uid, user, user_group):
         """
         Prepare parameters for ``item_add_batch`` operation.
         """
@@ -290,7 +290,7 @@ class API_Base:
         self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
-    def _prepare_item_update(self, *, item, replace, user=None, user_group=None):
+    def _prepare_item_update(self, *, item, replace, user, user_group):
         """
         Prepare parameters for ``item_update`` operation.
         """
@@ -347,7 +347,7 @@ class API_Base:
         self._add_request_param(request_params, "ignore_missing", ignore_missing)
         return request_params
 
-    def _prepare_item_execute(self, *, item, user=None, user_group=None):
+    def _prepare_item_execute(self, *, item, user, user_group):
         """
         Prepare parameters for ``item_execute`` operation.
         """
@@ -530,7 +530,7 @@ class API_Base:
         self._add_request_param(request_params, "run_in_background", run_in_background)
         return request_params
 
-    def _prepare_function_execute(self, *, item, run_in_background):
+    def _prepare_function_execute(self, *, item, run_in_background, user, user_group):
         """
         Prepare parameters for ``script_upload``
         """
@@ -541,7 +541,7 @@ class API_Base:
 
         request_params = {"item": item}
         self._add_request_param(request_params, "run_in_background", run_in_background)
-        self._request_params_add_user_info(request_params)
+        self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
     def _prepare_task_result(self, *, task_uid):
