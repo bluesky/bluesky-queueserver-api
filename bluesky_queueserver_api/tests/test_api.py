@@ -1,5 +1,5 @@
 import asyncio
-
+import getpass
 import pytest
 import re
 import threading
@@ -12,6 +12,34 @@ from .common import _is_async, _select_re_manager_api
 from bluesky_queueserver_api import BPlan, BFunc, WaitMonitor
 
 _plan1 = {"name": "count", "args": [["det1", "det2"]], "item_type": "plan"}
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_instantiation_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``REManagerAPI``: instantiation of classes
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    user_name = getpass.getuser()
+    if not _is_async(library):
+        RM = rm_api_class()
+        assert RM.protocol == RM.Protocols(protocol)
+        assert RM.user == user_name
+        assert RM.user_group == "admin"
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            assert RM.protocol == RM.Protocols(protocol)
+            assert RM.user == user_name
+            assert RM.user_group == "admin"
+            await RM.close()
+
+        asyncio.run(testing())
 
 
 # fmt: off
@@ -66,7 +94,7 @@ def test_status_02(re_manager, fastapi_server, protocol, library, reload):  # no
     """
 
     _user, _user_group = "Test User", "admin"
-    
+
     rm_api_class = _select_re_manager_api(protocol, library)
     status_params = {"reload": reload} if (reload is not None) else {}
     add_item_params = {"item": _plan1}

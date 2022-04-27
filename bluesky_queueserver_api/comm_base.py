@@ -149,6 +149,10 @@ class ReManagerAPI_Base:
 
     @property
     def protocol(self):
+        """
+        Indicates the protocol used for communication (ZMQ or HTTP). The returned value is of
+        ``REManagerAPI.Protocols`` enum type.
+        """
         if self._protocol is None:
             raise ValueError("Protocol is not defined")
         return self._protocol
