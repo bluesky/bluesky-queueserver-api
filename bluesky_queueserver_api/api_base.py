@@ -1,6 +1,8 @@
-from .item import BItem
 from collections.abc import Mapping, Iterable
 import copy
+import getpass
+
+from .item import BItem
 
 
 class WaitTimeoutError(TimeoutError):
@@ -170,6 +172,7 @@ class API_Base:
 
         self._user = "Python API User"
         self._user_group = "admin"
+        self.set_user_to_login_user_name()
 
         self._current_plan_queue = []
         self._current_running_item = {}
@@ -221,6 +224,15 @@ class API_Base:
     def user_group(self, user_group):
         self._check_name(user_group, "User group name")
         self._user_group = user_group
+
+    def set_user_to_login_user_name(self):
+        """
+        Set the default user name to 'login name' of the current user of the workstation. This function
+        is called during instantiation of ``REManagerAPI``, but it may be called manually at any time.
+        The name can be changed using ``REManagerAPI.user`` property. The default name is ignored by
+        HTTP version of the API.
+        """
+        self.user = getpass.getuser()
 
     def _clear_status_timestamp(self):
         """
