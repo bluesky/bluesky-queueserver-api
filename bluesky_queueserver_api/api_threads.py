@@ -310,9 +310,9 @@ class API_Threads_Mixin(API_Base):
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_add_batch", params=request_params)
 
-    def item_update(self, item, *, replace=None):
+    def item_update(self, item, *, replace=None, user=None, user_group=None):
         # Docstring is maintained separately
-        request_params = self._prepare_item_update(item=item, replace=replace)
+        request_params = self._prepare_item_update(item=item, replace=replace, user=user, user_group=user_group)
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_update", params=request_params)
 
@@ -350,9 +350,9 @@ class API_Threads_Mixin(API_Base):
         request_params = self._prepare_item_get_remove(pos=pos, uid=uid)
         return self.send_request(method="queue_item_get", params=request_params)
 
-    def item_execute(self, item):
+    def item_execute(self, item, *, user=None, user_group=None):
         # Docstring is maintained separately
-        request_params = self._prepare_item_execute(item=item)
+        request_params = self._prepare_item_execute(item=item, user=user, user_group=user_group)
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_execute", params=request_params)
 

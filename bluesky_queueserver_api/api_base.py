@@ -290,7 +290,7 @@ class API_Base:
         self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
-    def _prepare_item_update(self, *, item, replace):
+    def _prepare_item_update(self, *, item, replace, user=None, user_group=None):
         """
         Prepare parameters for ``item_update`` operation.
         """
@@ -301,7 +301,7 @@ class API_Base:
 
         request_params = {"item": item}
         self._add_request_param(request_params, "replace", replace)
-        self._request_params_add_user_info(request_params)
+        self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
     def _prepare_item_move(self, *, pos, uid, pos_dest, before_uid, after_uid):
@@ -347,7 +347,7 @@ class API_Base:
         self._add_request_param(request_params, "ignore_missing", ignore_missing)
         return request_params
 
-    def _prepare_item_execute(self, *, item):
+    def _prepare_item_execute(self, *, item, user=None, user_group=None):
         """
         Prepare parameters for ``item_execute`` operation.
         """
@@ -357,7 +357,7 @@ class API_Base:
         item = item.to_dict() if isinstance(item, BItem) else dict(item).copy()
 
         request_params = {"item": item}
-        self._request_params_add_user_info(request_params)
+        self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
     def _prepare_queue_mode_set(self, **kwargs):
