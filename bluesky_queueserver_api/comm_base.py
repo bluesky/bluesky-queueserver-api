@@ -1,7 +1,8 @@
 from bluesky_queueserver import CommTimeoutError
 from collections.abc import Mapping
-import os
+import enum
 import httpx
+import os
 
 from ._defaults import (
     default_allow_request_fail_exceptions,
@@ -86,6 +87,11 @@ class RequestFailedError(Exception):
         super().__init__(msg)
 
 
+class Protocols(enum.Enum):
+    ZMQ = "ZMQ"
+    HTTP = "HTTP"
+
+
 class ReManagerAPI_Base:
 
     RequestTimeoutError = RequestTimeoutError
@@ -93,11 +99,14 @@ class ReManagerAPI_Base:
     RequestError = RequestError
     ClientError = ClientError
 
+    Protocols = Protocols
+
     def __init__(self, *, request_fail_exceptions=True):
         # Raise exceptions if request fails (success=False)
         self._request_fail_exceptions = request_fail_exceptions
         self._pass_user_info = True
         self._console_monitor = None
+        self._protocol = None
 
     @property
     def request_fail_exceptions_enabled(self):
@@ -138,6 +147,12 @@ class ReManagerAPI_Base:
     def _init_console_monitor(self):
         raise NotImplementedError()
 
+    @property
+    def protocol(self):
+        if self._protocol is None:
+            raise ValueError("Protocol is not defined")
+        return self._protocol
+
 
 class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
     def __init__(
@@ -154,6 +169,8 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
+
+        self._protocol = self.Protocols.ZMQ
 
         zmq_control_addr = zmq_control_addr or os.environ.get("QSERVER_ZMQ_CONTROL_ADDRESS", None)
         zmq_info_addr = zmq_info_addr or os.environ.get("QSERVER_ZMQ_INFO_ADDRESS", None)
@@ -202,6 +219,8 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
+
+        self._protocol = self.Protocols.HTTP
 
         http_server_uri = http_server_uri or os.environ.get("QSERVER_HTTP_SERVER_URI")
         http_server_uri = http_server_uri or default_http_server_uri

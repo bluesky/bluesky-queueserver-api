@@ -12,8 +12,6 @@ from .common import _is_async, _select_re_manager_api
 from bluesky_queueserver_api import BPlan, BFunc, WaitMonitor
 
 _plan1 = {"name": "count", "args": [["det1", "det2"]], "item_type": "plan"}
-_user = "Test User"
-_user_group = "admin"
 
 
 # fmt: off
@@ -66,6 +64,9 @@ def test_status_02(re_manager, fastapi_server, protocol, library, reload):  # no
     In a rapid sequence: read status, add item to queue (using low-level API), read status again.
     Verify if the status was reloaded if ``reload`` is ``True``.
     """
+
+    _user, _user_group = "Test User", "admin"
+    
     rm_api_class = _select_re_manager_api(protocol, library)
     status_params = {"reload": reload} if (reload is not None) else {}
     add_item_params = {"item": _plan1}
