@@ -294,16 +294,18 @@ class API_Threads_Mixin(API_Base):
     # =====================================================================================
     #                 API for monitoring and control of Queue
 
-    def item_add(self, item, *, pos=None, before_uid=None, after_uid=None):
+    def item_add(self, item, *, pos=None, before_uid=None, after_uid=None, user=None, user_group=None):
         # Docstring is maintained separately
-        request_params = self._prepare_item_add(item=item, pos=pos, before_uid=before_uid, after_uid=after_uid)
+        request_params = self._prepare_item_add(
+            item=item, pos=pos, before_uid=before_uid, after_uid=after_uid, user=user, user_group=user_group
+        )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_add", params=request_params)
 
-    def item_add_batch(self, items, *, pos=None, before_uid=None, after_uid=None):
+    def item_add_batch(self, items, *, pos=None, before_uid=None, after_uid=None, user=None, user_group=None):
         # Docstring is maintained separately
         request_params = self._prepare_item_add_batch(
-            items=items, pos=pos, before_uid=before_uid, after_uid=after_uid
+            items=items, pos=pos, before_uid=before_uid, after_uid=after_uid, user=user, user_group=user_group
         )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_add_batch", params=request_params)
@@ -422,24 +424,24 @@ class API_Threads_Mixin(API_Base):
         self._clear_status_timestamp()
         return self.send_request(method="history_clear")
 
-    def plans_allowed(self, *, reload=False):
+    def plans_allowed(self, *, reload=False, user_group=None):
         # Docstring is maintained separately
         status = self._status(reload=reload)
         plans_allowed_uid = status["plans_allowed_uid"]
         if plans_allowed_uid != self._current_plans_allowed_uid:
-            request_params = self._prepare_plans_devices_allowed()
+            request_params = self._prepare_plans_devices_allowed(user_group=user_group)
             response = self.send_request(method="plans_allowed", params=request_params)
             self._process_response_plans_allowed(response)
         else:
             response = self._generate_response_plans_allowed()
         return response
 
-    def devices_allowed(self, *, reload=False):
+    def devices_allowed(self, *, reload=False, user_group=None):
         # Docstring is maintained separately
         status = self._status(reload=reload)
         devices_allowed_uid = status["devices_allowed_uid"]
         if devices_allowed_uid != self._current_devices_allowed_uid:
-            request_params = self._prepare_plans_devices_allowed()
+            request_params = self._prepare_plans_devices_allowed(user_group=user_group)
             response = self.send_request(method="devices_allowed", params=request_params)
             self._process_response_devices_allowed(response)
         else:

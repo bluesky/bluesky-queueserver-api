@@ -240,10 +240,10 @@ class API_Base:
         """
         self._status_timestamp = None
 
-    def _request_params_add_user_info(self, request_params):
+    def _request_params_add_user_info(self, request_params, *, user=None, user_group=None):
         if self._pass_user_info:
-            request_params["user"] = self._user
-            request_params["user_group"] = self._user_group
+            request_params["user"] = user if user else self._user
+            request_params["user_group"] = user_group if user_group else self._user_group
 
     def _add_request_param(self, request_params, name, value):
         """
@@ -252,7 +252,7 @@ class API_Base:
         if value is not None:
             request_params[name] = value
 
-    def _prepare_item_add(self, *, item, pos, before_uid, after_uid):
+    def _prepare_item_add(self, *, item, pos, before_uid, after_uid, user=None, user_group=None):
         """
         Prepare parameters for ``item_add`` operation.
         """
@@ -265,10 +265,10 @@ class API_Base:
         self._add_request_param(request_params, "pos", pos)
         self._add_request_param(request_params, "before_uid", before_uid)
         self._add_request_param(request_params, "after_uid", after_uid)
-        self._request_params_add_user_info(request_params)
+        self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
-    def _prepare_item_add_batch(self, *, items, pos, before_uid, after_uid):
+    def _prepare_item_add_batch(self, *, items, pos, before_uid, after_uid, user=None, user_group=None):
         """
         Prepare parameters for ``item_add_batch`` operation.
         """
@@ -287,7 +287,7 @@ class API_Base:
         self._add_request_param(request_params, "pos", pos)
         self._add_request_param(request_params, "before_uid", before_uid)
         self._add_request_param(request_params, "after_uid", after_uid)
-        self._request_params_add_user_info(request_params)
+        self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
     def _prepare_item_update(self, *, item, replace):
@@ -412,12 +412,12 @@ class API_Base:
         }
         return response
 
-    def _prepare_plans_devices_allowed(self):
+    def _prepare_plans_devices_allowed(self, *, user_group):
         """
         Prepare parameters for ``plans_allowed`` and ``devices_allowed`` operation.
         """
         request_params = {}
-        self._request_params_add_user_info(request_params)
+        self._request_params_add_user_info(request_params, user_group=user_group)
 
         # User name should not be includedin the request
         if "user" in request_params:

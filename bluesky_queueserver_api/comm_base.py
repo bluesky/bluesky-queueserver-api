@@ -104,9 +104,10 @@ class ReManagerAPI_Base:
     def __init__(self, *, request_fail_exceptions=True):
         # Raise exceptions if request fails (success=False)
         self._request_fail_exceptions = request_fail_exceptions
-        self._pass_user_info = True
         self._console_monitor = None
+
         self._protocol = None
+        self._pass_user_info = True
 
     @property
     def request_fail_exceptions_enabled(self):
@@ -225,13 +226,12 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
 
         self._protocol = self.Protocols.HTTP
-
-        http_server_uri = http_server_uri or os.environ.get("QSERVER_HTTP_SERVER_URI")
-        http_server_uri = http_server_uri or default_http_server_uri
-
         # Do not pass user info with request (e.g. user info is not required in REST API requests,
         #   because HTTP Server assigns user name and user group based on login information)
         self._pass_user_info = False
+
+        http_server_uri = http_server_uri or os.environ.get("QSERVER_HTTP_SERVER_URI")
+        http_server_uri = http_server_uri or default_http_server_uri
 
         self._timeout = timeout
         self._request_fail_exceptions = request_fail_exceptions
