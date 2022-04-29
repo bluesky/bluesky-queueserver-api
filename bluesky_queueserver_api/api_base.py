@@ -170,9 +170,8 @@ class API_Base:
         self._status_current = None
         self._status_exception = None
 
-        self._user = "Python API User"
+        self._user = "Queue Server API User"  # Meaningful user name should be set in application code.
         self._user_group = "admin"
-        self.set_user_to_login_user_name()
 
         self._current_plan_queue = []
         self._current_running_item = {}
@@ -201,7 +200,7 @@ class API_Base:
         """
         Get and set the default user name. The default value is used if user name is not passed
         explicitly as an API parameter (for API calls that require user name). User name is ignored
-        in HTTP API requests, since HTTP server is expected to manager user names.
+        by the HTTP version of API, since HTTP server is expected to manage user names.
         """
         return self._user
 
@@ -215,8 +214,8 @@ class API_Base:
         """
         Get and set the default user group name. The default value is used if the group name is
         not passed explicitly as an API parameter (for API calls that require user group name).
-        The group name is ignored in HTTP API requests, since HTTP server is expected to manage
-        user information including group names.
+        The group name is ignored by the HTTP version of API, since HTTP server is expected to manage
+        user information including names of user group.
         """
         return self._user_group
 
@@ -225,12 +224,10 @@ class API_Base:
         self._check_name(user_group, "User group name")
         self._user_group = user_group
 
-    def set_user_to_login_user_name(self):
+    def set_user_name_to_login_name(self):
         """
-        Set the default user name to 'login name' of the current user of the workstation. This function
-        is called during instantiation of ``REManagerAPI``, but it may be called manually at any time.
-        The name can be changed using ``REManagerAPI.user`` property. The default name is ignored by
-        HTTP version of the API.
+        Set the default user name to 'login name'. Login name the current user of the workstation
+        is used. User name is ignored by the HTTP version of the API.
         """
         self.user = getpass.getuser()
 

@@ -450,6 +450,12 @@ _doc_api_item_add = """
     before_uid, after_uid: str or None
         Insert the item before or after the item with the given item UID. If ``None``
         (default), then the parameters are not specified.
+    user, user_group: str or None (optional)
+        User name and user group name used in the API request. The parameter values 
+        override the default user and user group names (accessible using ``user`` and 
+        ``user_group`` properties). The default user or user group name is used 
+        if the respective parameter is not specified or ``None``. The parameters are 
+        ignored by the HTTP version of the API.
 
     Returns
     -------
@@ -540,6 +546,12 @@ _doc_api_item_add_batch = """
     before_uid, after_uid: str or None
         Insert the batch before or after the item with the given item UID. If ``None``
         (default), then the parameters are not specified.
+    user, user_group: str or None (optional)
+        User name and user group name used in the API request. The parameter values 
+        override the default user and user group names (accessible using ``user`` and 
+        ``user_group`` properties). The default user or user group name is used 
+        if the respective parameter is not specified or ``None``. The parameters are 
+        ignored by the HTTP version of the API.
 
     Returns
     -------
@@ -601,6 +613,12 @@ _doc_api_item_update = """
     replace: boolean
         The server generates a new item UID before the item is inserted in the queue
         if ``True``. Default: ``False``.
+    user, user_group: str or None (optional)
+        User name and user group name used in the API request. The parameter values 
+        override the default user and user group names (accessible using ``user`` and 
+        ``user_group`` properties). The default user or user group name is used 
+        if the respective parameter is not specified or ``None``. The parameters are 
+        ignored by the HTTP version of the API.
 
     Returns
     -------
@@ -934,6 +952,12 @@ _doc_api_item_execute = """
     item: dict, BItem, BPlan or BInst
         Dictionary of item parameters or an instance of ``BItem``, ``BPlan`` or ``BInst``
         representing a plan or an instruction.
+    user, user_group: str or None (optional)
+        User name and user group name used in the API request. The parameter values 
+        override the default user and user group names (accessible using ``user`` and 
+        ``user_group`` properties). The default user or user group name is used 
+        if the respective parameter is not specified or ``None``. The parameters are 
+        ignored by the HTTP version of the API.
 
     Returns
     -------
@@ -1299,6 +1323,12 @@ _doc_api_plans_allowed = """
         Set the parameter ``True`` to force reloading of status from the server before
         ``plans_allowed_uid`` is checked. Otherwise cached status is used.
 
+    user_group: str or None (optional)
+        User group name used in API request. Specified user group name overrides the default
+        user group name (accessible using ``user_group`` property). The default user group
+        name is used if the parameter is not specified or ``None``. The parameter is ignored
+        by the HTTP version of the API.
+
     Returns
     -------
     response: dict
@@ -1343,6 +1373,12 @@ _doc_api_devices_allowed = """
     reload: boolean
         Set the parameter ``True`` to force reloading of status from the server before
         ``devices_allowed_uid`` is checked. Otherwise cached status is used.
+
+    user_group: str or None (optional)
+        User group name used in API request. Specified user group name overrides the default
+        user group name (accessible using ``user_group`` property). The default user group
+        name is used if the parameter is not specified or ``None``. The parameter is ignored
+        by the HTTP version of the API.
 
     Returns
     -------
@@ -1807,6 +1843,12 @@ _doc_api_function_execute = """
         are executed in separate threads and only thread-safe scripts should be uploaded
         in the background. **Developers of data acquisition workflows and/or user specific
         code are responsible for thread safety.**
+    user, user_group: str or None (optional)
+        User name and user group name used in the API request. The parameter values 
+        override the default user and user group names (accessible using ``user`` and 
+        ``user_group`` properties). The default user or user group name is used 
+        if the respective parameter is not specified or ``None``. The parameters are 
+        ignored by the HTTP version of the API.
 
     Returns
     -------

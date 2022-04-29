@@ -63,6 +63,17 @@ Synchronous Communication with 0MQ Server
     zmq.REManagerAPI
     zmq.REManagerAPI.close
 
+Configuration of REManagerAPI
+*****************************
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    zmq.REManagerAPI.user
+    zmq.REManagerAPI.user_group
+    zmq.REManagerAPI.set_user_name_to_login_name
+
 Low-Level API
 *************
 
