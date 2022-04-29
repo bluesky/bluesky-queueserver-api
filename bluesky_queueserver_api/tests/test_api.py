@@ -1410,6 +1410,126 @@ def test_plans_devices_allowed_01(re_manager, fastapi_server, protocol, library)
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
+def test_plans_devices_allowed_02(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``plans_allowed``, ``devices_allowed``: test that the API can handle 'user_group' optional parameter.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = rm_api_class()
+
+        response = RM.plans_allowed(user_group=None)
+        assert response["success"] is True
+        plans_allowed = response["plans_allowed"]
+        assert len(plans_allowed) > 0
+
+        response2 = RM.plans_allowed(user_group=RM.user_group)
+        assert response2["success"] is True
+        plans_allowed2 = response2["plans_allowed"]
+        assert plans_allowed2 == plans_allowed
+
+        response3 = RM.plans_allowed(user_group="test_user")
+        assert response3["success"] is True
+        plans_allowed3 = response3["plans_allowed"]
+        if protocol != "HTTP":
+            assert plans_allowed3 != plans_allowed
+            # Request is expected to fail for non-existing user group
+            with pytest.raises(RM.RequestFailedError):
+                RM.plans_allowed(user_group="non_existing_user_group")
+        else:
+            # Group name is managed by HTTP server. User group in parameters is ignored.
+            assert plans_allowed3 == plans_allowed
+            # Group name is ignored, so the request will succeed
+            RM.plans_allowed(user_group="non_existing_user_group")
+
+        response = RM.devices_allowed(user_group=None)
+        assert response["success"] is True
+        devices_allowed = response["devices_allowed"]
+        assert len(devices_allowed) > 0
+
+        response2 = RM.devices_allowed(user_group=RM.user_group)
+        assert response2["success"] is True
+        devices_allowed2 = response2["devices_allowed"]
+        assert devices_allowed2 == devices_allowed
+
+        response3 = RM.devices_allowed(user_group="test_user")
+        assert response3["success"] is True
+        devices_allowed3 = response3["devices_allowed"]
+        if protocol != "HTTP":
+            assert devices_allowed3 != devices_allowed
+            # Request is expected to fail for non-existing user group
+            with pytest.raises(RM.RequestFailedError):
+                RM.devices_allowed(user_group="non_existing_user_group")
+        else:
+            # Group name is managed by HTTP server. User group in parameters is ignored.
+            assert devices_allowed3 == devices_allowed
+            # Group name is ignored, so the request will succeed
+            RM.devices_allowed(user_group="non_existing_user_group")
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+
+            response = await RM.plans_allowed(user_group=None)
+            assert response["success"] is True
+            plans_allowed = response["plans_allowed"]
+            assert len(plans_allowed) > 0
+
+            response2 = await RM.plans_allowed(user_group=RM.user_group)
+            assert response2["success"] is True
+            plans_allowed2 = response2["plans_allowed"]
+            assert plans_allowed2 == plans_allowed
+
+            response3 = await RM.plans_allowed(user_group="test_user")
+            assert response3["success"] is True
+            plans_allowed3 = response3["plans_allowed"]
+            if protocol != "HTTP":
+                assert plans_allowed3 != plans_allowed
+                # Request is expected to fail for non-existing user group
+                with pytest.raises(RM.RequestFailedError):
+                    await RM.plans_allowed(user_group="non_existing_user_group")
+            else:
+                # Group name is managed by HTTP server. User group in parameters is ignored.
+                assert plans_allowed3 == plans_allowed
+                # Group name is ignored, so the request will succeed
+                await RM.plans_allowed(user_group="non_existing_user_group")
+
+            response = await RM.devices_allowed(user_group=None)
+            assert response["success"] is True
+            devices_allowed = response["devices_allowed"]
+            assert len(devices_allowed) > 0
+
+            response2 = await RM.devices_allowed(user_group=RM.user_group)
+            assert response2["success"] is True
+            devices_allowed2 = response2["devices_allowed"]
+            assert devices_allowed2 == devices_allowed
+
+            response3 = await RM.devices_allowed(user_group="test_user")
+            assert response3["success"] is True
+            devices_allowed3 = response3["devices_allowed"]
+            if protocol != "HTTP":
+                assert devices_allowed3 != devices_allowed
+                # Request is expected to fail for non-existing user group
+                with pytest.raises(RM.RequestFailedError):
+                    await RM.devices_allowed(user_group="non_existing_user_group")
+            else:
+                # Group name is managed by HTTP server. User group in parameters is ignored.
+                assert devices_allowed3 == devices_allowed
+                # Group name is ignored, so the request will succeed
+                await RM.devices_allowed(user_group="non_existing_user_group")
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
 def test_plans_devices_existing_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
     """
     ``plans_existing``, ``devices_existing``: basic tests
