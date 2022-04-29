@@ -21,6 +21,7 @@ _plan1 = {"name": "count", "args": [["det1", "det2"]], "item_type": "plan"}
 def test_instantiation_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
     """
     ``REManagerAPI``: instantiation of classes. Check if ``set_user_name_to_login_name`` works as expected.
+    Check that ``user`` and ``user_group`` properties work properly.
     """
     rm_api_class = _select_re_manager_api(protocol, library)
     user_name = "Queue Server API User"
@@ -34,6 +35,11 @@ def test_instantiation_01(re_manager, fastapi_server, protocol, library):  # noq
         RM.set_user_name_to_login_name()
         assert RM.user == user_name_2
 
+        RM.user = "TestUser"
+        RM.user_group = "TestUserGroup"
+        assert RM.user == "TestUser"
+        assert RM.user_group == "TestUserGroup"
+
         RM.close()
     else:
 
@@ -45,6 +51,11 @@ def test_instantiation_01(re_manager, fastapi_server, protocol, library):  # noq
 
             RM.set_user_name_to_login_name()
             assert RM.user == user_name_2
+
+            RM.user = "TestUser"
+            RM.user_group = "TestUserGroup"
+            assert RM.user == "TestUser"
+            assert RM.user_group == "TestUserGroup"
 
             await RM.close()
 
