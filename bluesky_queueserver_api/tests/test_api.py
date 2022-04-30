@@ -1196,6 +1196,68 @@ def test_item_execute_01(re_manager, fastapi_server, protocol, library):  # noqa
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
+def test_item_execute_02(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``item_add_execute``: test that 'user' and 'user_group' parameters override defaults
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item = BPlan("count", ["det1", "det2"], num=1, delay=0.1)
+
+    user, user_group = "some user", "test_user"
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue):
+        assert status["items_in_queue"] == items_in_queue
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        RM.environment_open()
+        RM.wait_for_idle()
+        check_status(RM.status(), 0)
+        resp = RM.item_execute(item, user=user, user_group=user_group)
+        check_resp(resp)
+        if protocol != "HTTP":
+            assert resp["item"]["user"] == user
+            assert resp["item"]["user_group"] == user_group
+        else:
+            assert resp["item"]["user"] != user
+            assert resp["item"]["user_group"] != user_group
+        check_status(RM.status(), 0)
+        RM.wait_for_idle()
+        RM.environment_close()
+        RM.wait_for_idle()
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            await RM.environment_open()
+            await RM.wait_for_idle()
+            check_status(await RM.status(), 0)
+            resp = await RM.item_execute(item, user=user, user_group=user_group)
+            check_resp(resp)
+            if protocol != "HTTP":
+                assert resp["item"]["user"] == user
+                assert resp["item"]["user_group"] == user_group
+            else:
+                assert resp["item"]["user"] != user
+                assert resp["item"]["user_group"] != user_group
+            check_status(await RM.status(), 0)
+            await RM.wait_for_idle()
+            await RM.environment_close()
+            await RM.wait_for_idle()
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
 def test_queue_start_stop_cancel_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
     """
     ``queue_start``, ``queue_stop``, ``queue_stop_cancel``: basic test
