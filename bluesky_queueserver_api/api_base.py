@@ -1,6 +1,8 @@
-from .item import BItem
 from collections.abc import Mapping, Iterable
 import copy
+import getpass
+
+from .item import BItem
 
 
 class WaitTimeoutError(TimeoutError):
@@ -168,7 +170,7 @@ class API_Base:
         self._status_current = None
         self._status_exception = None
 
-        self._user = "Python API User"
+        self._user = "Queue Server API User"  # Meaningful user name should be set in application code.
         self._user_group = "admin"
 
         self._current_plan_queue = []
@@ -187,16 +189,68 @@ class API_Base:
         self._current_run_list = []
         self._current_run_list_uid = None
 
+    def _check_name(self, name, name_in_msg):
+        if not isinstance(name, str):
+            raise ValueError(f"{name_in_msg} {name!r} is not a string: type {type(name)!r}")
+        if not name:
+            raise ValueError(f"{name_in_msg} is an empty string.")
+
+    @property
+    def user(self):
+        """
+        Get and set the default user name. The default value is used if user name is not passed
+        explicitly as an API parameter (for API calls that require user name). User name is ignored
+        by the HTTP version of API, since HTTP server is expected to manage user names.
+        """
+        return self._user
+
+    @user.setter
+    def user(self, user):
+        self._check_name(user, "User name")
+        self._user = user
+
+    @property
+    def user_group(self):
+        """
+        Get and set the default user group name. The default value is used if the group name is
+        not passed explicitly as an API parameter (for API calls that require user group name).
+        The group name is ignored by the HTTP version of API, since HTTP server is expected to manage
+        user information including names of user group.
+        """
+        return self._user_group
+
+    @user_group.setter
+    def user_group(self, user_group):
+        self._check_name(user_group, "User group name")
+        self._user_group = user_group
+
+    def set_user_name_to_login_name(self):
+        """
+        Set the default user name to 'login name'. Login name the current user of the workstation
+        is used. User name is ignored by the HTTP version of the API.
+        """
+        self.user = getpass.getuser()
+
     def _clear_status_timestamp(self):
         """
         Clearing status timestamp causes status to be reloaded from the server next time it is requested.
         """
         self._status_timestamp = None
 
-    def _request_params_add_user_info(self, request_params):
+    def _get_user_group_for_allowed_plans_devices(self, *, user_group):
+        """
+        Returns ``user_group`` used by ``plans_allowed`` and ``devices_allowed`` API.
+        """
+        if self._add_request_param:
+            user_group = user_group if user_group else self._user_group
+        else:
+            user_group = "http"  # Arbitrary group names, since it is not sent in the request
+        return user_group
+
+    def _request_params_add_user_info(self, request_params, *, user, user_group):
         if self._pass_user_info:
-            request_params["user"] = self._user
-            request_params["user_group"] = self._user_group
+            request_params["user"] = user if user else self._user
+            request_params["user_group"] = user_group if user_group else self._user_group
 
     def _add_request_param(self, request_params, name, value):
         """
@@ -205,7 +259,7 @@ class API_Base:
         if value is not None:
             request_params[name] = value
 
-    def _prepare_item_add(self, *, item, pos, before_uid, after_uid):
+    def _prepare_item_add(self, *, item, pos, before_uid, after_uid, user, user_group):
         """
         Prepare parameters for ``item_add`` operation.
         """
@@ -218,10 +272,10 @@ class API_Base:
         self._add_request_param(request_params, "pos", pos)
         self._add_request_param(request_params, "before_uid", before_uid)
         self._add_request_param(request_params, "after_uid", after_uid)
-        self._request_params_add_user_info(request_params)
+        self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
-    def _prepare_item_add_batch(self, *, items, pos, before_uid, after_uid):
+    def _prepare_item_add_batch(self, *, items, pos, before_uid, after_uid, user, user_group):
         """
         Prepare parameters for ``item_add_batch`` operation.
         """
@@ -240,10 +294,10 @@ class API_Base:
         self._add_request_param(request_params, "pos", pos)
         self._add_request_param(request_params, "before_uid", before_uid)
         self._add_request_param(request_params, "after_uid", after_uid)
-        self._request_params_add_user_info(request_params)
+        self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
-    def _prepare_item_update(self, *, item, replace):
+    def _prepare_item_update(self, *, item, replace, user, user_group):
         """
         Prepare parameters for ``item_update`` operation.
         """
@@ -254,7 +308,7 @@ class API_Base:
 
         request_params = {"item": item}
         self._add_request_param(request_params, "replace", replace)
-        self._request_params_add_user_info(request_params)
+        self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
     def _prepare_item_move(self, *, pos, uid, pos_dest, before_uid, after_uid):
@@ -300,7 +354,7 @@ class API_Base:
         self._add_request_param(request_params, "ignore_missing", ignore_missing)
         return request_params
 
-    def _prepare_item_execute(self, *, item):
+    def _prepare_item_execute(self, *, item, user, user_group):
         """
         Prepare parameters for ``item_execute`` operation.
         """
@@ -310,7 +364,7 @@ class API_Base:
         item = item.to_dict() if isinstance(item, BItem) else dict(item).copy()
 
         request_params = {"item": item}
-        self._request_params_add_user_info(request_params)
+        self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
     def _prepare_queue_mode_set(self, **kwargs):
@@ -365,12 +419,12 @@ class API_Base:
         }
         return response
 
-    def _prepare_plans_devices_allowed(self):
+    def _prepare_plans_devices_allowed(self, *, user_group):
         """
         Prepare parameters for ``plans_allowed`` and ``devices_allowed`` operation.
         """
         request_params = {}
-        self._request_params_add_user_info(request_params)
+        self._request_params_add_user_info(request_params, user=None, user_group=user_group)
 
         # User name should not be includedin the request
         if "user" in request_params:
@@ -378,15 +432,20 @@ class API_Base:
 
         return request_params
 
-    def _process_response_plans_allowed(self, response):
+    def _invalidate_plans_allowed_cache(self):
+        self._current_plans_allowed.clear()
+
+    def _process_response_plans_allowed(self, response, *, user_group):
         """
         ``plans_allowed``: process response
         """
         if response["success"] is True:
-            self._current_plans_allowed = copy.deepcopy(response["plans_allowed"])
-            self._current_plans_allowed_uid = copy.deepcopy(response["plans_allowed_uid"])
+            if response["plans_allowed_uid"] != self._current_plans_allowed_uid:
+                self._invalidate_plans_allowed_cache()
+                self._current_plans_allowed_uid = response["plans_allowed_uid"]
+            self._current_plans_allowed[user_group] = copy.deepcopy(response["plans_allowed"])
 
-    def _generate_response_plans_allowed(self):
+    def _generate_response_plans_allowed(self, *, user_group):
         """
         ``plans_allowed``: generate response based on cached data
         """
@@ -394,19 +453,24 @@ class API_Base:
             "success": True,
             "msg": "",
             "plans_allowed_uid": self._current_plans_allowed_uid,
-            "plans_allowed": copy.deepcopy(self._current_plans_allowed),
+            "plans_allowed": copy.deepcopy(self._current_plans_allowed[user_group]),
         }
         return response
 
-    def _process_response_devices_allowed(self, response):
+    def _invalidate_devices_allowed_cache(self):
+        self._current_devices_allowed.clear()
+
+    def _process_response_devices_allowed(self, response, *, user_group):
         """
         ``devices_allowed``: process response
         """
         if response["success"] is True:
-            self._current_devices_allowed = copy.deepcopy(response["devices_allowed"])
-            self._current_devices_allowed_uid = copy.deepcopy(response["devices_allowed_uid"])
+            if response["devices_allowed_uid"] != self._current_devices_allowed_uid:
+                self._invalidate_devices_allowed_cache()
+                self._current_devices_allowed_uid = response["devices_allowed_uid"]
+            self._current_devices_allowed[user_group] = copy.deepcopy(response["devices_allowed"])
 
-    def _generate_response_devices_allowed(self):
+    def _generate_response_devices_allowed(self, *, user_group):
         """
         ``devices_allowed``: generate response based on cached data
         """
@@ -414,7 +478,7 @@ class API_Base:
             "success": True,
             "msg": "",
             "devices_allowed_uid": self._current_devices_allowed_uid,
-            "devices_allowed": copy.deepcopy(self._current_devices_allowed),
+            "devices_allowed": copy.deepcopy(self._current_devices_allowed[user_group]),
         }
         return response
 
@@ -424,7 +488,7 @@ class API_Base:
         """
         if response["success"] is True:
             self._current_plans_existing = copy.deepcopy(response["plans_existing"])
-            self._current_plans_existing_uid = copy.deepcopy(response["plans_existing_uid"])
+            self._current_plans_existing_uid = response["plans_existing_uid"]
 
     def _generate_response_plans_existing(self):
         """
@@ -444,7 +508,7 @@ class API_Base:
         """
         if response["success"] is True:
             self._current_devices_existing = copy.deepcopy(response["devices_existing"])
-            self._current_devices_existing_uid = copy.deepcopy(response["devices_existing_uid"])
+            self._current_devices_existing_uid = response["devices_existing_uid"]
 
     def _generate_response_devices_existing(self):
         """
@@ -483,7 +547,7 @@ class API_Base:
         self._add_request_param(request_params, "run_in_background", run_in_background)
         return request_params
 
-    def _prepare_function_execute(self, *, item, run_in_background):
+    def _prepare_function_execute(self, *, item, run_in_background, user, user_group):
         """
         Prepare parameters for ``script_upload``
         """
@@ -494,7 +558,7 @@ class API_Base:
 
         request_params = {"item": item}
         self._add_request_param(request_params, "run_in_background", run_in_background)
-        self._request_params_add_user_info(request_params)
+        self._request_params_add_user_info(request_params, user=user, user_group=user_group)
         return request_params
 
     def _prepare_task_result(self, *, task_uid):
