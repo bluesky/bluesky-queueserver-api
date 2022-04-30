@@ -919,6 +919,58 @@ def test_item_add_batch_02(re_manager, fastapi_server, protocol, library):  # no
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
+def test_item_add_batch_03(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``item_add_batch``: test that 'user' and 'user_group' parameters override defaults
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item = BPlan("count", ["det1", "det2"], num=10, delay=1)
+
+    user, user_group = "some user", "test_user"
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue):
+        assert status["items_in_queue"] == items_in_queue
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        check_status(RM.status(), 0)
+        resp = RM.item_add_batch([item], user=user, user_group=user_group)
+        check_resp(resp)
+        if protocol != "HTTP":
+            assert resp["items"][0]["user"] == user
+            assert resp["items"][0]["user_group"] == user_group
+        else:
+            assert resp["items"][0]["user"] != user
+            assert resp["items"][0]["user_group"] != user_group
+        check_status(RM.status(), 1)
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            check_status(await RM.status(), 0)
+            resp = await RM.item_add_batch([item], user=user, user_group=user_group)
+            check_resp(resp)
+            if protocol != "HTTP":
+                assert resp["items"][0]["user"] == user
+                assert resp["items"][0]["user_group"] == user_group
+            else:
+                assert resp["items"][0]["user"] != user
+                assert resp["items"][0]["user_group"] != user_group
+            check_status(await RM.status(), 1)
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
 def test_item_update_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
     """
     ``item_update``: basic test
@@ -1000,6 +1052,72 @@ def test_item_update_01(re_manager, fastapi_server, protocol, library):  # noqa:
             assert current_item2.kwargs["num"] == 30
             assert current_item2.item_uid != current_item.item_uid
 
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_item_update_02(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``item_update``: test that 'user' and 'user_group' parameters override defaults
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item = BPlan("count", ["det1", "det2"], num=10, delay=1)
+
+    user, user_group = "some user", "test_user"
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue):
+        assert status["items_in_queue"] == items_in_queue
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        check_status(RM.status(), 0)
+        check_resp(RM.item_add(item))
+        resp = RM.queue_get()
+        check_resp(resp)
+        check_status(RM.status(), 1)
+
+        item_updated = resp["items"][0]
+        resp = RM.item_update(item_updated, user=user, user_group=user_group)
+        check_resp(resp)
+        if protocol != "HTTP":
+            assert resp["item"]["user"] == user
+            assert resp["item"]["user_group"] == user_group
+        else:
+            assert resp["item"]["user"] != user
+            assert resp["item"]["user_group"] != user_group
+
+        check_status(RM.status(), 1)
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            check_status(await RM.status(), 0)
+            check_resp(await RM.item_add(item))
+            resp = await RM.queue_get()
+            check_resp(resp)
+            check_status(await RM.status(), 1)
+
+            item_updated = resp["items"][0]
+            resp = await RM.item_update(item_updated, user=user, user_group=user_group)
+            check_resp(resp)
+            if protocol != "HTTP":
+                assert resp["item"]["user"] == user
+                assert resp["item"]["user_group"] == user_group
+            else:
+                assert resp["item"]["user"] != user
+                assert resp["item"]["user_group"] != user_group
+
+            check_status(await RM.status(), 1)
             await RM.close()
 
         asyncio.run(testing())
