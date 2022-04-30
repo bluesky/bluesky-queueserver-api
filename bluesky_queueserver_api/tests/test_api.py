@@ -752,6 +752,58 @@ def test_item_add_02(re_manager, fastapi_server, protocol, library):  # noqa: F8
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
+def test_item_add_03(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``item_add``: test that 'user' and 'user_group' parameters override defaults
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    item = BPlan("count", ["det1", "det2"], num=10, delay=1)
+
+    user, user_group = "some user", "test_user"
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, items_in_queue):
+        assert status["items_in_queue"] == items_in_queue
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        check_status(RM.status(), 0)
+        resp = RM.item_add(item, user=user, user_group=user_group)
+        check_resp(resp)
+        if protocol != "HTTP":
+            assert resp["item"]["user"] == user
+            assert resp["item"]["user_group"] == user_group
+        else:
+            assert resp["item"]["user"] != user
+            assert resp["item"]["user_group"] != user_group
+        check_status(RM.status(), 1)
+        RM.close()
+    else:
+
+        async def testing():
+            RM = rm_api_class()
+            check_status(await RM.status(), 0)
+            resp = await RM.item_add(item, user=user, user_group=user_group)
+            check_resp(resp)
+            if protocol != "HTTP":
+                assert resp["item"]["user"] == user
+                assert resp["item"]["user_group"] == user_group
+            else:
+                assert resp["item"]["user"] != user
+                assert resp["item"]["user_group"] != user_group
+            check_status(await RM.status(), 1)
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
 def test_item_add_batch_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
     """
     ``item_add_batch``: basic test
