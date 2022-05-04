@@ -13,7 +13,7 @@ Queue Server (0MQ) or via HTTP Server. Start Queue Server in a separate terminal
 
 Start HTTP Server in a separate terminal (optional)::
 
-    $ uvicorn bluesky_httpserver.server.server:app --host localhost --port 60610
+    $ uvicorn bluesky_httpserver.server:app --host localhost --port 60610
 
 Open IPython to explore the API library. The first step is to import ``REManagerAPI`` object.
 The API library supports synchronous and asynchronous (``asyncio``) models and for 0MQ and HTTP
