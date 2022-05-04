@@ -9,7 +9,7 @@ from bluesky_queueserver import ReceiveConsoleOutput, ReceiveConsoleOutputAsync
 from .comm_base import RequestTimeoutError
 
 _console_monitor_http_method = "GET"
-_console_monitor_http_endpoint = "console_output_update"
+_console_monitor_http_endpoint = "/api/console_output_update"
 
 _doc_ConsoleMonitor_ZMQ = """
     Console Monitor API (0MQ). The class implements a monitor for console output
