@@ -92,6 +92,12 @@ class Protocols(enum.Enum):
     HTTP = "HTTP"
 
 
+class AuthorizationMethods(enum.Enum):
+    NONE = "NONE"
+    API_KEY = "API_KEY"
+    TOKEN = "TOKEN"
+
+
 class ReManagerAPI_Base:
 
     RequestTimeoutError = RequestTimeoutError
@@ -100,6 +106,7 @@ class ReManagerAPI_Base:
     ClientError = ClientError
 
     Protocols = Protocols
+    AuthorizationMethods = AuthorizationMethods
 
     def __init__(self, *, request_fail_exceptions=True):
         # Raise exceptions if request fails (success=False)
@@ -227,8 +234,12 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
         self._protocol = self.Protocols.HTTP
         # Do not pass user info with request (e.g. user info is not required in REST API requests,
-        #   because HTTP Server assigns user name and user group based on login information)
+        #   because HTTP Server assigns user name and user group based on login infsormation)
         self._pass_user_info = False
+
+        # Default authorization type and key
+        self._auth_method = AuthorizationMethods.NONE
+        self._auth_key = ""  # May be a token or an API key
 
         http_server_uri = http_server_uri or os.environ.get("QSERVER_HTTP_SERVER_URI")
         http_server_uri = http_server_uri or default_http_server_uri
@@ -285,3 +296,36 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
                 raise self.ClientError(message, request=exc.request, response=exc.response) from exc
             else:
                 raise self.ClientError(exc) from exc
+
+    def set_authorization_key(self, *, api_key=None, token=None, refresh_token=None):
+        """
+        Set default authorization type and key for HTTP requests. The default authorization method
+        are used unless different method is used during API call.
+
+        Parameters
+        ----------
+        auth_method: str
+            Authorization method. Accepted values: `NONE`, `API_KEY` and `TOKEN`.
+        auth_key: str
+            Authorization key: api key or token. The value is ignored if `auth_method`
+            is `NONE`.
+        """
+        if api_key and (token or refresh_token)
+
+        try:
+            auth_method_as_enum = self.AuthorizationMethods(auth_method)
+        except ValueError as ex:
+            raise ValueError(f"Authentication method {auth_method!r} is not supported: {ex}")
+
+        if not isinstance(auth_key, str):
+            # We don't want to print the api key or a token
+            raise ValueError(f"Authorization key must be a string: type(auth_key) = {type(auth_key)}")
+
+        if (auth_method_as_enum != self.AuthorizationMethods.NONE) and (not auth_key):
+            raise ValueError(k
+                "Authorization key can not be an empty string if authorization type is "
+                f"{auth_method_as_enum.value!r}"
+            )
+
+        self._auth_method = auth_method_as_enum
+        self._auth_key = auth_key if (auth_method_as_enum is not self.AuthorizationMethods.NONE) else ""
