@@ -5,7 +5,13 @@ from bluesky_queueserver import generate_zmq_keys
 
 from .common import re_manager_cmd  # noqa: F401
 from .common import fastapi_server_fs  # noqa: F401
-from .common import set_qserver_zmq_address, set_qserver_zmq_public_key, _is_async, _select_re_manager_api
+from .common import (
+    set_qserver_zmq_address,
+    set_qserver_zmq_public_key,
+    _is_async,
+    _select_re_manager_api,
+    instantiate_re_api_class,
+)
 
 
 # fmt: off
@@ -80,7 +86,7 @@ def test_ReManagerAPI_parameters_01(
     rm_api_class = _select_re_manager_api(protocol, library)
 
     if not _is_async(library):
-        RM = rm_api_class(**params)
+        RM = instantiate_re_api_class(rm_api_class, **params)
         if option == "default_addr":
             # ZMQ - RequestTimeoutError, HTTP - RequestError
             with pytest.raises((RM.RequestTimeoutError, RM.RequestError)):
@@ -99,7 +105,7 @@ def test_ReManagerAPI_parameters_01(
     else:
 
         async def testing():
-            RM = rm_api_class(**params)
+            RM = instantiate_re_api_class(rm_api_class, **params)
             if option == "default_addr":
                 # ZMQ - RequestTimeoutError, HTTP - RequestError
                 with pytest.raises((RM.RequestTimeoutError, RM.RequestError)):

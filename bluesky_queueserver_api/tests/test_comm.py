@@ -12,7 +12,7 @@ from bluesky_queueserver_api._defaults import default_http_server_uri
 from .common import re_manager, re_manager_cmd  # noqa: F401
 from .common import fastapi_server  # noqa: F401
 
-from .common import set_qserver_zmq_address, set_qserver_zmq_public_key
+from .common import set_qserver_zmq_address, set_qserver_zmq_public_key, API_KEY_FOR_TESTS
 
 _plan1 = {"name": "count", "args": [["det1", "det2"]], "item_type": "plan"}
 _user = "Test User"
@@ -147,6 +147,7 @@ def test_ReManagerComm_HTTP_02(re_manager, fastapi_server, server_uri, success):
     params = {"item": _plan1}
 
     RM = ReManagerComm_HTTP_Threads(http_server_uri=server_uri)
+    RM.set_authorization_key(api_key=API_KEY_FOR_TESTS)
     if success:
         result = RM.send_request(method="queue_item_add", params=params)
         assert result["success"] is True
@@ -157,6 +158,7 @@ def test_ReManagerComm_HTTP_02(re_manager, fastapi_server, server_uri, success):
 
     async def testing():
         RM = ReManagerComm_HTTP_Async(http_server_uri=server_uri)
+        RM.set_authorization_key(api_key=API_KEY_FOR_TESTS)
         if success:
             result = await RM.send_request(method="queue_item_add", params=params)
             assert result["success"] is True
@@ -212,11 +214,15 @@ def test_ReManagerComm_ALL_01(re_manager, fastapi_server, protocol):  # noqa: F8
         assert False, f"Unknown protocol {protocol!r}"
 
     RM = RM_threads_class()
+    if protocol == "HTTP":
+        RM.set_authorization_key(api_key=API_KEY_FOR_TESTS)
     result = RM.send_request(method="queue_item_add", params=params)
     assert result["success"] is True
     RM.close()
 
     RM = RM_threads_class()
+    if protocol == "HTTP":
+        RM.set_authorization_key(api_key=API_KEY_FOR_TESTS)
     # Test that the exception is raised
     with pytest.raises(RM.RequestFailedError, match="request contains no item info"):
         RM.send_request(method="queue_item_add", params=params_invalid)
@@ -232,6 +238,8 @@ def test_ReManagerComm_ALL_01(re_manager, fastapi_server, protocol):  # noqa: F8
 
     # Do not raise the exceptions if the request fails (rejected by the server)
     RM = RM_threads_class(request_fail_exceptions=False)
+    if protocol == "HTTP":
+        RM.set_authorization_key(api_key=API_KEY_FOR_TESTS)
     result = RM.send_request(method="queue_item_add", params=params_invalid)
     assert result["success"] is False
     assert "request contains no item info" in result["msg"]
@@ -240,11 +248,15 @@ def test_ReManagerComm_ALL_01(re_manager, fastapi_server, protocol):  # noqa: F8
     # Repeat the same test for 'async' version
     async def testing():
         RM = RM_async_class()
+        if protocol == "HTTP":
+            RM.set_authorization_key(api_key=API_KEY_FOR_TESTS)
         result = await RM.send_request(method="queue_item_add", params=params)
         assert result["success"] is True
         await RM.close()
 
         RM = RM_async_class()
+        if protocol == "HTTP":
+            RM.set_authorization_key(api_key=API_KEY_FOR_TESTS)
         # Test that the exception is raised
         with pytest.raises(RM.RequestFailedError, match="request contains no item info"):
             await RM.send_request(method="queue_item_add", params=params_invalid)
@@ -260,6 +272,8 @@ def test_ReManagerComm_ALL_01(re_manager, fastapi_server, protocol):  # noqa: F8
 
         # Do not raise the exceptions if the request fails (rejected by the server)
         RM = RM_async_class(request_fail_exceptions=False)
+        if protocol == "HTTP":
+            RM.set_authorization_key(api_key=API_KEY_FOR_TESTS)
         result = await RM.send_request(method="queue_item_add", params=params_invalid)
         assert result["success"] is False
         assert "request contains no item info" in result["msg"]

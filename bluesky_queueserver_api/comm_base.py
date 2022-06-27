@@ -259,6 +259,13 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
     def _create_client(self, http_server_uri, timeout):
         raise NotImplementedError()
 
+    def _prepare_headers(self):
+        if self.auth_method == self.AuthorizationMethods.API_KEY:
+            headers = {"Authorization": f"ApiKey {self.auth_key}"}
+        else:
+            headers = None
+        return headers
+
     def _prepare_request(self, *, method, params=None):
         if method not in self._rest_api_method_map:
             raise KeyError(f"Unknown method {method!r}")
@@ -345,9 +352,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             Refresh token used to request authorization token from the server. Default: ``None``.
         """
         if api_key and (token or refresh_token):
-            raise ValueError(
-                f"API key and a token are mutually exclusive and can not be specified simultaneously."
-            )
+            raise ValueError("API key and a token are mutually exclusive and can not be specified simultaneously.")
 
         if not isinstance(api_key, (str, type(None))):
             raise TypeError(f"API key must be a string or None: api_key={api_key} type(api_key)={type(api_key)}")
