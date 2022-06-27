@@ -239,7 +239,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
         # Default authorization type and key
         self._auth_method = AuthorizationMethods.NONE
-        self._auth_key = ""  # May be a token or an API key
+        self._auth_key = None  # May be a token or an API key
 
         http_server_uri = http_server_uri or os.environ.get("QSERVER_HTTP_SERVER_URI")
         http_server_uri = http_server_uri or default_http_server_uri
@@ -297,35 +297,74 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             else:
                 raise self.ClientError(exc) from exc
 
+    @property
+    def auth_method(self):
+        """
+        Returns authorization method (API key, token or none).
+
+        Returns
+        -------
+        REManagerAPI.AuthorizationMethods
+            Enum value that defines currently selected authorization method
+        """
+        return self._auth_method
+
+    @property
+    def auth_key(self):
+        """
+        Returns authorization key
+
+        Returns
+        -------
+        str, tuple(str) or None
+            Depending on currently selected authorization method, returns a string (API key), tuple of strings
+            with authorization token (may be ``None``) as the first element and refresh token (may be ``None``) as
+            the second element. If no authorization is used, then returns ``None``.
+        """
+        return self._auth_key
+
     def set_authorization_key(self, *, api_key=None, token=None, refresh_token=None):
         """
-        Set default authorization type and key for HTTP requests. The default authorization method
-        are used unless different method is used during API call.
+        Set default authorization key(s) for HTTP requests. Authorization method is selected based on whether
+        an API key or token(s) are passed to the API. API keys and tokens are mutually exclusive and can not
+        be passed to the request simultaneously. If the API call contains no API keys, then authorization is
+        disabled.
+
+        The function configures authorization method and keys without communicating with the server or
+        validation of the keys.
 
         Parameters
         ----------
-        auth_method: str
-            Authorization method. Accepted values: `NONE`, `API_KEY` and `TOKEN`.
-        auth_key: str
-            Authorization key: api key or token. The value is ignored if `auth_method`
-            is `NONE`.
+        api_key: str
+            API key for HTTP requests to the server. Default: ``None``.
+        token: str
+            Authorization token for HTTP requests to the server. If the token is ``None`` and the refresh token
+            is specified, then the new authorization token is requested from the server during the first HTTP
+            request. Default: ``None``.
+        refresh_token: str
+            Refresh token used to request authorization token from the server. Default: ``None``.
         """
-        if api_key and (token or refresh_token)
-
-        try:
-            auth_method_as_enum = self.AuthorizationMethods(auth_method)
-        except ValueError as ex:
-            raise ValueError(f"Authentication method {auth_method!r} is not supported: {ex}")
-
-        if not isinstance(auth_key, str):
-            # We don't want to print the api key or a token
-            raise ValueError(f"Authorization key must be a string: type(auth_key) = {type(auth_key)}")
-
-        if (auth_method_as_enum != self.AuthorizationMethods.NONE) and (not auth_key):
-            raise ValueError(k
-                "Authorization key can not be an empty string if authorization type is "
-                f"{auth_method_as_enum.value!r}"
+        if api_key and (token or refresh_token):
+            raise ValueError(
+                f"API key and a token are mutually exclusive and can not be specified simultaneously."
             )
 
-        self._auth_method = auth_method_as_enum
-        self._auth_key = auth_key if (auth_method_as_enum is not self.AuthorizationMethods.NONE) else ""
+        if not isinstance(api_key, (str, type(None))):
+            raise TypeError(f"API key must be a string or None: api_key={api_key} type(api_key)={type(api_key)}")
+        if not isinstance(token, (str, type(None))):
+            raise TypeError(f"Token must be a string or None: token={token} type(token)={type(token)}")
+        if not isinstance(refresh_token, (str, type(None))):
+            raise TypeError(
+                f"Refresh token must be a string or None: refresh_token={refresh_token} "
+                f"type(refresh_token)={type(refresh_token)}"
+            )
+
+        if api_key:
+            self._auth_method = self.AuthorizationMethods.API_KEY
+            self._auth_key = api_key
+        elif token or refresh_token:
+            self._auth_method = self.AuthorizationMethods.TOKEN
+            self._auth_key = (token, refresh_token)
+        else:
+            self._auth_method = self.AuthorizationMethods.NONE
+            self._auth_key = None
