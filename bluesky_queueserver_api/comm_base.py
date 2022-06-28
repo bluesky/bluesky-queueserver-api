@@ -312,21 +312,22 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         Returns
         -------
         REManagerAPI.AuthorizationMethods
-            Enum value that defines currently selected authorization method
+            Enum value that defines current authorization method.
         """
         return self._auth_method
 
     @property
     def auth_key(self):
         """
-        Returns authorization key
+        Returns authorization key.
 
         Returns
         -------
         str, tuple(str) or None
             Depending on currently selected authorization method, returns a string (API key), tuple of strings
-            with authorization token (may be ``None``) as the first element and refresh token (may be ``None``) as
-            the second element. If no authorization is used, then returns ``None``.
+            with authorization token as the first element (may be ``None``) and the refresh token
+            (may be ``None``) as the second element. If no authorization is used then the return value
+            is ``None``.
         """
         return self._auth_key
 
