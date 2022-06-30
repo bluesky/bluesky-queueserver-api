@@ -1,6 +1,8 @@
 import asyncio
 import pytest
 
+from .common import re_manager_cmd  # noqa: F401
+from .common import fastapi_server_fs  # noqa: F401
 from .common import _is_async, _select_re_manager_api
 
 
@@ -72,3 +74,18 @@ def test_set_authorization_key_01(
             await RM.close()
 
         asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("api_key, success, msg", [
+    ("validkey", True, "")
+    ("invalidkey", False, "401: Invalid API key"),
+    (None, False, "401: Not enough permissions."),
+])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_ReManagerAPI_parameters_01(
+    monkeypatch, re_manager, fastapi_server_fs, protocol, library, api_key, success, msg  # noqa: F811
+):
+    pass
