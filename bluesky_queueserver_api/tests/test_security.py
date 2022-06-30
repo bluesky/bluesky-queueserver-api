@@ -1,7 +1,9 @@
 import asyncio
+import pprint
 import pytest
+import time as ttime
 
-from .common import re_manager_cmd  # noqa: F401
+from .common import re_manager, re_manager_cmd  # noqa: F401
 from .common import fastapi_server_fs  # noqa: F401
 from .common import _is_async, _select_re_manager_api
 
@@ -76,16 +78,82 @@ def test_set_authorization_key_01(
         asyncio.run(testing())
 
 
+valid_api_key_test_1 = "validapikey"
+
+
 # fmt: off
 @pytest.mark.parametrize("api_key, success, msg", [
-    ("validkey", True, "")
+    (valid_api_key_test_1, True, ""),
     ("invalidkey", False, "401: Invalid API key"),
     (None, False, "401: Not enough permissions."),
 ])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["HTTP"])
 # fmt: on
-def test_ReManagerAPI_parameters_01(
+def test_ReManagerAPI_authorization_api_key_01(
     monkeypatch, re_manager, fastapi_server_fs, protocol, library, api_key, success, msg  # noqa: F811
 ):
-    pass
+    if protocol != "HTTP":
+        raise RuntimeError("Protocol {protocol!r} is not supported in this test.")
+
+    # monkeypatch.setenv("QSERVER_HTTP_SERVER_SINGLE_USER_API_KEY", test_valid_api_key_1)
+    fastapi_server_fs(api_key=valid_api_key_test_1)
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = rm_api_class()
+        RM.set_authorization_key(api_key=api_key, token=None, refresh_token=None)
+
+        if success:
+            RM.wait_for_idle(timeout=3)  # Wait returns immediately
+            status = RM.status()
+            assert status["msg"].startswith("RE Manager"), pprint.pformat(status)
+        else:
+            # Wait functions do not check for communication errors and are expected to timeout.
+            t0 = ttime.time()
+            with pytest.raises(RM.WaitTimeoutError):
+                RM.wait_for_idle(timeout=3)
+            assert ttime.time() - t0 > 2
+
+            with pytest.raises(RM.ClientError, match="401"):
+                RM.status()
+
+        # Now repeat the test with valid API key
+        RM.set_authorization_key(api_key=valid_api_key_test_1, token=None, refresh_token=None)
+        RM.wait_for_idle(timeout=3)  # Wait returns immediately
+        status = RM.status()
+        assert status["msg"].startswith("RE Manager"), pprint.pformat(status)
+
+        RM.close()
+
+    else:
+
+        async def testing():
+
+            RM = rm_api_class()
+            RM.set_authorization_key(api_key=api_key, token=None, refresh_token=None)
+
+            if success:
+                await RM.wait_for_idle(timeout=3)  # Wait returns immediately
+                status = await RM.status()
+                assert status["msg"].startswith("RE Manager"), pprint.pformat(status)
+            else:
+                # Wait functions do not check for communication errors and are expected to timeout.
+                t0 = ttime.time()
+                with pytest.raises(RM.WaitTimeoutError):
+                    await RM.wait_for_idle(timeout=3)
+                assert ttime.time() - t0 > 2
+
+                with pytest.raises(RM.ClientError, match="401"):
+                    await RM.status()
+
+            # Now repeat the test with valid API key
+            RM.set_authorization_key(api_key=valid_api_key_test_1, token=None, refresh_token=None)
+            await RM.wait_for_idle(timeout=3)  # Wait returns immediately
+            status = await RM.status()
+            assert status["msg"].startswith("RE Manager"), pprint.pformat(status)
+
+            await RM.close()
+
+        asyncio.run(testing())
