@@ -11,7 +11,7 @@ from bluesky_queueserver_api._defaults import default_http_server_uri
 
 from .common import re_manager, re_manager_cmd  # noqa: F401
 from .common import fastapi_server  # noqa: F401
-
+from .common import _is_async, _select_re_manager_api, instantiate_re_api_class
 from .common import set_qserver_zmq_address, set_qserver_zmq_public_key, API_KEY_FOR_TESTS
 
 _plan1 = {"name": "count", "args": [["det1", "det2"]], "item_type": "plan"}
@@ -200,23 +200,28 @@ def test_ReManagerComm_HTTP_03():
     ("abc/def", "/abc/def/api/status"),
     ("/abc/def", "/abc/def/api/status"),
 ])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
 # fmt: on
-def test_ReManagerComm_HTTP_04(api_prefix, expected_endpoint):
+def test_ReManagerComm_HTTP_04(api_prefix, expected_endpoint, library, protocol):
     """
     Test that ``api_prefix`` parameter is properly handled by HTTP API classes.
     """
-    RM = ReManagerComm_HTTP_Threads(api_prefix=api_prefix)
-    _, endpoint, _ = RM._prepare_request(method="status")
-    assert endpoint == expected_endpoint
-    RM.close()
-
-    async def testing():
-        RM = ReManagerComm_HTTP_Async(api_prefix=api_prefix)
+    rm_api_class = _select_re_manager_api(protocol, library)
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, api_prefix=api_prefix)
         _, endpoint, _ = RM._prepare_request(method="status")
         assert endpoint == expected_endpoint
-        await RM.close()
+        RM.close()
+    else:
 
-    asyncio.run(testing())
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, api_prefix=api_prefix)
+            _, endpoint, _ = RM._prepare_request(method="status")
+            assert endpoint == expected_endpoint
+            await RM.close()
+
+        asyncio.run(testing())
 
 
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])

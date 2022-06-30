@@ -235,7 +235,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
         self._protocol = self.Protocols.HTTP
         # Do not pass user info with request (e.g. user info is not required in REST API requests,
-        #   because HTTP Server assigns user name and user group based on login infsormation)
+        #   because HTTP Server assigns user name and user group based on login information)
         self._pass_user_info = False
 
         # Default authorization type and key
