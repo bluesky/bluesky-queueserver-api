@@ -7,7 +7,7 @@ import time as ttime
 
 from .common import re_manager, re_manager_cmd  # noqa: F401
 from .common import fastapi_server, fastapi_server_fs  # noqa: F401
-from .common import _is_async, _select_re_manager_api
+from .common import _is_async, _select_re_manager_api, instantiate_re_api_class
 
 from bluesky_queueserver_api import BPlan, BFunc, WaitMonitor
 
@@ -27,7 +27,7 @@ def test_instantiation_01(re_manager, fastapi_server, protocol, library):  # noq
     user_name = "Queue Server API User"
     user_name_2 = getpass.getuser()
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         assert RM.protocol == RM.Protocols(protocol)
         assert RM.user == user_name
         assert RM.user_group == "admin"
@@ -44,7 +44,7 @@ def test_instantiation_01(re_manager, fastapi_server, protocol, library):  # noq
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             assert RM.protocol == RM.Protocols(protocol)
             assert RM.user == user_name
             assert RM.user_group == "admin"
@@ -76,7 +76,7 @@ def test_status_01(re_manager, fastapi_server, protocol, library, reload, api): 
     params = {"reload": reload} if (reload is not None) else {}
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         if api == "status":
             status = RM.status(**params)
         elif api == "ping":
@@ -88,7 +88,7 @@ def test_status_01(re_manager, fastapi_server, protocol, library, reload, api): 
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             if api == "status":
                 status = await RM.status(**params)
             elif api == "ping":
@@ -129,7 +129,7 @@ def test_status_02(re_manager, fastapi_server, protocol, library, reload):  # no
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_status(RM.status(**status_params), 0)
         check_resp(RM.send_request(method="queue_item_add", params=add_item_params))
         check_status(RM.status(**status_params), 1 if reload else 0)
@@ -140,7 +140,7 @@ def test_status_02(re_manager, fastapi_server, protocol, library, reload):  # no
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_status(await RM.status(**status_params), 0)
             check_resp(await RM.send_request(method="queue_item_add", params=add_item_params))
             check_status(await RM.status(**status_params), 1 if reload else 0)
@@ -172,7 +172,7 @@ def test_environment_close_destroy_01(re_manager, fastapi_server, protocol, libr
         assert status["worker_environment_exists"] == worker_environment_exists
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_status(RM.status(), "idle", False)
         check_resp(RM.environment_open())
         check_status(RM.status(), "creating_environment", False)
@@ -188,7 +188,7 @@ def test_environment_close_destroy_01(re_manager, fastapi_server, protocol, libr
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_status(await RM.status(), "idle", False)
             check_resp(await RM.environment_open())
             check_status(await RM.status(), "creating_environment", False)
@@ -230,7 +230,7 @@ def test_environment_close_destroy_02(
         assert resp["msg"] == ""
 
     if not _is_async(library):
-        RM = rm_api_class(**params)
+        RM = instantiate_re_api_class(rm_api_class, **params)
         check_resp(RM.environment_open())
         RM.wait_for_idle()
         if request_fail_exceptions in (True, None):
@@ -253,7 +253,7 @@ def test_environment_close_destroy_02(
     else:
 
         async def testing():
-            RM = rm_api_class(**params)
+            RM = instantiate_re_api_class(rm_api_class, **params)
             check_resp(await RM.environment_open())
             await RM.wait_for_idle()
             if request_fail_exceptions in (True, None):
@@ -302,7 +302,7 @@ def test_item_get_01(re_manager, fastapi_server, protocol, library):  # noqa: F8
         assert resp1["item"]["kwargs"]["num"] == 2
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         RM.item_add(item1)
         RM.item_add(item2)
         check_status(RM.status(), 2)
@@ -316,7 +316,7 @@ def test_item_get_01(re_manager, fastapi_server, protocol, library):  # noqa: F8
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             await RM.item_add(item1)
             await RM.item_add(item2)
             check_status(await RM.status(), 2)
@@ -347,7 +347,7 @@ def test_item_remove_01(re_manager, fastapi_server, protocol, library):  # noqa:
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         resp_item1 = RM.item_add(item1)
         RM.item_add(item2)
         check_status(RM.status(), 2)
@@ -366,7 +366,7 @@ def test_item_remove_01(re_manager, fastapi_server, protocol, library):  # noqa:
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             resp_item1 = await RM.item_add(item1)
             await RM.item_add(item2)
             check_status(await RM.status(), 2)
@@ -402,7 +402,7 @@ def test_item_remove_batch_01(re_manager, fastapi_server, protocol, library):  #
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         resp_item1 = RM.item_add(item1)
         resp_item2 = RM.item_add(item2)
         check_status(RM.status(), 2)
@@ -422,7 +422,7 @@ def test_item_remove_batch_01(re_manager, fastapi_server, protocol, library):  #
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             resp_item1 = await RM.item_add(item1)
             resp_item2 = await RM.item_add(item2)
             check_status(await RM.status(), 2)
@@ -462,7 +462,7 @@ def test_item_move_01(re_manager, fastapi_server, protocol, library):  # noqa: F
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         resp_item1 = RM.item_add(item1)
         resp_item2 = RM.item_add(item2)
         resp_item3 = RM.item_add(item3)
@@ -502,7 +502,7 @@ def test_item_move_01(re_manager, fastapi_server, protocol, library):  # noqa: F
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             resp_item1 = await RM.item_add(item1)
             resp_item2 = await RM.item_add(item2)
             resp_item3 = await RM.item_add(item3)
@@ -560,7 +560,7 @@ def test_item_move_batch_01(re_manager, fastapi_server, protocol, library):  # n
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         resp_item1 = RM.item_add(item1)
         resp_item2 = RM.item_add(item2)
         resp_item3 = RM.item_add(item3)
@@ -600,7 +600,7 @@ def test_item_move_batch_01(re_manager, fastapi_server, protocol, library):  # n
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             resp_item1 = await RM.item_add(item1)
             resp_item2 = await RM.item_add(item2)
             resp_item3 = await RM.item_add(item3)
@@ -661,7 +661,7 @@ def test_item_add_01(re_manager, fastapi_server, protocol, library):  # noqa: F8
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_status(RM.status(), 0)
         check_resp(RM.item_add(item))
         check_status(RM.status(), 1)
@@ -671,7 +671,7 @@ def test_item_add_01(re_manager, fastapi_server, protocol, library):  # noqa: F8
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_status(await RM.status(), 0)
             check_resp(await RM.item_add(item))
             check_status(await RM.status(), 1)
@@ -706,7 +706,7 @@ def test_item_add_02(re_manager, fastapi_server, protocol, library):  # noqa: F8
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_resp(RM.item_add(item1))
         check_resp(RM.item_add(item2))
         check_status(RM.status(), 2)
@@ -727,7 +727,7 @@ def test_item_add_02(re_manager, fastapi_server, protocol, library):  # noqa: F8
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_resp(await RM.item_add(item1))
             check_resp(await RM.item_add(item2))
             check_status(await RM.status(), 2)
@@ -769,7 +769,7 @@ def test_item_add_03(re_manager, fastapi_server, protocol, library):  # noqa: F8
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_status(RM.status(), 0)
         resp = RM.item_add(item, user=user, user_group=user_group)
         check_resp(resp)
@@ -784,7 +784,7 @@ def test_item_add_03(re_manager, fastapi_server, protocol, library):  # noqa: F8
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_status(await RM.status(), 0)
             resp = await RM.item_add(item, user=user, user_group=user_group)
             check_resp(resp)
@@ -820,7 +820,7 @@ def test_item_add_batch_01(re_manager, fastapi_server, protocol, library):  # no
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_status(RM.status(), 0)
         check_resp(RM.item_add_batch([item]))
         check_status(RM.status(), 1)
@@ -834,7 +834,7 @@ def test_item_add_batch_01(re_manager, fastapi_server, protocol, library):  # no
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_status(await RM.status(), 0)
             check_resp(await RM.item_add_batch([item]))
             check_status(await RM.status(), 1)
@@ -873,7 +873,7 @@ def test_item_add_batch_02(re_manager, fastapi_server, protocol, library):  # no
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_resp(RM.item_add_batch([item1]))
         check_resp(RM.item_add_batch([item2]))
         check_status(RM.status(), 2)
@@ -894,7 +894,7 @@ def test_item_add_batch_02(re_manager, fastapi_server, protocol, library):  # no
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_resp(await RM.item_add_batch([item1]))
             check_resp(await RM.item_add_batch([item2]))
             check_status(await RM.status(), 2)
@@ -936,7 +936,7 @@ def test_item_add_batch_03(re_manager, fastapi_server, protocol, library):  # no
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_status(RM.status(), 0)
         resp = RM.item_add_batch([item], user=user, user_group=user_group)
         check_resp(resp)
@@ -951,7 +951,7 @@ def test_item_add_batch_03(re_manager, fastapi_server, protocol, library):  # no
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_status(await RM.status(), 0)
             resp = await RM.item_add_batch([item], user=user, user_group=user_group)
             check_resp(resp)
@@ -986,7 +986,7 @@ def test_item_update_01(re_manager, fastapi_server, protocol, library):  # noqa:
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_status(RM.status(), 0)
         check_resp(RM.item_add(item))
         check_status(RM.status(), 1)
@@ -1021,7 +1021,7 @@ def test_item_update_01(re_manager, fastapi_server, protocol, library):  # noqa:
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_status(await RM.status(), 0)
             check_resp(await RM.item_add(item))
             check_status(await RM.status(), 1)
@@ -1078,7 +1078,7 @@ def test_item_update_02(re_manager, fastapi_server, protocol, library):  # noqa:
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_status(RM.status(), 0)
         check_resp(RM.item_add(item))
         resp = RM.queue_get()
@@ -1100,7 +1100,7 @@ def test_item_update_02(re_manager, fastapi_server, protocol, library):  # noqa:
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_status(await RM.status(), 0)
             check_resp(await RM.item_add(item))
             resp = await RM.queue_get()
@@ -1145,7 +1145,7 @@ def test_item_execute_01(re_manager, fastapi_server, protocol, library):  # noqa
         assert status["manager_state"] in manager_states
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         check_resp(RM.environment_open())
         RM.wait_for_idle()
@@ -1168,7 +1168,7 @@ def test_item_execute_01(re_manager, fastapi_server, protocol, library):  # noqa
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             check_resp(await RM.environment_open())
             await RM.wait_for_idle()
@@ -1213,7 +1213,7 @@ def test_item_execute_02(re_manager, fastapi_server, protocol, library):  # noqa
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         RM.environment_open()
         RM.wait_for_idle()
         check_status(RM.status(), 0)
@@ -1233,7 +1233,7 @@ def test_item_execute_02(re_manager, fastapi_server, protocol, library):  # noqa
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             await RM.environment_open()
             await RM.wait_for_idle()
             check_status(await RM.status(), 0)
@@ -1274,7 +1274,7 @@ def test_queue_start_stop_cancel_01(re_manager, fastapi_server, protocol, librar
         assert status["queue_stop_pending"] == queue_stop_pending
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         check_resp(RM.environment_open())
         RM.wait_for_idle()
@@ -1301,7 +1301,7 @@ def test_queue_start_stop_cancel_01(re_manager, fastapi_server, protocol, librar
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             check_resp(await RM.environment_open())
             await RM.wait_for_idle()
@@ -1348,7 +1348,7 @@ def test_queue_clear_01(re_manager, fastapi_server, protocol, library):  # noqa:
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_status(RM.status(), 0)
         check_resp(RM.item_add(item))
         check_status(RM.status(), 1)
@@ -1358,7 +1358,7 @@ def test_queue_clear_01(re_manager, fastapi_server, protocol, library):  # noqa:
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_status(await RM.status(), 0)
             check_resp(await RM.item_add(item))
             check_status(await RM.status(), 1)
@@ -1387,7 +1387,7 @@ def test_queue_mode_set_01(re_manager, fastapi_server, protocol, library):  # no
         assert status["plan_queue_mode"]["loop"] == loop_mode
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_status(RM.status(), False)
         check_resp(RM.queue_mode_set(loop=True))
         check_status(RM.status(), True)
@@ -1397,7 +1397,7 @@ def test_queue_mode_set_01(re_manager, fastapi_server, protocol, library):  # no
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_status(await RM.status(), False)
             check_resp(await RM.queue_mode_set(loop=True))
             check_status(await RM.status(), True)
@@ -1426,7 +1426,7 @@ def test_queue_mode_set_02(re_manager, fastapi_server, protocol, library):  # no
         assert status["plan_queue_mode"]["loop"] == loop_mode
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_status(RM.status(), False)
         check_resp(RM.queue_mode_set(mode={"loop": True}))
         check_status(RM.status(), True)
@@ -1436,7 +1436,7 @@ def test_queue_mode_set_02(re_manager, fastapi_server, protocol, library):  # no
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_status(await RM.status(), False)
             check_resp(await RM.queue_mode_set(mode={"loop": True}))
             check_status(await RM.status(), True)
@@ -1466,7 +1466,7 @@ def test_queue_get_01(re_manager, fastapi_server, protocol, library):  # noqa: F
         assert status["items_in_queue"] == items_in_queue
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         check_status(RM.status(), 0)
         check_resp(RM.item_add(item))
 
@@ -1483,7 +1483,7 @@ def test_queue_get_01(re_manager, fastapi_server, protocol, library):  # noqa: F
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             check_status(await RM.status(), 0)
             check_resp(await RM.item_add(item))
 
@@ -1521,7 +1521,7 @@ def test_history_get_clear_01(re_manager, fastapi_server, protocol, library):  #
         assert status["items_in_history"] == items_in_history
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         check_resp(RM.environment_open())
         RM.wait_for_idle()
@@ -1551,7 +1551,7 @@ def test_history_get_clear_01(re_manager, fastapi_server, protocol, library):  #
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             check_resp(await RM.environment_open())
             await RM.wait_for_idle()
@@ -1593,7 +1593,7 @@ def test_plans_devices_allowed_01(re_manager, fastapi_server, protocol, library)
     rm_api_class = _select_re_manager_api(protocol, library)
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         response = RM.plans_allowed()
         assert response["success"] is True
@@ -1615,7 +1615,7 @@ def test_plans_devices_allowed_01(re_manager, fastapi_server, protocol, library)
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             response = await RM.plans_allowed()
             assert response["success"] is True
@@ -1649,7 +1649,7 @@ def test_plans_devices_allowed_02(re_manager, fastapi_server, protocol, library)
     rm_api_class = _select_re_manager_api(protocol, library)
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         response = RM.plans_allowed(user_group=None)
         assert response["success"] is True
@@ -1703,7 +1703,7 @@ def test_plans_devices_allowed_02(re_manager, fastapi_server, protocol, library)
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             response = await RM.plans_allowed(user_group=None)
             assert response["success"] is True
@@ -1769,7 +1769,7 @@ def test_plans_devices_existing_01(re_manager, fastapi_server, protocol, library
     rm_api_class = _select_re_manager_api(protocol, library)
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         response = RM.plans_existing()
         assert response["success"] is True
@@ -1791,7 +1791,7 @@ def test_plans_devices_existing_01(re_manager, fastapi_server, protocol, library
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             response = await RM.plans_existing()
             assert response["success"] is True
@@ -1825,7 +1825,7 @@ def test_permissions_get_set_01(re_manager, fastapi_server, protocol, library): 
     rm_api_class = _select_re_manager_api(protocol, library)
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         resp1 = RM.permissions_get()
         assert resp1["success"] is True
@@ -1873,7 +1873,7 @@ def test_permissions_get_set_01(re_manager, fastapi_server, protocol, library): 
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             resp1 = await RM.permissions_get()
             assert resp1["success"] is True
@@ -1947,7 +1947,7 @@ def test_script_upload_01(
         assert status["manager_state"] == manager_state
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         check_resp(RM.environment_open())
         RM.wait_for_idle()
@@ -1988,7 +1988,7 @@ def test_script_upload_01(
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             check_resp(await RM.environment_open())
             await RM.wait_for_idle()
@@ -2054,7 +2054,7 @@ def test_function_execute_01(re_manager, fastapi_server, protocol, library):  # 
         assert status["manager_state"] == manager_state
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         RM.environment_open()
         RM.wait_for_idle()
         check_status(RM.status(), "idle")
@@ -2075,7 +2075,7 @@ def test_function_execute_01(re_manager, fastapi_server, protocol, library):  # 
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             await RM.environment_open()
             await RM.wait_for_idle()
             check_status(await RM.status(), "idle")
@@ -2123,7 +2123,7 @@ def test_re_runs_01(re_manager, fastapi_server, protocol, library, options, n_el
         assert status["manager_state"] == manager_state
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         check_resp(RM.environment_open())
         RM.wait_for_idle()
@@ -2151,7 +2151,7 @@ def test_re_runs_01(re_manager, fastapi_server, protocol, library, options, n_el
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             check_resp(await RM.environment_open())
             await RM.wait_for_idle()
@@ -2209,7 +2209,7 @@ def test_re_pause_01(re_manager, fastapi_server, protocol, library, pause_option
         assert status["manager_state"] == manager_state
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         check_resp(RM.environment_open())
         RM.wait_for_idle()
@@ -2248,7 +2248,7 @@ def test_re_pause_01(re_manager, fastapi_server, protocol, library, pause_option
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             check_resp(await RM.environment_open())
             await RM.wait_for_idle()
@@ -2305,7 +2305,7 @@ def test_wait_for_idle_01(re_manager, fastapi_server, protocol, library, timeout
         assert status["manager_state"] in manager_states
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         RM.item_add(item)
         RM.environment_open()
         RM.wait_for_idle()
@@ -2327,7 +2327,7 @@ def test_wait_for_idle_01(re_manager, fastapi_server, protocol, library, timeout
     else:
 
         async def testing():
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             await RM.item_add(item)
             await RM.environment_open()
             await RM.wait_for_idle()
@@ -2373,7 +2373,7 @@ def test_wait_for_idle_02(re_manager, fastapi_server, protocol, library):  # noq
             ttime.sleep(timeout)
             monitor.cancel()
 
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
         RM.item_add(item)
         RM.environment_open()
         RM.wait_for_idle()
@@ -2400,7 +2400,7 @@ def test_wait_for_idle_02(re_manager, fastapi_server, protocol, library):  # noq
                 await asyncio.sleep(timeout)
                 monitor.cancel()
 
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
             await RM.item_add(item)
             await RM.environment_open()
             await RM.wait_for_idle()
@@ -2441,7 +2441,7 @@ def test_wait_for_idle_03(protocol, library):  # noqa: F811
             ttime.sleep(timeout)
             monitor.cancel()
 
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         t = ttime.time()
         with pytest.raises(RM.WaitTimeoutError):
@@ -2463,7 +2463,7 @@ def test_wait_for_idle_03(protocol, library):  # noqa: F811
                 await asyncio.sleep(timeout)
                 monitor.cancel()
 
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             t = ttime.time()
             with pytest.raises(RM.WaitTimeoutError):
@@ -2523,7 +2523,7 @@ def test_console_monitor_01(re_manager_cmd, fastapi_server, read_timeout, option
 
     if not _is_async(library):
 
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         RM.environment_open()
         RM.wait_for_idle(timeout=10)
@@ -2582,7 +2582,7 @@ def test_console_monitor_01(re_manager_cmd, fastapi_server, read_timeout, option
 
         async def testing():
 
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             await RM.environment_open()
             await RM.wait_for_idle(timeout=10)
@@ -2654,7 +2654,7 @@ def test_console_monitor_02(re_manager_cmd, fastapi_server, library, protocol): 
 
     if not _is_async(library):
 
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         RM.console_monitor.enable()
         assert RM.console_monitor.enabled is True
@@ -2677,7 +2677,7 @@ def test_console_monitor_02(re_manager_cmd, fastapi_server, library, protocol): 
 
         async def testing():
 
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
@@ -2713,7 +2713,7 @@ def test_console_monitor_03(re_manager_cmd, fastapi_server, pause_before_enable,
 
     if not _is_async(library):
 
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         RM.console_monitor.enable()
         assert RM.console_monitor.enabled is True
@@ -2739,7 +2739,7 @@ def test_console_monitor_03(re_manager_cmd, fastapi_server, pause_before_enable,
 
         async def testing():
 
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
@@ -2777,7 +2777,7 @@ def test_console_monitor_04(re_manager_cmd, fastapi_server, library, protocol): 
 
     if not _is_async(library):
 
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         RM.console_monitor.enable()
         assert RM.console_monitor.enabled is True
@@ -2796,7 +2796,7 @@ def test_console_monitor_04(re_manager_cmd, fastapi_server, library, protocol): 
 
         async def testing():
 
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
@@ -2848,7 +2848,7 @@ def test_console_monitor_05(
 
     if not _is_async(library):
 
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         RM.console_monitor.enable()
         assert RM.console_monitor.enabled is True
@@ -2877,7 +2877,7 @@ def test_console_monitor_05(
 
         async def testing():
 
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
@@ -2930,7 +2930,7 @@ def test_console_monitor_06(re_manager_cmd, fastapi_server, library, protocol, n
         assert resp["msg"] == ""
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         check_resp(RM.environment_open())
         RM.wait_for_idle(timeout=10)
@@ -2973,7 +2973,7 @@ def test_console_monitor_06(re_manager_cmd, fastapi_server, library, protocol, n
 
         async def testing():
 
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             check_resp(await RM.environment_open())
             await RM.wait_for_idle(timeout=10)
@@ -3048,7 +3048,7 @@ def test_console_monitor_07(
         params["console_monitor_max_lines"] = 0
 
     if not _is_async(library):
-        RM = rm_api_class(**params)
+        RM = instantiate_re_api_class(rm_api_class, **params)
 
         RM.console_monitor.enable()
         assert RM.console_monitor.enabled is True
@@ -3081,7 +3081,7 @@ def test_console_monitor_07(
 
         async def testing():
 
-            RM = rm_api_class(**params)
+            RM = instantiate_re_api_class(rm_api_class, **params)
 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
@@ -3132,7 +3132,7 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
         assert resp["msg"] == ""
 
     if not _is_async(library):
-        RM = rm_api_class()
+        RM = instantiate_re_api_class(rm_api_class)
 
         RM.console_monitor.enable()
         assert RM.console_monitor.enabled is True
@@ -3190,7 +3190,7 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
 
         async def testing():
 
-            RM = rm_api_class()
+            RM = instantiate_re_api_class(rm_api_class)
 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True

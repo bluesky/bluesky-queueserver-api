@@ -62,7 +62,11 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         try:
             client_response = None
             request_method, endpoint, payload = self._prepare_request(method=method, params=params)
-            client_response = await self._client.request(request_method, endpoint, json=payload)
+            headers = self._prepare_headers()
+            kwargs = {"json": payload}
+            if headers:
+                kwargs.update({"headers": headers})
+            client_response = await self._client.request(request_method, endpoint, **kwargs)
             response = self._process_response(client_response=client_response)
 
         except Exception:

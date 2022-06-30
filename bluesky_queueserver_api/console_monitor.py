@@ -623,10 +623,12 @@ class ConsoleMonitor_HTTP_Threads(_ConsoleMonitor_Threads):
                     self._monitor_thread_running.set()
                     break
             try:
+                headers = self._parent._prepare_headers()
+                kwargs = {"json": {"last_msg_uid": self._console_output_last_msg_uid}}
+                if headers:
+                    kwargs.update({"headers": headers})
                 client_response = self._parent._client.request(
-                    _console_monitor_http_method,
-                    _console_monitor_http_endpoint,
-                    json={"last_msg_uid": self._console_output_last_msg_uid},
+                    _console_monitor_http_method, _console_monitor_http_endpoint, **kwargs
                 )
                 client_response.raise_for_status()
                 response = client_response.json()
@@ -779,10 +781,13 @@ class ConsoleMonitor_HTTP_Async(_ConsoleMonitor_Async):
                     break
 
             try:
+                headers = self._parent._prepare_headers()
+                kwargs = {"json": {"last_msg_uid": self._console_output_last_msg_uid}}
+                if headers:
+                    kwargs.update({"headers": headers})
+
                 client_response = await self._parent._client.request(
-                    _console_monitor_http_method,
-                    _console_monitor_http_endpoint,
-                    json={"last_msg_uid": self._console_output_last_msg_uid},
+                    _console_monitor_http_method, _console_monitor_http_endpoint, **kwargs
                 )
                 client_response.raise_for_status()
                 response = client_response.json()

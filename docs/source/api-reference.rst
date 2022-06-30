@@ -240,6 +240,17 @@ Synchronous Communication with HTTP Server
 
     http.REManagerAPI
 
+API for authentication and authorization (HTTP)
+***********************************************
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    http.REManagerAPI.auth_method
+    http.REManagerAPI.auth_key
+    http.REManagerAPI.set_authorization_key
+
 ASynchronous Communication with HTTP Server
 -------------------------------------------
 

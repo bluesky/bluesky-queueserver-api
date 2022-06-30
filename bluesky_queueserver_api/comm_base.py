@@ -92,6 +92,12 @@ class Protocols(enum.Enum):
     HTTP = "HTTP"
 
 
+class AuthorizationMethods(enum.Enum):
+    NONE = "NONE"
+    API_KEY = "API_KEY"
+    TOKEN = "TOKEN"
+
+
 class ReManagerAPI_Base:
 
     RequestTimeoutError = RequestTimeoutError
@@ -100,6 +106,7 @@ class ReManagerAPI_Base:
     ClientError = ClientError
 
     Protocols = Protocols
+    AuthorizationMethods = AuthorizationMethods
 
     def __init__(self, *, request_fail_exceptions=True):
         # Raise exceptions if request fails (success=False)
@@ -217,6 +224,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self,
         *,
         http_server_uri=None,
+        api_prefix=None,
         timeout=default_http_request_timeout,
         console_monitor_poll_period=default_console_monitor_poll_period,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
@@ -230,6 +238,10 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         #   because HTTP Server assigns user name and user group based on login information)
         self._pass_user_info = False
 
+        # Default authorization type and key
+        self._auth_method = AuthorizationMethods.NONE
+        self._auth_key = None  # May be a token or an API key
+
         http_server_uri = http_server_uri or os.environ.get("QSERVER_HTTP_SERVER_URI")
         http_server_uri = http_server_uri or default_http_server_uri
 
@@ -240,6 +252,10 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self._console_monitor_max_lines = console_monitor_max_lines
 
         self._rest_api_method_map = rest_api_method_map
+        if api_prefix:
+            api_prefix = api_prefix.strip()
+            api_prefix = api_prefix if api_prefix.startswith("/") else f"/{api_prefix}"
+        self._rest_api_prefix = api_prefix
 
         self._client = self._create_client(http_server_uri=http_server_uri, timeout=timeout)
 
@@ -248,10 +264,18 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
     def _create_client(self, http_server_uri, timeout):
         raise NotImplementedError()
 
+    def _prepare_headers(self):
+        if self.auth_method == self.AuthorizationMethods.API_KEY:
+            headers = {"Authorization": f"ApiKey {self.auth_key}"}
+        else:
+            headers = None
+        return headers
+
     def _prepare_request(self, *, method, params=None):
         if method not in self._rest_api_method_map:
             raise KeyError(f"Unknown method {method!r}")
         request_method, endpoint = rest_api_method_map[method]
+        endpoint = f"{self._rest_api_prefix}{endpoint}" if self._rest_api_prefix else endpoint
         payload = params or {}
         return request_method, endpoint, payload
 
@@ -285,3 +309,74 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
                 raise self.ClientError(message, request=exc.request, response=exc.response) from exc
             else:
                 raise self.ClientError(exc) from exc
+
+    @property
+    def auth_method(self):
+        """
+        Returns authorization method (API key, token or none).
+
+        Returns
+        -------
+        REManagerAPI.AuthorizationMethods
+            Enum value that defines current authorization method.
+        """
+        return self._auth_method
+
+    @property
+    def auth_key(self):
+        """
+        Returns authorization key.
+
+        Returns
+        -------
+        str, tuple(str) or None
+            Depending on currently selected authorization method, returns a string (API key), tuple of strings
+            with authorization token as the first element (may be ``None``) and the refresh token
+            (may be ``None``) as the second element. If no authorization is used then the return value
+            is ``None``.
+        """
+        return self._auth_key
+
+    def set_authorization_key(self, *, api_key=None, token=None, refresh_token=None):
+        """
+        Set default authorization key(s) for HTTP requests. Authorization method is selected based on whether
+        an API key or token(s) are passed to the API. API keys and tokens are mutually exclusive and can not
+        be passed to the request simultaneously. If the API call contains no API keys, then authorization is
+        disabled.
+
+        The function configures authorization method and keys without communicating with the server or
+        validation of the keys.
+
+        Parameters
+        ----------
+        api_key: str
+            API key for HTTP requests to the server. Default: ``None``.
+        token: str
+            Authorization token for HTTP requests to the server. If the token is ``None`` and the refresh token
+            is specified, then the new authorization token is requested from the server during the first HTTP
+            request. Default: ``None``.
+        refresh_token: str
+            Refresh token used to request authorization token from the server. Default: ``None``.
+        """
+        if api_key and (token or refresh_token):
+            raise ValueError("API key and a token are mutually exclusive and can not be specified simultaneously.")
+
+        if not isinstance(api_key, (str, type(None))):
+            raise TypeError(f"API key must be a string or None: api_key={api_key} type(api_key)={type(api_key)}")
+        if not isinstance(token, (str, type(None))):
+            raise TypeError(f"Token must be a string or None: token={token} type(token)={type(token)}")
+        if not isinstance(refresh_token, (str, type(None))):
+            raise TypeError(
+                f"Refresh token must be a string or None: refresh_token={refresh_token} "
+                f"type(refresh_token)={type(refresh_token)}"
+            )
+
+        if api_key:
+            self._auth_method = self.AuthorizationMethods.API_KEY
+            self._auth_key = api_key
+        elif token or refresh_token:
+            self._auth_method = self.AuthorizationMethods.TOKEN
+            self._auth_key = (token, refresh_token)
+        else:
+            self._auth_method = self.AuthorizationMethods.NONE
+            self._auth_key = None
