@@ -254,7 +254,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self._rest_api_method_map = rest_api_method_map
         if api_prefix:
             api_prefix = api_prefix.strip()
-            api_prefix = api_prefix if api_prefix.startswith("/") else "/{api_prefix}"
+            api_prefix = api_prefix if api_prefix.startswith("/") else f"/{api_prefix}"
         self._rest_api_prefix = api_prefix
 
         self._client = self._create_client(http_server_uri=http_server_uri, timeout=timeout)

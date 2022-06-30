@@ -191,6 +191,34 @@ def test_ReManagerComm_HTTP_03():
     asyncio.run(testing())
 
 
+# fmt: off
+@pytest.mark.parametrize("api_prefix, expected_endpoint", [
+    (None, "/api/status"),
+    ("", "/api/status"),
+    ("abc", "/abc/api/status"),
+    ("/abc", "/abc/api/status"),
+    ("abc/def", "/abc/def/api/status"),
+    ("/abc/def", "/abc/def/api/status"),
+])
+# fmt: on
+def test_ReManagerComm_HTTP_04(api_prefix, expected_endpoint):
+    """
+    Test that ``api_prefix`` parameter is properly handled by HTTP API classes.
+    """
+    RM = ReManagerComm_HTTP_Threads(api_prefix=api_prefix)
+    _, endpoint, _ = RM._prepare_request(method="status")
+    assert endpoint == expected_endpoint
+    RM.close()
+
+    async def testing():
+        RM = ReManagerComm_HTTP_Async(api_prefix=api_prefix)
+        _, endpoint, _ = RM._prepare_request(method="status")
+        assert endpoint == expected_endpoint
+        await RM.close()
+
+    asyncio.run(testing())
+
+
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 def test_ReManagerComm_ALL_01(re_manager, fastapi_server, protocol):  # noqa: F811
     """

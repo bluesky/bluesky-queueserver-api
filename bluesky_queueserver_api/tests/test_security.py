@@ -93,6 +93,9 @@ valid_api_key_test_1 = "validapikey"
 def test_ReManagerAPI_authorization_api_key_01(
     monkeypatch, re_manager, fastapi_server_fs, protocol, library, api_key, success, msg  # noqa: F811
 ):
+    """
+    Test if authorization failure exceptions are properly processed during typical API calls.
+    """
     if protocol != "HTTP":
         raise RuntimeError("Protocol {protocol!r} is not supported in this test.")
 
