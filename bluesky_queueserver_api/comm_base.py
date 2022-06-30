@@ -224,6 +224,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self,
         *,
         http_server_uri=None,
+        api_prefix=None,
         timeout=default_http_request_timeout,
         console_monitor_poll_period=default_console_monitor_poll_period,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
@@ -251,6 +252,10 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self._console_monitor_max_lines = console_monitor_max_lines
 
         self._rest_api_method_map = rest_api_method_map
+        if api_prefix:
+            api_prefix = api_prefix.strip()
+            api_prefix = api_prefix if api_prefix.startswith("/") else "/{api_prefix}"
+        self._rest_api_prefix = api_prefix
 
         self._client = self._create_client(http_server_uri=http_server_uri, timeout=timeout)
 
@@ -270,6 +275,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         if method not in self._rest_api_method_map:
             raise KeyError(f"Unknown method {method!r}")
         request_method, endpoint = rest_api_method_map[method]
+        endpoint = f"{self._rest_api_prefix}{endpoint}" if self._rest_api_prefix else endpoint
         payload = params or {}
         return request_method, endpoint, payload
 

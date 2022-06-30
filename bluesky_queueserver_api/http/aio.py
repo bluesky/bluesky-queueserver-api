@@ -19,6 +19,7 @@ class REManagerAPI(ReManagerComm_HTTP_Async, API_Async_Mixin):
         self,
         *,
         http_server_uri=None,
+        api_prefix=None,
         timeout=default_http_request_timeout,
         console_monitor_poll_period=default_console_monitor_poll_period,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
@@ -30,6 +31,7 @@ class REManagerAPI(ReManagerComm_HTTP_Async, API_Async_Mixin):
         ReManagerComm_HTTP_Async.__init__(
             self,
             http_server_uri=http_server_uri,
+            api_prefix=api_prefix,
             timeout=timeout,
             console_monitor_poll_period=console_monitor_poll_period,
             console_monitor_max_msgs=console_monitor_max_msgs,
