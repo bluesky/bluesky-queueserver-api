@@ -494,10 +494,10 @@ class API_Threads_Mixin(API_Base):
         self._clear_status_timestamp()
         return self.send_request(method="permissions_set", params=request_params)
 
-    def script_upload(self, script, *, update_re=None, run_in_background=None):
+    def script_upload(self, script, *, update_lists=None, update_re=None, run_in_background=None):
         # Docstring is maintained separately
         request_params = self._prepare_script_upload(
-            script=script, update_re=update_re, run_in_background=run_in_background
+            script=script, update_lists=update_lists, update_re=update_re, run_in_background=run_in_background
         )
         self._clear_status_timestamp()
         return self.send_request(method="script_upload", params=request_params)

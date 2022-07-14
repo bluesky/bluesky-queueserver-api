@@ -2034,6 +2034,132 @@ def test_script_upload_01(
         asyncio.run(testing())
 
 
+script_upload_02 = """
+# Another device
+from ophyd import Device
+
+dev_test = Device(name="dev_test")
+
+# Trivial plan
+def sleep_for_a_few_sec(tt=1):
+    yield from bps.sleep(tt)
+"""
+
+
+# fmt: off
+@pytest.mark.parametrize("update_lists", [None, True, False])
+@pytest.mark.parametrize("run_in_background", [False, True])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_script_upload_02(
+    re_manager, fastapi_server, protocol, library, run_in_background, update_lists  # noqa: F811
+):
+    """
+    ``script_upload``: test functionality for different values of ``update_lists``
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, worker_environment_exists, manager_state):
+        assert status["worker_environment_exists"] == worker_environment_exists
+        assert status["manager_state"] == manager_state
+
+    def check_item_in_list(name, obj_list, in_list):
+        if in_list:
+            assert name in obj_list
+        else:
+            assert name not in obj_list
+
+    params = {"script": script_upload_02, "run_in_background": run_in_background}
+    if update_lists is not None:
+        params.update({"update_lists": update_lists})
+    else:
+        update_lists = True
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        check_resp(RM.environment_open())
+        RM.wait_for_idle()
+        check_status(RM.status(), True, "idle")
+
+        resp1 = RM.script_upload(**params)
+        assert resp1["success"] is True
+        task_uid = resp1["task_uid"]
+
+        for _ in range(10):
+            resp2 = RM.task_status(task_uid)
+            assert resp2["success"] is True
+            if resp2["status"] == "completed":
+                break
+            ttime.sleep(0.5)
+
+        resp3 = RM.task_result(task_uid)
+        assert resp3["success"] is True
+        assert resp3["status"] == "completed"
+        assert resp3["result"]["success"] is True
+
+        resp4 = RM.plans_existing()
+        check_item_in_list("sleep_for_a_few_sec", resp4["plans_existing"], update_lists)
+        resp5 = RM.plans_allowed()
+        check_item_in_list("sleep_for_a_few_sec", resp5["plans_allowed"], update_lists)
+        resp6 = RM.devices_existing()
+        check_item_in_list("dev_test", resp6["devices_existing"], update_lists)
+        resp7 = RM.devices_allowed()
+        check_item_in_list("dev_test", resp7["devices_allowed"], update_lists)
+
+        check_resp(RM.environment_close())
+        RM.wait_for_idle()
+        check_status(RM.status(), False, "idle")
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle()
+            check_status(await RM.status(), True, "idle")
+
+            resp1 = await RM.script_upload(**params)
+            assert resp1["success"] is True
+            task_uid = resp1["task_uid"]
+
+            for _ in range(10):
+                resp2 = await RM.task_status(task_uid)
+                assert resp2["success"] is True
+                if resp2["status"] == "completed":
+                    break
+                ttime.sleep(0.5)
+
+            resp3 = await RM.task_result(task_uid)
+            assert resp3["success"] is True
+            assert resp3["status"] == "completed"
+            assert resp3["result"]["success"] is True
+
+            resp4 = await RM.plans_existing()
+            check_item_in_list("sleep_for_a_few_sec", resp4["plans_existing"], update_lists)
+            resp5 = await RM.plans_allowed()
+            check_item_in_list("sleep_for_a_few_sec", resp5["plans_allowed"], update_lists)
+            resp6 = await RM.devices_existing()
+            check_item_in_list("dev_test", resp6["devices_existing"], update_lists)
+            resp7 = await RM.devices_allowed()
+            check_item_in_list("dev_test", resp7["devices_allowed"], update_lists)
+
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle()
+            check_status(await RM.status(), False, "idle")
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
 # fmt: off
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])

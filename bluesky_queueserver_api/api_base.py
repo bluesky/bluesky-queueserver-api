@@ -538,11 +538,12 @@ class API_Base:
         request_params = {"user_group_permissions": user_group_permissions}
         return request_params
 
-    def _prepare_script_upload(self, *, script, update_re, run_in_background):
+    def _prepare_script_upload(self, *, script, update_lists, update_re, run_in_background):
         """
         Prepare parameters for ``script_upload``
         """
         request_params = {"script": script}
+        self._add_request_param(request_params, "update_lists", update_lists)
         self._add_request_param(request_params, "update_re", update_re)
         self._add_request_param(request_params, "run_in_background", run_in_background)
         return request_params

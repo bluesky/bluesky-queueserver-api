@@ -1767,6 +1767,12 @@ _doc_api_script_upload = r"""
         The string that contains the Python script. The script should satisfy the same
         requirements as Bluesky startup scripts. The script can use objects already
         existing in the RE Worker namespace.
+    update_lists: boolean (optional, default True)
+        Update lists of existing and available plans and devices after execution of the script.
+        It is required to update the lists if the script adds or modifies plans and/or devices
+        in RE Worker namespace, otherwise it is more efficient to disable the update. For example,
+        the update could be disabled for the remotely executed scripts that print or modify
+        variables from the namespace during iteractive debug session.
     update_re: boolean (optional, default False)
         The uploaded scripts may replace Run Engine (``RE``) and Data Broker (``db``)
         instances in the namespace. In most cases this operation should not be allowed,
