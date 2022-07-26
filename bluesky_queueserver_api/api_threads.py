@@ -558,23 +558,25 @@ class API_Threads_Mixin(API_Base):
         self._clear_status_timestamp()
         return self.send_request(method="re_halt")
 
-    def lock(self, lock_key=None, *, environment=None, queue=None, note=None):
+    def lock(self, lock_key=None, *, environment=None, queue=None, note=None, user=None):
         # Docstring is maintained separately
-        request_params = self._prepare_lock(environment=environment, queue=queue, lock_key=lock_key, note=note)
+        request_params = self._prepare_lock(
+            environment=environment, queue=queue, lock_key=lock_key, note=note, user=user
+        )
         self._clear_status_timestamp()
         return self.send_request(method="lock", params=request_params)
 
-    def lock_environment(self, lock_key=None, *, note=None):
+    def lock_environment(self, lock_key=None, *, note=None, user=None):
         # Docstring is maintained separately
-        return self.lock(lock_key=lock_key, environment=True, note=note)
+        return self.lock(lock_key=lock_key, environment=True, note=note, user=user)
 
-    def lock_queue(self, lock_key=None, *, note=None):
+    def lock_queue(self, lock_key=None, *, note=None, user=None):
         # Docstring is maintained separately
-        return self.lock(lock_key=lock_key, queue=True, note=note)
+        return self.lock(lock_key=lock_key, queue=True, note=note, user=user)
 
-    def lock_all(self, lock_key=None, *, note=None):
+    def lock_all(self, lock_key=None, *, note=None, user=None):
         # Docstring is maintained separately
-        return self.lock(lock_key=lock_key, environment=True, queue=True, note=note)
+        return self.lock(lock_key=lock_key, environment=True, queue=True, note=note, user=user)
 
     def lock_info(self, lock_key=None, *, reload=False):
         # Docstring is maintained separately

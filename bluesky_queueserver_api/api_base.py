@@ -636,7 +636,7 @@ class API_Base:
             if not isinstance(lock_key, str) or not lock_key:
                 raise ValueError(f"Parameter 'lock_key' must be non-empty string or None: lock_key={lock_key!r}")
 
-    def _prepare_lock(self, *, environment, queue, lock_key, note):
+    def _prepare_lock(self, *, environment, queue, lock_key, note, user):
         # Lock key may be None. Use self.lock_key in this case.
         self._validate_lock_key(lock_key)
         if not lock_key:
@@ -654,7 +654,11 @@ class API_Base:
         if queue:
             request_params["queue"] = queue
         request_params["lock_key"] = lock_key
-        request_params["user"] = self._user
+
+        self._request_params_add_user_info(request_params, user=user, user_group=None)
+        if "user_group" in request_params:
+            del request_params["user_group"]
+
         if note:
             request_params["note"] = note
 

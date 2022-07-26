@@ -3517,10 +3517,9 @@ def test_lock_key_1(library, protocol):
     (True, True),
 ])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-# @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
-@pytest.mark.parametrize("protocol", ["ZMQ"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
-def test_lock_1(re_manager, library, protocol, use_current_lock_key, set_note):  # noqa: F811
+def test_lock_1(re_manager, fastapi_server, library, protocol, use_current_lock_key, set_note):  # noqa: F811
     """
     ``lock``, ``lock_environment``, ``lock_queue``, ``lock_all``, ``unlock``, ``lock_info``: basic tests
     Call the API with all valid combinations of parameters.
@@ -3617,10 +3616,9 @@ def test_lock_1(re_manager, library, protocol, use_current_lock_key, set_note): 
 
 
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-# @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
-@pytest.mark.parametrize("protocol", ["ZMQ"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
-def test_lock_2(re_manager, library, protocol):  # noqa: F811
+def test_lock_2(re_manager, fastapi_server, library, protocol):  # noqa: F811
     """
     ``lock``, ``lock_environment``, ``lock_queue``, ``lock_all``, ``unlock``, ``lock_info``:
     Test some edge cases and invalid parameter values.

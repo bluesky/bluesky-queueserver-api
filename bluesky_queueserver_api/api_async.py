@@ -561,23 +561,25 @@ class API_Async_Mixin(API_Base):
         self._clear_status_timestamp()
         return await self.send_request(method="re_halt")
 
-    async def lock(self, lock_key=None, *, environment=None, queue=None, note=None):
+    async def lock(self, lock_key=None, *, environment=None, queue=None, note=None, user=None):
         # Docstring is maintained separately
-        request_params = self._prepare_lock(environment=environment, queue=queue, lock_key=lock_key, note=note)
+        request_params = self._prepare_lock(
+            environment=environment, queue=queue, lock_key=lock_key, note=note, user=user
+        )
         self._clear_status_timestamp()
         return await self.send_request(method="lock", params=request_params)
 
-    async def lock_environment(self, lock_key=None, *, note=None):
+    async def lock_environment(self, lock_key=None, *, note=None, user=None):
         # Docstring is maintained separately
-        return await self.lock(lock_key=lock_key, environment=True, note=note)
+        return await self.lock(lock_key=lock_key, environment=True, note=note, user=user)
 
-    async def lock_queue(self, lock_key=None, *, note=None):
+    async def lock_queue(self, lock_key=None, *, note=None, user=None):
         # Docstring is maintained separately
-        return await self.lock(lock_key=lock_key, queue=True, note=note)
+        return await self.lock(lock_key=lock_key, queue=True, note=note, user=user)
 
-    async def lock_all(self, lock_key=None, *, note=None):
+    async def lock_all(self, lock_key=None, *, note=None, user=None):
         # Docstring is maintained separately
-        return await self.lock(lock_key=lock_key, environment=True, queue=True, note=note)
+        return await self.lock(lock_key=lock_key, environment=True, queue=True, note=note, user=user)
 
     async def lock_info(self, lock_key=None, *, reload=False):
         # Docstring is maintained separately
