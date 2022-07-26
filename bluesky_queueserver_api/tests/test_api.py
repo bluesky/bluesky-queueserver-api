@@ -4,6 +4,8 @@ import pytest
 import re
 import threading
 import time as ttime
+from pathlib import Path
+import os
 
 from .common import re_manager, re_manager_cmd  # noqa: F401
 from .common import fastapi_server, fastapi_server_fs  # noqa: F401
@@ -3242,7 +3244,6 @@ def test_console_monitor_07(
 # fmt: off
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
-# @pytest.mark.parametrize("protocol", ["HTTP"])
 # fmt: on
 def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol):  # noqa: F811
     """
@@ -3368,6 +3369,91 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
 
             assert RM.console_monitor.text_uid == text_uid2
 
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# ====================================================================================================
+#                                     Locking RE Manager
+# ====================================================================================================
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_default_lock_key_path_1(tmp_path, library, protocol):
+    """
+    ``default_lock_key_path`` - basic test
+    """
+    default_path = os.path.join(Path.home(), ".config", "qserver", "default_lock_key.txt")
+    new_default_path = os.path.join(tmp_path, ".config", "qserver", "default_lock_key.txt")
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+        assert RM.default_lock_key_path == default_path
+        RM.default_lock_key_path = new_default_path
+        assert RM.default_lock_key_path == new_default_path
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+            assert RM.default_lock_key_path == default_path
+            RM.default_lock_key_path = new_default_path
+            assert RM.default_lock_key_path == new_default_path
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_default_lock_key_1(tmp_path, library, protocol):
+    default_path = os.path.join(tmp_path, ".config", "qserver", "default_lock_key.txt")
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def run_test(RM):
+        # The test is the same for sync and async version.
+
+        RM.default_lock_key_path = default_path
+
+        lock_key = RM.get_default_lock_key()
+        assert RM.get_default_lock_key() == lock_key
+
+        lock_key2 = RM.get_default_lock_key(new_key=True)
+        assert lock_key2 != lock_key
+        assert RM.get_default_lock_key() == lock_key2
+
+        lock_key3 = "test-key"
+        RM.set_default_lock_key(lock_key3)
+        assert RM.get_default_lock_key() == lock_key3
+
+        assert os.path.isfile(default_path), default_path
+
+        with pytest.raises(IOError, match="'lock_key' must be a non-empty string"):
+            RM.set_default_lock_key(None)
+        with pytest.raises(IOError, match="'lock_key' must be a non-empty string"):
+            RM.set_default_lock_key(10)
+        with pytest.raises(IOError, match="'lock_key' must be a non-empty string"):
+            RM.set_default_lock_key("")
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+        run_test(RM)
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+            run_test(RM)
             await RM.close()
 
         asyncio.run(testing())

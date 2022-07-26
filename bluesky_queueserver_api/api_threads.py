@@ -558,6 +558,42 @@ class API_Threads_Mixin(API_Base):
         self._clear_status_timestamp()
         return self.send_request(method="re_halt")
 
+    def lock(self, lock_key=None, *, environment=None, queue=None, note=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_lock(environment=environment, queue=queue, lock_key=lock_key, note=note)
+        self._clear_status_timestamp()
+        return self.send_request(method="lock", params=request_params)
+
+    def lock_environment(self, lock_key=None, *, note=None):
+        # Docstring is maintained separately
+        return self.lock(lock_key=lock_key, environment=True, note=note)
+
+    def lock_queue(self, lock_key=None, *, note=None):
+        # Docstring is maintained separately
+        return self.lock(lock_key=lock_key, queue=True, note=note)
+
+    def lock_all(self, lock_key=None, *, note=None):
+        # Docstring is maintained separately
+        return self.lock(lock_key=lock_key, environment=True, queue=True, note=note)
+
+    def lock_info(self, lock_key=None, *, reload=False):
+        # Docstring is maintained separately
+        status = self._status(reload=reload)
+        lock_info_uid = status["lock_info_uid"]
+        if lock_info_uid != self._current_lock_info_uid:
+            request_params = self._prepare_lock_info(lock_key=lock_key)
+            response = self.send_request(method="lock_info", params=request_params)
+            self._process_response_lock_info(response)
+        else:
+            response = self._generate_response_lock_info()
+        return response
+
+    def unlock(self, lock_key=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_unlock(lock_key=lock_key)
+        self._clear_status_timestamp()
+        return self.send_request(method="unlock", params=request_params)
+
     # =======================================================================================
     #                            Console monitor
     # =======================================================================================

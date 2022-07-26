@@ -1,6 +1,10 @@
 from collections.abc import Mapping, Iterable
 import copy
 import getpass
+import os
+from pathlib import Path
+import secrets
+
 
 from .item import BItem
 
@@ -188,6 +192,12 @@ class API_Base:
         self._current_devices_existing_uid = None
         self._current_run_list = []
         self._current_run_list_uid = None
+        self._current_lock_info = {}
+        self._current_lock_info_uid = None
+
+        self._lock_key = None
+        self._default_lock_key_path = os.path.join(Path.home(), ".config", "qserver", "default_lock_key.txt")
+        self._enable_locked_api = False
 
     def _check_name(self, name, name_in_msg):
         if not isinstance(name, str):
@@ -619,3 +629,163 @@ class API_Base:
         request_params = {}
         self._add_request_param(request_params, "option", option)
         return request_params
+
+    def _validate_lock_key(self, lock_key):
+        # lock key may be a non-empty string or None
+        if not (lock_key is None):
+            if not isinstance(lock_key, str) or not lock_key:
+                raise ValueError(f"Parameter 'lock_key' must be non-empty string or None: lock_key={lock_key!r}")
+
+    def _prepare_lock(self, *, environment, queue, lock_key, note):
+        # Lock key may be None. Use self.lock_key in this case.
+        self._validate_lock_key(lock_key)
+        if not lock_key:
+            lock_key = self.lock_key
+        if not lock_key:
+            raise RuntimeError("Failed to format the 'lock' request: Lock key is not set")
+
+        if not isinstance(note, (str, None)):
+            raise ValueError(f"Parameter 'note' must be a string or None: note={note!r}")
+        environment, queue = bool(environment), bool(queue)
+
+        request_params = {}
+        if environment:
+            request_params["environment"] = environment
+        if queue:
+            request_params["queue"] = queue
+        request_params["lock_key"] = lock_key
+        request_params["user"] = self._user
+        if note:
+            request_params["note"] = note
+
+        return request_params
+
+    def _prepare_unlock(self, *, lock_key):
+        # Lock key may be None. Use self.lock_key in this case.
+        self._validate_lock_key(lock_key)
+        if not lock_key:
+            lock_key = self.lock_key
+        if not lock_key:
+            raise RuntimeError("Failed to format the 'unlock' request: Lock key is not set")
+
+        return {"lock_key": lock_key}
+
+    def _prepare_lock_info(self, *, lock_key):
+        # Lock key may be None. Use self.lock_key in this case.
+        self._validate_lock_key(lock_key)
+        if not lock_key:
+            lock_key = self.lock_key
+        if not lock_key:
+            raise RuntimeError("Failed to format the 'lock_info' request: Lock key is not set")
+
+        return {"lock_key": lock_key}
+
+    def _process_response_lock_info(self, response):
+        """
+        ``lock_info``: process response
+        """
+        if response["success"] is True:
+            self._current_lock_info = copy.deepcopy(response["lock_info"])
+            self._current_lock_info_uid = copy.deepcopy(response["lock_info_uid"])
+
+    def _generate_response_lock_info(self):
+        """
+        ``lock_info``: generate response based on cached data
+        """
+        response = {
+            "success": True,
+            "msg": "",
+            "lock_info_uid": self._current_lock_info_uid,
+            "lock_info": copy.deepcopy(self._current_lock_info),
+        }
+        return response
+
+    @property
+    def default_lock_key_path(self):
+        return self._default_lock_key_path
+
+    @default_lock_key_path.setter
+    def default_lock_key_path(self, lock_key_path):
+        """
+        Get/set path of the file with the default lock key. The default path is
+        ``<user-home-dir>.config/qserver/default_lock_key.txt``. In some workflows
+        it may be useful to set a different path.
+        """
+        self._default_lock_key_path = lock_key_path
+
+    def get_default_lock_key(self, new_key=False):
+        """
+        Returns the default lock key. The key is stored in a file ``.config/qserver/default_lock_key.txt``.
+        The key is load from disk each time the method is called. If the key (the file) does not exist
+        or the method parameter ``new_key`` is ``True``, then the new key is generated and saved to file.
+        A specific default key may be manually set and saved to file using ``set_default_lock_key()`` API.
+
+        Parameters
+        ----------
+        new_key: boolean
+            Set this parameter ``True`` to generate a new default lock key.
+
+        Returns
+        -------
+        str
+            The default lock key.
+        """
+        if not os.path.exists(self._default_lock_key_path) or new_key:
+            lock_key = secrets.token_urlsafe(16)
+            self.set_default_lock_key(lock_key)
+        else:
+            with open(self._default_lock_key_path, "rt") as f:
+                lock_key = f.readlines()[0].strip()
+        return lock_key
+
+    def set_default_lock_key(self, lock_key):
+        """
+        Set the default lock key. The lock key must be a non-empty string. The key is saved
+        to a file on disk and loaded each time ``get_default_lock_key()`` method is called.
+
+        Parameters
+        ----------
+        lock_key: str
+            The new lock key.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        IOError
+            Error while saving the lock key to disk or the lock key is invalid.
+        """
+        try:
+            if not lock_key or not isinstance(lock_key, str):
+                raise ValueError(f"'lock_key' must be a non-empty string: lock_key={lock_key!r}")
+            lock_key_path, _ = os.path.split(self._default_lock_key_path)
+            if os.path.exists(lock_key_path):
+                if not os.path.isdir(lock_key_path):
+                    raise IOError(f"Path {lock_key_path!r} exists, but it is not a directory")
+            else:
+                os.makedirs(lock_key_path, exist_ok=True)
+            with open(self._default_lock_key_path, "wt") as f:
+                f.write(lock_key)
+        except Exception as ex:
+            raise IOError(f"Failed to save the default lock key: {ex}") from ex
+
+    @property
+    def lock_key(self):
+        return self._lock_key
+
+    @lock_key.setter
+    def lock_key(self, lock_key):
+        self._validate_lock_key(lock_key)
+        self._lock_key = lock_key
+
+    @property
+    def enable_locked_api(self):
+        return self._enable_locked_api
+
+    @enable_locked_api.setter
+    def enable_locked_api(self, enable_locked_api):
+        if not self.lock_key:
+            raise RuntimeError("Failed to enable locked API: lock key is not set")
+        self._enable_locked_api = bool(enable_locked_api)
