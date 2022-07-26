@@ -644,7 +644,7 @@ class API_Base:
         if not lock_key:
             raise RuntimeError("Failed to format the 'lock' request: Lock key is not set")
 
-        if not isinstance(note, (str, None)):
+        if not isinstance(note, (str, type(None))):
             raise ValueError(f"Parameter 'note' must be a string or None: note={note!r}")
         environment, queue = bool(environment), bool(queue)
 
@@ -671,13 +671,8 @@ class API_Base:
         return {"lock_key": lock_key}
 
     def _prepare_lock_info(self, *, lock_key):
-        # Lock key may be None. Use self.lock_key in this case.
+        # Lock key may be None.
         self._validate_lock_key(lock_key)
-        if not lock_key:
-            lock_key = self.lock_key
-        if not lock_key:
-            raise RuntimeError("Failed to format the 'lock_info' request: Lock key is not set")
-
         return {"lock_key": lock_key}
 
     def _process_response_lock_info(self, response):

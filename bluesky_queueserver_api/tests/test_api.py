@@ -3508,3 +3508,205 @@ def test_lock_key_1(library, protocol):
             await RM.close()
 
         asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("use_current_lock_key, set_note", [
+    (False, False),
+    (True, False),
+    (True, True),
+])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+# @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+@pytest.mark.parametrize("protocol", ["ZMQ"])
+# fmt: on
+def test_lock_1(re_manager, library, protocol, use_current_lock_key, set_note):  # noqa: F811
+    """
+    ``lock``, ``lock_environment``, ``lock_queue``, ``lock_all``, ``unlock``, ``lock_info``: basic tests
+    Call the API with all valid combinations of parameters.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    lock_key = "abc"
+    note = "This is a note ..."
+
+    def check_lock(status, environment, queue):
+        assert status["lock"]["environment"] == environment
+        assert status["lock"]["queue"] == queue
+
+    def check_lock_info(lock_info_response, environment, queue):
+        assert lock_info_response["success"] is True
+        assert lock_info_response["msg"] == ""
+        lock_info = lock_info_response["lock_info"]
+        assert lock_info["environment"] == environment
+        assert lock_info["queue"] == queue
+        assert lock_info["note"] == (note if set_note else None)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        if use_current_lock_key:
+            RM.lock_key = lock_key
+            param_key = {}
+        else:
+            param_key = {"lock_key": lock_key}
+        param_note = {"note": note} if set_note else {}
+
+        RM.lock(environment=True, **param_key, **param_note)
+        check_lock(RM.status(), True, False)
+        check_lock_info(RM.lock_info(**param_key), True, False)
+        RM.lock(queue=True, **param_key, **param_note)
+        check_lock(RM.status(), False, True)
+        check_lock_info(RM.lock_info(**param_key), False, True)
+        RM.lock(environment=True, queue=True, **param_key, **param_note)
+        check_lock(RM.status(), True, True)
+        check_lock_info(RM.lock_info(**param_key), True, True)
+
+        RM.lock_environment(**param_key, **param_note)
+        check_lock(RM.status(), True, False)
+        check_lock_info(RM.lock_info(**param_key), True, False)
+        RM.lock_queue(**param_key, **param_note)
+        check_lock(RM.status(), False, True)
+        check_lock_info(RM.lock_info(**param_key), False, True)
+        RM.lock_all(**param_key, **param_note)
+        check_lock(RM.status(), True, True)
+        check_lock_info(RM.lock_info(**param_key), True, True)
+
+        RM.unlock(**param_key)
+        check_lock(RM.status(), False, False)
+
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            if use_current_lock_key:
+                RM.lock_key = lock_key
+                param_key = {}
+            else:
+                param_key = {"lock_key": lock_key}
+            param_note = {"note": note} if set_note else {}
+
+            await RM.lock(environment=True, **param_key, **param_note)
+            check_lock(await RM.status(), True, False)
+            check_lock_info(await RM.lock_info(**param_key), True, False)
+            await RM.lock(queue=True, **param_key, **param_note)
+            check_lock(await RM.status(), False, True)
+            check_lock_info(await RM.lock_info(**param_key), False, True)
+            await RM.lock(environment=True, queue=True, **param_key, **param_note)
+            check_lock(await RM.status(), True, True)
+            check_lock_info(await RM.lock_info(**param_key), True, True)
+
+            await RM.lock_environment(**param_key, **param_note)
+            check_lock(await RM.status(), True, False)
+            check_lock_info(await RM.lock_info(**param_key), True, False)
+            await RM.lock_queue(**param_key, **param_note)
+            check_lock(await RM.status(), False, True)
+            check_lock_info(await RM.lock_info(**param_key), False, True)
+            await RM.lock_all(**param_key, **param_note)
+            check_lock(await RM.status(), True, True)
+            check_lock_info(await RM.lock_info(**param_key), True, True)
+
+            await RM.unlock(**param_key)
+            check_lock(await RM.status(), False, False)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+# @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+@pytest.mark.parametrize("protocol", ["ZMQ"])
+# fmt: on
+def test_lock_2(re_manager, library, protocol):  # noqa: F811
+    """
+    ``lock``, ``lock_environment``, ``lock_queue``, ``lock_all``, ``unlock``, ``lock_info``:
+    Test some edge cases and invalid parameter values.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    lock_key = "abc"
+
+    def check_lock(status, environment, queue):
+        assert status["lock"]["environment"] == environment
+        assert status["lock"]["queue"] == queue
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        # No lock option is selected.
+        with pytest.raises(RM.RequestFailedError, match="environment and/or queue must be selected"):
+            RM.lock(lock_key=lock_key)
+
+        # Current lock key is not set. Try to apply lock without the lock key.
+        with pytest.raises(RuntimeError, match="Lock key is not set"):
+            RM.lock(environment=True)
+        check_lock(RM.status(), False, False)
+
+        # Invalid type of the lock key
+        with pytest.raises(ValueError, match="'lock_key' must be non-empty string or None"):
+            RM.lock(environment=True, lock_key=10)
+        check_lock(RM.status(), False, False)
+
+        # Lock the manager
+        RM.lock(environment=True, lock_key=lock_key)
+        check_lock(RM.status(), True, False)
+
+        # Test validation of the lock key
+        RM.lock_info(lock_key=lock_key)
+        with pytest.raises(RM.RequestFailedError, match="Invalid lock key"):
+            RM.lock_info(lock_key="invalid-key")
+
+        # Try to unlock with invalid key
+        with pytest.raises(ValueError, match="'lock_key' must be non-empty string or None"):
+            RM.unlock(lock_key=10)
+        with pytest.raises(RM.RequestFailedError, match="Invalid lock key"):
+            RM.unlock(lock_key="invalid-key")
+
+        RM.unlock(lock_key=lock_key)
+        check_lock(RM.status(), False, False)
+
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            # No lock option is selected.
+            with pytest.raises(RM.RequestFailedError, match="environment and/or queue must be selected"):
+                await RM.lock(lock_key=lock_key)
+
+            # Current lock key is not set. Try to apply lock without the lock key.
+            with pytest.raises(RuntimeError, match="Lock key is not set"):
+                await RM.lock(environment=True)
+            check_lock(await RM.status(), False, False)
+
+            # Invalid type of the lock key
+            with pytest.raises(ValueError, match="'lock_key' must be non-empty string or None"):
+                await RM.lock(environment=True, lock_key=10)
+            check_lock(await RM.status(), False, False)
+
+            # Lock the manager
+            await RM.lock(environment=True, lock_key=lock_key)
+            check_lock(await RM.status(), True, False)
+
+            # Test validation of the lock key
+            await RM.lock_info(lock_key=lock_key)
+            with pytest.raises(RM.RequestFailedError, match="Invalid lock key"):
+                await RM.lock_info(lock_key="invalid-key")
+
+            # Try to unlock with invalid key
+            with pytest.raises(ValueError, match="'lock_key' must be non-empty string or None"):
+                await RM.unlock(lock_key=10)
+            with pytest.raises(RM.RequestFailedError, match="Invalid lock key"):
+                await RM.unlock(lock_key="invalid-key")
+
+            await RM.unlock(lock_key=lock_key)
+
+            check_lock(await RM.status(), False, False)
+
+            await RM.close()
+
+        asyncio.run(testing())

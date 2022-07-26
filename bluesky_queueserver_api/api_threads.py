@@ -580,7 +580,8 @@ class API_Threads_Mixin(API_Base):
         # Docstring is maintained separately
         status = self._status(reload=reload)
         lock_info_uid = status["lock_info_uid"]
-        if lock_info_uid != self._current_lock_info_uid:
+        # If lock key is specified, then always send the request
+        if (lock_info_uid != self._current_lock_info_uid) or (lock_key is not None):
             request_params = self._prepare_lock_info(lock_key=lock_key)
             response = self.send_request(method="lock_info", params=request_params)
             self._process_response_lock_info(response)
