@@ -720,6 +720,12 @@ class API_Base:
         or the method parameter ``new_key`` is ``True``, then the new key is generated and saved to file.
         A specific default key may be manually set and saved to file using ``set_default_lock_key()`` API.
 
+        The default lock key is used for storage of the key so that it could be reused between
+        sessions. The default key is not used directly by other API. Typically the initialization
+        script for the session should initialize the current lock key with the default lock key::
+
+          RM.lock_key = RM.get_default_lock_key()
+
         Parameters
         ----------
         new_key: boolean
@@ -742,6 +748,7 @@ class API_Base:
         """
         Set the default lock key. The lock key must be a non-empty string. The key is saved
         to a file on disk and loaded each time ``get_default_lock_key()`` method is called.
+        See the description for ``get_default_lock_key()`` for more information.
 
         Parameters
         ----------
@@ -773,19 +780,49 @@ class API_Base:
 
     @property
     def lock_key(self):
+        """
+        Get/set current lock key. The current lock key is used for locking/unlocking RE Manager
+        unless the key is explicitly passed as ``lock_key`` parameter. The current key is also
+        passed with other API if locked API are enabled (``enable_locked_api`` is ``True``).
+        Setting the current lock key to ``None`` clears the lock key and disables access to
+        locked API. A valid current lock key must be set before access to locked API is enabled.
+
+        Raises
+        ------
+        ValueError
+            Invalid lock key. The key must be a non-empty string or ``None``.
+        """
         return self._lock_key
 
     @lock_key.setter
     def lock_key(self, lock_key):
         self._validate_lock_key(lock_key)
+        if not lock_key:
+            self.enable_locked_api = False
         self._lock_key = lock_key
 
     @property
     def enable_locked_api(self):
+        """
+        Enable/disable access to locked API. When access to locked API is enabled, the current
+        lock key (``RM.lock_key``) is automatically sent with API requests. The locked API
+        may be called without enabling automatic access by explicitly sending the lock key
+        with each request. A valid current lock key must be set before access could be enabled.
+        The access is disabled when the lock key is cleared.
+
+        Raises
+        ------
+        TypeError
+            Attempt to set to a value of non-boolean type.
+        RuntimeError
+            Current lock key is not set.
+        """
         return self._enable_locked_api
 
     @enable_locked_api.setter
     def enable_locked_api(self, enable_locked_api):
+        if not isinstance(enable_locked_api, bool):
+            raise TypeError("The property may be set only to boolean values")
         if not self.lock_key:
-            raise RuntimeError("Failed to enable locked API: lock key is not set")
-        self._enable_locked_api = bool(enable_locked_api)
+            raise RuntimeError("Failed to enable locked API: current lock key is not set")
+        self._enable_locked_api = enable_locked_api

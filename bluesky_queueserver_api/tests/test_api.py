@@ -3457,3 +3457,54 @@ def test_default_lock_key_1(tmp_path, library, protocol):
             await RM.close()
 
         asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_lock_key_1(library, protocol):
+    """
+    ``lock_key`` and ``enable_locked_api``: basic tests
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def run_test(RM):
+        # The test is the same for sync and async version.
+
+        assert RM.lock_key is None
+
+        with pytest.raises(ValueError, match="'lock_key' must be non-empty string or None"):
+            RM.lock_key = ""
+        assert RM.lock_key is None
+
+        RM.lock_key = "abc"
+        assert RM.lock_key == "abc"
+
+        assert RM.enable_locked_api is False
+        RM.enable_locked_api = True
+        assert RM.enable_locked_api is True
+
+        with pytest.raises(TypeError, match="The property may be set only to boolean values"):
+            RM.enable_locked_api = 10
+
+        RM.lock_key = None
+        assert RM.enable_locked_api is False
+
+        with pytest.raises(RuntimeError, match="current lock key is not set"):
+            RM.enable_locked_api = True
+        assert RM.enable_locked_api is False
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+        run_test(RM)
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+            run_test(RM)
+            await RM.close()
+
+        asyncio.run(testing())
