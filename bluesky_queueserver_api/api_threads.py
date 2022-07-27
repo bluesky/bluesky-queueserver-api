@@ -294,47 +294,69 @@ class API_Threads_Mixin(API_Base):
     # =====================================================================================
     #                 API for monitoring and control of Queue
 
-    def item_add(self, item, *, pos=None, before_uid=None, after_uid=None, user=None, user_group=None):
+    def item_add(
+        self, item, *, pos=None, before_uid=None, after_uid=None, user=None, user_group=None, lock_key=None
+    ):
         # Docstring is maintained separately
         request_params = self._prepare_item_add(
-            item=item, pos=pos, before_uid=before_uid, after_uid=after_uid, user=user, user_group=user_group
+            item=item,
+            pos=pos,
+            before_uid=before_uid,
+            after_uid=after_uid,
+            user=user,
+            user_group=user_group,
+            lock_key=lock_key,
         )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_add", params=request_params)
 
-    def item_add_batch(self, items, *, pos=None, before_uid=None, after_uid=None, user=None, user_group=None):
+    def item_add_batch(
+        self, items, *, pos=None, before_uid=None, after_uid=None, user=None, user_group=None, lock_key=None
+    ):
         # Docstring is maintained separately
         request_params = self._prepare_item_add_batch(
-            items=items, pos=pos, before_uid=before_uid, after_uid=after_uid, user=user, user_group=user_group
+            items=items,
+            pos=pos,
+            before_uid=before_uid,
+            after_uid=after_uid,
+            user=user,
+            user_group=user_group,
+            lock_key=lock_key,
         )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_add_batch", params=request_params)
 
-    def item_update(self, item, *, replace=None, user=None, user_group=None):
+    def item_update(self, item, *, replace=None, user=None, user_group=None, lock_key=None):
         # Docstring is maintained separately
-        request_params = self._prepare_item_update(item=item, replace=replace, user=user, user_group=user_group)
+        request_params = self._prepare_item_update(
+            item=item, replace=replace, user=user, user_group=user_group, lock_key=lock_key
+        )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_update", params=request_params)
 
-    def item_remove(self, *, pos=None, uid=None):
-        request_params = self._prepare_item_get_remove(pos=pos, uid=uid)
+    def item_remove(self, *, pos=None, uid=None, lock_key=None):
+        request_params = self._prepare_item_remove(pos=pos, uid=uid, lock_key=lock_key)
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_remove", params=request_params)
 
-    def item_remove_batch(self, *, uids, ignore_missing=None):
-        request_params = self._prepare_item_remove_batch(uids=uids, ignore_missing=ignore_missing)
+    def item_remove_batch(self, *, uids, ignore_missing=None, lock_key=None):
+        request_params = self._prepare_item_remove_batch(
+            uids=uids, ignore_missing=ignore_missing, lock_key=lock_key
+        )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_remove_batch", params=request_params)
 
-    def item_move(self, *, pos=None, uid=None, pos_dest=None, before_uid=None, after_uid=None):
+    def item_move(self, *, pos=None, uid=None, pos_dest=None, before_uid=None, after_uid=None, lock_key=None):
         # Docstring is maintained separately
         request_params = self._prepare_item_move(
-            pos=pos, uid=uid, pos_dest=pos_dest, before_uid=before_uid, after_uid=after_uid
+            pos=pos, uid=uid, pos_dest=pos_dest, before_uid=before_uid, after_uid=after_uid, lock_key=lock_key
         )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_move", params=request_params)
 
-    def item_move_batch(self, *, uids=None, pos_dest=None, before_uid=None, after_uid=None, reorder=None):
+    def item_move_batch(
+        self, *, uids=None, pos_dest=None, before_uid=None, after_uid=None, reorder=None, lock_key=None
+    ):
         # Docstring is maintained separately
         request_params = self._prepare_item_move_batch(
             uids=uids,
@@ -342,12 +364,13 @@ class API_Threads_Mixin(API_Base):
             before_uid=before_uid,
             after_uid=after_uid,
             reorder=reorder,
+            lock_key=lock_key,
         )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_move_batch", params=request_params)
 
     def item_get(self, *, pos=None, uid=None):
-        request_params = self._prepare_item_get_remove(pos=pos, uid=uid)
+        request_params = self._prepare_item_get(pos=pos, uid=uid)
         return self.send_request(method="queue_item_get", params=request_params)
 
     def item_execute(self, item, *, user=None, user_group=None):
@@ -386,10 +409,11 @@ class API_Threads_Mixin(API_Base):
         self._clear_status_timestamp()
         return self.send_request(method="queue_stop_cancel")
 
-    def queue_clear(self):
+    def queue_clear(self, *, lock_key):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="queue_clear")
+        request_params = self._prepare_queue_clear(lock_key=lock_key)
+        return self.send_request(method="queue_clear", params=request_params)
 
     def queue_mode_set(self, **kwargs):
         # Docstring is maintained separately
@@ -419,10 +443,11 @@ class API_Threads_Mixin(API_Base):
             response = self._generate_response_history_get()
         return response
 
-    def history_clear(self):
+    def history_clear(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="history_clear")
+        request_params = self._prepare_history_clear(lock_key=lock_key)
+        return self.send_request(method="history_clear", params=request_params)
 
     def plans_allowed(self, *, reload=False, user_group=None):
         # Docstring is maintained separately
@@ -476,10 +501,10 @@ class API_Threads_Mixin(API_Base):
             response = self._generate_response_devices_existing()
         return response
 
-    def permissions_reload(self, *, restore_plans_devices=None, restore_permissions=None):
+    def permissions_reload(self, *, restore_plans_devices=None, restore_permissions=None, lock_key=None):
         # Docstring is maintained separately
         request_params = self._prepare_permissions_reload(
-            restore_plans_devices=restore_plans_devices, restore_permissions=restore_permissions
+            restore_plans_devices=restore_plans_devices, restore_permissions=restore_permissions, lock_key=lock_key
         )
         self._clear_status_timestamp()
         return self.send_request(method="permissions_reload", params=request_params)
@@ -488,9 +513,11 @@ class API_Threads_Mixin(API_Base):
         # Docstring is maintained separately
         return self.send_request(method="permissions_get")
 
-    def permissions_set(self, user_group_permissions):
+    def permissions_set(self, user_group_permissions, *, lock_key=None):
         # Docstring is maintained separately
-        request_params = self._prepare_permissions_set(user_group_permissions=user_group_permissions)
+        request_params = self._prepare_permissions_set(
+            user_group_permissions=user_group_permissions, lock_key=lock_key
+        )
         self._clear_status_timestamp()
         return self.send_request(method="permissions_set", params=request_params)
 
