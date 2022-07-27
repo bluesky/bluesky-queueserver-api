@@ -392,7 +392,7 @@ class API_Base:
         self._add_lock_key(request_params, lock_key)
         return request_params
 
-    def _prepare_item_execute(self, *, item, user, user_group):
+    def _prepare_item_execute(self, *, item, user, user_group, lock_key):
         """
         Prepare parameters for ``item_execute`` operation.
         """
@@ -403,6 +403,7 @@ class API_Base:
 
         request_params = {"item": item}
         self._request_params_add_user_info(request_params, user=user, user_group=user_group)
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
     def _prepare_history_clear(self, *, lock_key):
@@ -596,7 +597,15 @@ class API_Base:
         self._add_lock_key(request_params, lock_key)
         return request_params
 
-    def _prepare_script_upload(self, *, script, update_lists, update_re, run_in_background):
+    def _prepare_environment_control(self, *, lock_key):
+        """
+        Prepare parameters for generic API for environment control which accepts only 'lock_key'``
+        """
+        request_params = {}
+        self._add_lock_key(request_params, lock_key)
+        return request_params
+
+    def _prepare_script_upload(self, *, script, update_lists, update_re, run_in_background, lock_key):
         """
         Prepare parameters for ``script_upload``
         """
@@ -604,9 +613,10 @@ class API_Base:
         self._add_request_param(request_params, "update_lists", update_lists)
         self._add_request_param(request_params, "update_re", update_re)
         self._add_request_param(request_params, "run_in_background", run_in_background)
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
-    def _prepare_function_execute(self, *, item, run_in_background, user, user_group):
+    def _prepare_function_execute(self, *, item, run_in_background, user, user_group, lock_key):
         """
         Prepare parameters for ``script_upload``
         """
@@ -618,6 +628,7 @@ class API_Base:
         request_params = {"item": item}
         self._add_request_param(request_params, "run_in_background", run_in_background)
         self._request_params_add_user_info(request_params, user=user, user_group=user_group)
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
     def _prepare_task_result(self, *, task_uid):
@@ -670,12 +681,13 @@ class API_Base:
         }
         return response
 
-    def _prepare_re_pause(self, *, option):
+    def _prepare_re_pause(self, *, option, lock_key):
         """
         Prepare parameters for ``re_pause`` operation
         """
         request_params = {}
         self._add_request_param(request_params, "option", option)
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
     def _validate_lock_key(self, lock_key):
