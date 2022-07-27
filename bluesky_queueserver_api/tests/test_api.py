@@ -6,6 +6,7 @@ import threading
 import time as ttime
 from pathlib import Path
 import os
+import pprint
 
 from .common import re_manager, re_manager_cmd  # noqa: F401
 from .common import fastapi_server, fastapi_server_fs  # noqa: F401
@@ -3703,6 +3704,87 @@ def test_lock_2(re_manager, fastapi_server, library, protocol):  # noqa: F811
 
             await RM.unlock(lock_key=lock_key)
 
+            check_lock(await RM.status(), False, False)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("pass_user_name_as_param", [False, True])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_lock_3(re_manager, fastapi_server, library, protocol, pass_user_name_as_param):  # noqa: F811
+    """
+    ``lock``, ``lock_environment``, ``lock_queue``, ``lock_all``: test proper handling of user name.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    lock_key = "abc"
+
+    user1, user2 = "lock-test-user1", "lock-test-user2"
+    param = {"user": user2} if pass_user_name_as_param else {}
+
+    def check_lock(status, environment, queue):
+        assert status["lock"]["environment"] == environment
+        assert status["lock"]["queue"] == queue
+
+    def check_user_name(lock_info):
+        user_expected = user2 if pass_user_name_as_param else user1
+        if protocol != "HTTP":
+            assert lock_info["user"] == user_expected, pprint.pformat(lock_info)
+        else:
+            assert lock_info["user"] != user_expected, pprint.pformat(lock_info)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+        RM.user = user1
+
+        resp = RM.lock(environment=True, lock_key=lock_key, **param)
+        check_lock(RM.status(), True, False)
+        check_user_name(resp["lock_info"])
+
+        resp = RM.lock_queue(lock_key=lock_key, **param)
+        check_lock(RM.status(), False, True)
+        check_user_name(resp["lock_info"])
+
+        resp = RM.lock_environment(lock_key=lock_key, **param)
+        check_lock(RM.status(), True, False)
+        check_user_name(resp["lock_info"])
+
+        resp = RM.lock_all(lock_key=lock_key, **param)
+        check_lock(RM.status(), True, True)
+        check_user_name(resp["lock_info"])
+
+        RM.unlock(lock_key=lock_key)
+        check_lock(RM.status(), False, False)
+
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+            RM.user = user1
+
+            resp = await RM.lock(environment=True, lock_key=lock_key, **param)
+            check_lock(await RM.status(), True, False)
+            check_user_name(resp["lock_info"])
+
+            resp = await RM.lock_queue(lock_key=lock_key, **param)
+            check_lock(await RM.status(), False, True)
+            check_user_name(resp["lock_info"])
+
+            resp = await RM.lock_environment(lock_key=lock_key, **param)
+            check_lock(await RM.status(), True, False)
+            check_user_name(resp["lock_info"])
+
+            resp = await RM.lock_all(lock_key=lock_key, **param)
+            check_lock(await RM.status(), True, True)
+            check_user_name(resp["lock_info"])
+
+            await RM.unlock(lock_key=lock_key)
             check_lock(await RM.status(), False, False)
 
             await RM.close()
