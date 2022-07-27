@@ -3800,100 +3800,148 @@ def test_lock_3(re_manager, fastapi_server, library, protocol, pass_user_name_as
     ({"queue": True}, True),  # Queue is locked
     ({"environment": True, "queue": True}, True),  # Queue is locked
 ])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
-def test_zmq_api_lock_4(re_manager, lock_options, is_locked, unlock_with_param):  # noqa: F811
+def test_zmq_api_lock_4(
+    re_manager, fastapi_server, lock_options, is_locked, unlock_with_param, library, protocol  # noqa: F811
+):
     """
-    ``lock`` API: check that the appropriate API are locked while the queue is locked
+    ``lock`` API: check the API for queue control are properly locked and unlocked
     """
     rm_api_class = _select_re_manager_api(protocol, library)
     lock_key = "custom-key"
 
-    unlock_params = {"lock_key": lock_key} if unlock_with_param else {}
-
+    unlock_params = {"lock_key": lock_key} if unlock_with_param is True else {}
     plan3 = BPlan("count", ["det1", "det2"], num=5, delay=1)
 
-    # Add 4 plans to the queue
-    params = {"items": [_plan1, _plan2, _plan3, _plan4], "user": _user, "user_group": _user_group}
-    resp0, _ = zmq_single_request("queue_item_add_batch", params=params)
-    assert resp0["success"] is True
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+        if unlock_with_param is False:
+            RM.lock_key = lock_key
+            RM.enable_locked_api = True
+        else:
+            RM.lock_key = "invalid-key"
 
-    # def check_reply(reply):
-    #     success = not is_locked or unlock
-    #     assert reply["success"] is success, f"resp={reply}"
-    #     if success:
-    #         assert reply["msg"] == "", f"resp={reply}"
-    #     else:
-    #         assert "Invalid lock key" in reply["msg"], f"resp={reply}"
+        # Add 4 plans to the queue
+        resp0 = RM.item_add_batch(items=[plan3, plan3, plan3, plan3])
+        assert resp0["success"] is True
 
-    # if lock_options:
-    #     params = {**lock_options, "lock_key": custom_key, "user": _user}
-    #     resp1, _ = zmq_single_request("lock", params=params)
-    #     assert resp1["success"] is True, f"resp={resp1}"
+        def call_api(method_name, *args, **kwargs):
+            success_expected = not is_locked or (unlock_with_param is not None)
+            if success_expected:
+                return getattr(RM, method_name)(*args, **kwargs)
+            else:
+                with pytest.raises(RM.RequestFailedError, match="Invalid lock key"):
+                    getattr(RM, method_name)(*args, **kwargs)
 
-    # # API for uploading permissions
-    # resp2, _ = zmq_single_request("permissions_reload", params={**unlock_params})
-    # check_reply(resp2)
+        if lock_options:
+            RM.lock(**lock_options, lock_key=lock_key)
 
-    # resp3, _ = zmq_single_request("permissions_get")
-    # permissions = resp3["user_group_permissions"]
+        # API for uploading permissions
+        call_api("permissions_reload", **unlock_params)
+        resp = RM.permissions_get()
+        permissions = resp["user_group_permissions"]
+        call_api("permissions_set", user_group_permissions=permissions, **unlock_params)
 
-    # params = {"user_group_permissions": permissions, **unlock_params}
-    # resp4, _ = zmq_single_request("permissions_set", params=params)
-    # check_reply(resp4)
+        # Setting queue mode
+        call_api("queue_mode_set", mode={"loop": False}, **unlock_params)
 
-    # # Setting queue mode
-    # params = {"mode": {"loop": False}, **unlock_params}
-    # resp5, _ = zmq_single_request("queue_mode_set", params=params)
-    # check_reply(resp5)
+        # Adding items to the queue
+        call_api("item_add", item=plan3, **unlock_params)
+        call_api("item_add_batch", items=[plan3, plan3, plan3], **unlock_params)
 
-    # # Adding items to the queue
-    # params = {"item": _plan1, "user": _user, "user_group": _user_group, **unlock_params}
-    # resp6, _ = zmq_single_request("queue_item_add", params=params)
-    # check_reply(resp6)
+        # Read the plan queue
+        resp = RM.queue_get()
+        plan_queue = resp["items"]
+        assert len(plan_queue) >= 4  # It must contain at least 4 plans
 
-    # params = {"items": [_plan2, _plan3, _plan4], "user": _user, "user_group": _user_group, **unlock_params}
-    # resp7, _ = zmq_single_request("queue_item_add_batch", params=params)
-    # check_reply(resp7)
+        # Updating a queue item
+        plan = plan_queue[0]
+        call_api("item_update", item=plan, **unlock_params)
 
-    # # Read the plan queue
-    # resp8, _ = zmq_single_request("queue_get")
-    # assert resp8["success"] is True
-    # plan_queue = resp8["items"]
-    # assert len(plan_queue) >= 4  # It must contain at least 4 plans
+        # Move queue items
+        call_api("item_move", pos=0, pos_dest=1, **unlock_params)
+        uids = [_["item_uid"] for _ in plan_queue[2:4]]
+        call_api("item_move_batch", uids=uids, pos_dest="front", **unlock_params)
 
-    # # Updating a queue item
-    # plan = plan_queue[0]
-    # params = {"item": plan, "user": _user, "user_group": _user_group, **unlock_params}
-    # resp9, _ = zmq_single_request("queue_item_update", params=params)
-    # check_reply(resp9)
+        # Remove queue items
+        call_api("item_remove", pos=3, **unlock_params)
+        call_api("item_remove_batch", uids=uids, **unlock_params)
 
-    # # Move queue items
-    # params = {"pos": 0, "pos_dest": 1, **unlock_params}
-    # resp10, _ = zmq_single_request("queue_item_move", params=params)
-    # check_reply(resp10)
+        # Clearing the history and the queue
+        call_api("history_clear", **unlock_params)
+        call_api("queue_clear", **unlock_params)
 
-    # uids = [_["item_uid"] for _ in plan_queue[2:4]]
-    # params = {"uids": uids, "pos_dest": "front", **unlock_params}
-    # resp11, _ = zmq_single_request("queue_item_move_batch", params=params)
-    # check_reply(resp11)
+        RM.unlock(lock_key=lock_key)
 
-    # # Remove queue items
-    # params = {"pos": 3, **unlock_params}
-    # resp12, _ = zmq_single_request("queue_item_remove", params=params)
-    # check_reply(resp12)
+        RM.close()
+    else:
 
-    # params = {"uids": uids, **unlock_params}
-    # resp13, _ = zmq_single_request("queue_item_remove_batch", params=params)
-    # check_reply(resp13)
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
 
-    # # Clearing the history and the queue
-    # resp14, _ = zmq_single_request("history_clear", params={**unlock_params})
-    # check_reply(resp14)
-    # resp15, _ = zmq_single_request("queue_clear", params={**unlock_params})
-    # check_reply(resp15)
+            if unlock_with_param is False:
+                RM.lock_key = lock_key
+                RM.enable_locked_api = True
+            else:
+                RM.lock_key = "invalid-key"
 
-    # resp99, _ = zmq_single_request("unlock", params={"lock_key": custom_key})
-    # assert resp99["success"] is True, f"resp={resp99}"
+            # Add 4 plans to the queue
+            resp0 = await RM.item_add_batch(items=[plan3, plan3, plan3, plan3])
+            assert resp0["success"] is True
+
+            async def call_api(method_name, *args, **kwargs):
+                success_expected = not is_locked or (unlock_with_param is not None)
+                if success_expected:
+                    return await getattr(RM, method_name)(*args, **kwargs)
+                else:
+                    with pytest.raises(RM.RequestFailedError, match="Invalid lock key"):
+                        await getattr(RM, method_name)(*args, **kwargs)
+
+            if lock_options:
+                await RM.lock(**lock_options, lock_key=lock_key)
+
+            # API for uploading permissions
+            await call_api("permissions_reload", **unlock_params)
+            resp = await RM.permissions_get()
+            permissions = resp["user_group_permissions"]
+            await call_api("permissions_set", user_group_permissions=permissions, **unlock_params)
+
+            # Setting queue mode
+            await call_api("queue_mode_set", mode={"loop": False}, **unlock_params)
+
+            # Adding items to the queue
+            await call_api("item_add", item=plan3, **unlock_params)
+            await call_api("item_add_batch", items=[plan3, plan3, plan3], **unlock_params)
+
+            # Read the plan queue
+            resp = await RM.queue_get()
+            plan_queue = resp["items"]
+            assert len(plan_queue) >= 4  # It must contain at least 4 plans
+
+            # Updating a queue item
+            plan = plan_queue[0]
+            await call_api("item_update", item=plan, **unlock_params)
+
+            # Move queue items
+            await call_api("item_move", pos=0, pos_dest=1, **unlock_params)
+            uids = [_["item_uid"] for _ in plan_queue[2:4]]
+            await call_api("item_move_batch", uids=uids, pos_dest="front", **unlock_params)
+
+            # Remove queue items
+            await call_api("item_remove", pos=3, **unlock_params)
+            await call_api("item_remove_batch", uids=uids, **unlock_params)
+
+            # Clearing the history and the queue
+            await call_api("history_clear", **unlock_params)
+            await call_api("queue_clear", **unlock_params)
+
+            await RM.unlock(lock_key=lock_key)
+
+            await RM.close()
+
+        asyncio.run(testing())
 
 
 # # fmt: off
@@ -3999,4 +4047,3 @@ def test_zmq_api_lock_4(re_manager, lock_options, is_locked, unlock_with_param):
 
 #     resp99, _ = zmq_single_request("unlock", params={"lock_key": custom_key})
 #     assert resp99["success"] is True, f"resp={resp99}"
-

@@ -275,7 +275,7 @@ class API_Base:
         If ``lock_key`` is None, then try to use the 'current' lock key.
         If the passed and 'current' lock key is None, then do not add the key.
         """
-        self.validate_lock_key(lock_key)
+        self._validate_lock_key(lock_key)
         if not lock_key and self._enable_locked_api:
             lock_key = self._lock_key
         if lock_key:

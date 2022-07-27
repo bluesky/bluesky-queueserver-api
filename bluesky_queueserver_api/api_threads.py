@@ -415,7 +415,7 @@ class API_Threads_Mixin(API_Base):
         request_params = self._prepare_environment_control(lock_key=lock_key)
         return self.send_request(method="queue_stop_cancel", params=request_params)
 
-    def queue_clear(self, *, lock_key):
+    def queue_clear(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
         request_params = self._prepare_queue_clear(lock_key=lock_key)
