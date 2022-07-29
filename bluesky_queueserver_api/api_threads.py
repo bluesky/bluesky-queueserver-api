@@ -47,6 +47,12 @@ from .api_docstrings import (
     _doc_api_re_stop,
     _doc_api_re_abort,
     _doc_api_re_halt,
+    _doc_api_lock,
+    _doc_api_lock_environment,
+    _doc_api_lock_queue,
+    _doc_api_lock_all,
+    _doc_api_lock_info,
+    _doc_api_unlock,
 )
 
 
@@ -294,47 +300,69 @@ class API_Threads_Mixin(API_Base):
     # =====================================================================================
     #                 API for monitoring and control of Queue
 
-    def item_add(self, item, *, pos=None, before_uid=None, after_uid=None, user=None, user_group=None):
+    def item_add(
+        self, item, *, pos=None, before_uid=None, after_uid=None, user=None, user_group=None, lock_key=None
+    ):
         # Docstring is maintained separately
         request_params = self._prepare_item_add(
-            item=item, pos=pos, before_uid=before_uid, after_uid=after_uid, user=user, user_group=user_group
+            item=item,
+            pos=pos,
+            before_uid=before_uid,
+            after_uid=after_uid,
+            user=user,
+            user_group=user_group,
+            lock_key=lock_key,
         )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_add", params=request_params)
 
-    def item_add_batch(self, items, *, pos=None, before_uid=None, after_uid=None, user=None, user_group=None):
+    def item_add_batch(
+        self, items, *, pos=None, before_uid=None, after_uid=None, user=None, user_group=None, lock_key=None
+    ):
         # Docstring is maintained separately
         request_params = self._prepare_item_add_batch(
-            items=items, pos=pos, before_uid=before_uid, after_uid=after_uid, user=user, user_group=user_group
+            items=items,
+            pos=pos,
+            before_uid=before_uid,
+            after_uid=after_uid,
+            user=user,
+            user_group=user_group,
+            lock_key=lock_key,
         )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_add_batch", params=request_params)
 
-    def item_update(self, item, *, replace=None, user=None, user_group=None):
+    def item_update(self, item, *, replace=None, user=None, user_group=None, lock_key=None):
         # Docstring is maintained separately
-        request_params = self._prepare_item_update(item=item, replace=replace, user=user, user_group=user_group)
+        request_params = self._prepare_item_update(
+            item=item, replace=replace, user=user, user_group=user_group, lock_key=lock_key
+        )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_update", params=request_params)
 
-    def item_remove(self, *, pos=None, uid=None):
-        request_params = self._prepare_item_get_remove(pos=pos, uid=uid)
+    def item_remove(self, *, pos=None, uid=None, lock_key=None):
+        request_params = self._prepare_item_remove(pos=pos, uid=uid, lock_key=lock_key)
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_remove", params=request_params)
 
-    def item_remove_batch(self, *, uids, ignore_missing=None):
-        request_params = self._prepare_item_remove_batch(uids=uids, ignore_missing=ignore_missing)
+    def item_remove_batch(self, *, uids, ignore_missing=None, lock_key=None):
+        request_params = self._prepare_item_remove_batch(
+            uids=uids, ignore_missing=ignore_missing, lock_key=lock_key
+        )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_remove_batch", params=request_params)
 
-    def item_move(self, *, pos=None, uid=None, pos_dest=None, before_uid=None, after_uid=None):
+    def item_move(self, *, pos=None, uid=None, pos_dest=None, before_uid=None, after_uid=None, lock_key=None):
         # Docstring is maintained separately
         request_params = self._prepare_item_move(
-            pos=pos, uid=uid, pos_dest=pos_dest, before_uid=before_uid, after_uid=after_uid
+            pos=pos, uid=uid, pos_dest=pos_dest, before_uid=before_uid, after_uid=after_uid, lock_key=lock_key
         )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_move", params=request_params)
 
-    def item_move_batch(self, *, uids=None, pos_dest=None, before_uid=None, after_uid=None, reorder=None):
+    def item_move_batch(
+        self, *, uids=None, pos_dest=None, before_uid=None, after_uid=None, reorder=None, lock_key=None
+    ):
         # Docstring is maintained separately
         request_params = self._prepare_item_move_batch(
             uids=uids,
@@ -342,54 +370,62 @@ class API_Threads_Mixin(API_Base):
             before_uid=before_uid,
             after_uid=after_uid,
             reorder=reorder,
+            lock_key=lock_key,
         )
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_move_batch", params=request_params)
 
     def item_get(self, *, pos=None, uid=None):
-        request_params = self._prepare_item_get_remove(pos=pos, uid=uid)
+        request_params = self._prepare_item_get(pos=pos, uid=uid)
         return self.send_request(method="queue_item_get", params=request_params)
 
-    def item_execute(self, item, *, user=None, user_group=None):
+    def item_execute(self, item, *, user=None, user_group=None, lock_key=None):
         # Docstring is maintained separately
-        request_params = self._prepare_item_execute(item=item, user=user, user_group=user_group)
+        request_params = self._prepare_item_execute(item=item, user=user, user_group=user_group, lock_key=lock_key)
         self._clear_status_timestamp()
         return self.send_request(method="queue_item_execute", params=request_params)
 
-    def environment_open(self):
+    def environment_open(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="environment_open")
+        request_params = self._prepare_environment_control(lock_key=lock_key)
+        return self.send_request(method="environment_open", params=request_params)
 
-    def environment_close(self):
+    def environment_close(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="environment_close")
+        request_params = self._prepare_environment_control(lock_key=lock_key)
+        return self.send_request(method="environment_close", params=request_params)
 
-    def environment_destroy(self):
+    def environment_destroy(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="environment_destroy")
+        request_params = self._prepare_environment_control(lock_key=lock_key)
+        return self.send_request(method="environment_destroy", params=request_params)
 
-    def queue_start(self):
+    def queue_start(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="queue_start")
+        request_params = self._prepare_environment_control(lock_key=lock_key)
+        return self.send_request(method="queue_start", params=request_params)
 
-    def queue_stop(self):
+    def queue_stop(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="queue_stop")
+        request_params = self._prepare_environment_control(lock_key=lock_key)
+        return self.send_request(method="queue_stop", params=request_params)
 
-    def queue_stop_cancel(self):
+    def queue_stop_cancel(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="queue_stop_cancel")
+        request_params = self._prepare_environment_control(lock_key=lock_key)
+        return self.send_request(method="queue_stop_cancel", params=request_params)
 
-    def queue_clear(self):
+    def queue_clear(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="queue_clear")
+        request_params = self._prepare_queue_clear(lock_key=lock_key)
+        return self.send_request(method="queue_clear", params=request_params)
 
     def queue_mode_set(self, **kwargs):
         # Docstring is maintained separately
@@ -419,10 +455,11 @@ class API_Threads_Mixin(API_Base):
             response = self._generate_response_history_get()
         return response
 
-    def history_clear(self):
+    def history_clear(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="history_clear")
+        request_params = self._prepare_history_clear(lock_key=lock_key)
+        return self.send_request(method="history_clear", params=request_params)
 
     def plans_allowed(self, *, reload=False, user_group=None):
         # Docstring is maintained separately
@@ -476,10 +513,10 @@ class API_Threads_Mixin(API_Base):
             response = self._generate_response_devices_existing()
         return response
 
-    def permissions_reload(self, *, restore_plans_devices=None, restore_permissions=None):
+    def permissions_reload(self, *, restore_plans_devices=None, restore_permissions=None, lock_key=None):
         # Docstring is maintained separately
         request_params = self._prepare_permissions_reload(
-            restore_plans_devices=restore_plans_devices, restore_permissions=restore_permissions
+            restore_plans_devices=restore_plans_devices, restore_permissions=restore_permissions, lock_key=lock_key
         )
         self._clear_status_timestamp()
         return self.send_request(method="permissions_reload", params=request_params)
@@ -488,24 +525,30 @@ class API_Threads_Mixin(API_Base):
         # Docstring is maintained separately
         return self.send_request(method="permissions_get")
 
-    def permissions_set(self, user_group_permissions):
+    def permissions_set(self, user_group_permissions, *, lock_key=None):
         # Docstring is maintained separately
-        request_params = self._prepare_permissions_set(user_group_permissions=user_group_permissions)
+        request_params = self._prepare_permissions_set(
+            user_group_permissions=user_group_permissions, lock_key=lock_key
+        )
         self._clear_status_timestamp()
         return self.send_request(method="permissions_set", params=request_params)
 
-    def script_upload(self, script, *, update_lists=None, update_re=None, run_in_background=None):
+    def script_upload(self, script, *, update_lists=None, update_re=None, run_in_background=None, lock_key=None):
         # Docstring is maintained separately
         request_params = self._prepare_script_upload(
-            script=script, update_lists=update_lists, update_re=update_re, run_in_background=run_in_background
+            script=script,
+            update_lists=update_lists,
+            update_re=update_re,
+            run_in_background=run_in_background,
+            lock_key=lock_key,
         )
         self._clear_status_timestamp()
         return self.send_request(method="script_upload", params=request_params)
 
-    def function_execute(self, item, *, run_in_background=None, user=None, user_group=None):
+    def function_execute(self, item, *, run_in_background=None, user=None, user_group=None, lock_key=None):
         # Docstring is maintained separately
         request_params = self._prepare_function_execute(
-            item=item, run_in_background=run_in_background, user=user, user_group=user_group
+            item=item, run_in_background=run_in_background, user=user, user_group=user_group, lock_key=lock_key
         )
         self._clear_status_timestamp()
         return self.send_request(method="function_execute", params=request_params)
@@ -532,49 +575,55 @@ class API_Threads_Mixin(API_Base):
             response = self._generate_response_re_runs(option=option)
         return response
 
-    def re_pause(self, option=None):
+    def re_pause(self, option=None, *, lock_key=None):
         # Docstring is maintained separately
-        request_params = self._prepare_re_pause(option=option)
+        request_params = self._prepare_re_pause(option=option, lock_key=lock_key)
         self._clear_status_timestamp()
         return self.send_request(method="re_pause", params=request_params)
 
-    def re_resume(self):
+    def re_resume(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="re_resume")
+        request_params = self._prepare_environment_control(lock_key=lock_key)
+        return self.send_request(method="re_resume", params=request_params)
 
-    def re_stop(self):
+    def re_stop(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="re_stop")
+        request_params = self._prepare_environment_control(lock_key=lock_key)
+        return self.send_request(method="re_stop", params=request_params)
 
-    def re_abort(self):
+    def re_abort(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="re_abort")
+        request_params = self._prepare_environment_control(lock_key=lock_key)
+        return self.send_request(method="re_abort", params=request_params)
 
-    def re_halt(self):
+    def re_halt(self, *, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        return self.send_request(method="re_halt")
+        request_params = self._prepare_environment_control(lock_key=lock_key)
+        return self.send_request(method="re_halt", params=request_params)
 
-    def lock(self, lock_key=None, *, environment=None, queue=None, note=None):
+    def lock(self, lock_key=None, *, environment=None, queue=None, note=None, user=None):
         # Docstring is maintained separately
-        request_params = self._prepare_lock(environment=environment, queue=queue, lock_key=lock_key, note=note)
+        request_params = self._prepare_lock(
+            environment=environment, queue=queue, lock_key=lock_key, note=note, user=user
+        )
         self._clear_status_timestamp()
         return self.send_request(method="lock", params=request_params)
 
-    def lock_environment(self, lock_key=None, *, note=None):
+    def lock_environment(self, lock_key=None, *, note=None, user=None):
         # Docstring is maintained separately
-        return self.lock(lock_key=lock_key, environment=True, note=note)
+        return self.lock(lock_key=lock_key, environment=True, note=note, user=user)
 
-    def lock_queue(self, lock_key=None, *, note=None):
+    def lock_queue(self, lock_key=None, *, note=None, user=None):
         # Docstring is maintained separately
-        return self.lock(lock_key=lock_key, queue=True, note=note)
+        return self.lock(lock_key=lock_key, queue=True, note=note, user=user)
 
-    def lock_all(self, lock_key=None, *, note=None):
+    def lock_all(self, lock_key=None, *, note=None, user=None):
         # Docstring is maintained separately
-        return self.lock(lock_key=lock_key, environment=True, queue=True, note=note)
+        return self.lock(lock_key=lock_key, environment=True, queue=True, note=note, user=user)
 
     def lock_info(self, lock_key=None, *, reload=False):
         # Docstring is maintained separately
@@ -641,3 +690,9 @@ API_Threads_Mixin.re_resume.__doc__ = _doc_api_re_resume
 API_Threads_Mixin.re_stop.__doc__ = _doc_api_re_stop
 API_Threads_Mixin.re_abort.__doc__ = _doc_api_re_abort
 API_Threads_Mixin.re_halt.__doc__ = _doc_api_re_halt
+API_Threads_Mixin.lock.__doc__ = _doc_api_lock
+API_Threads_Mixin.lock_environment.__doc__ = _doc_api_lock_environment
+API_Threads_Mixin.lock_queue.__doc__ = _doc_api_lock_queue
+API_Threads_Mixin.lock_all.__doc__ = _doc_api_lock_all
+API_Threads_Mixin.lock_info.__doc__ = _doc_api_lock_info
+API_Threads_Mixin.unlock.__doc__ = _doc_api_unlock

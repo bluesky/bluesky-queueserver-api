@@ -6,6 +6,7 @@ import threading
 import time as ttime
 from pathlib import Path
 import os
+import pprint
 
 from .common import re_manager, re_manager_cmd  # noqa: F401
 from .common import fastapi_server, fastapi_server_fs  # noqa: F401
@@ -3517,10 +3518,9 @@ def test_lock_key_1(library, protocol):
     (True, True),
 ])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-# @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
-@pytest.mark.parametrize("protocol", ["ZMQ"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
-def test_lock_1(re_manager, library, protocol, use_current_lock_key, set_note):  # noqa: F811
+def test_lock_1(re_manager, fastapi_server, library, protocol, use_current_lock_key, set_note):  # noqa: F811
     """
     ``lock``, ``lock_environment``, ``lock_queue``, ``lock_all``, ``unlock``, ``lock_info``: basic tests
     Call the API with all valid combinations of parameters.
@@ -3617,10 +3617,9 @@ def test_lock_1(re_manager, library, protocol, use_current_lock_key, set_note): 
 
 
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-# @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
-@pytest.mark.parametrize("protocol", ["ZMQ"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
-def test_lock_2(re_manager, library, protocol):  # noqa: F811
+def test_lock_2(re_manager, fastapi_server, library, protocol):  # noqa: F811
     """
     ``lock``, ``lock_environment``, ``lock_queue``, ``lock_all``, ``unlock``, ``lock_info``:
     Test some edge cases and invalid parameter values.
@@ -3706,6 +3705,426 @@ def test_lock_2(re_manager, library, protocol):  # noqa: F811
             await RM.unlock(lock_key=lock_key)
 
             check_lock(await RM.status(), False, False)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("pass_user_name_as_param", [False, True])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_lock_3(re_manager, fastapi_server, library, protocol, pass_user_name_as_param):  # noqa: F811
+    """
+    ``lock``, ``lock_environment``, ``lock_queue``, ``lock_all``: test proper handling of user name.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    lock_key = "abc"
+
+    user1, user2 = "lock-test-user1", "lock-test-user2"
+    param = {"user": user2} if pass_user_name_as_param else {}
+
+    def check_lock(status, environment, queue):
+        assert status["lock"]["environment"] == environment
+        assert status["lock"]["queue"] == queue
+
+    def check_user_name(lock_info):
+        user_expected = user2 if pass_user_name_as_param else user1
+        if protocol != "HTTP":
+            assert lock_info["user"] == user_expected, pprint.pformat(lock_info)
+        else:
+            assert lock_info["user"] != user_expected, pprint.pformat(lock_info)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+        RM.user = user1
+
+        resp = RM.lock(environment=True, lock_key=lock_key, **param)
+        check_lock(RM.status(), True, False)
+        check_user_name(resp["lock_info"])
+
+        resp = RM.lock_queue(lock_key=lock_key, **param)
+        check_lock(RM.status(), False, True)
+        check_user_name(resp["lock_info"])
+
+        resp = RM.lock_environment(lock_key=lock_key, **param)
+        check_lock(RM.status(), True, False)
+        check_user_name(resp["lock_info"])
+
+        resp = RM.lock_all(lock_key=lock_key, **param)
+        check_lock(RM.status(), True, True)
+        check_user_name(resp["lock_info"])
+
+        RM.unlock(lock_key=lock_key)
+        check_lock(RM.status(), False, False)
+
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+            RM.user = user1
+
+            resp = await RM.lock(environment=True, lock_key=lock_key, **param)
+            check_lock(await RM.status(), True, False)
+            check_user_name(resp["lock_info"])
+
+            resp = await RM.lock_queue(lock_key=lock_key, **param)
+            check_lock(await RM.status(), False, True)
+            check_user_name(resp["lock_info"])
+
+            resp = await RM.lock_environment(lock_key=lock_key, **param)
+            check_lock(await RM.status(), True, False)
+            check_user_name(resp["lock_info"])
+
+            resp = await RM.lock_all(lock_key=lock_key, **param)
+            check_lock(await RM.status(), True, True)
+            check_user_name(resp["lock_info"])
+
+            await RM.unlock(lock_key=lock_key)
+            check_lock(await RM.status(), False, False)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("unlock_with_param", [None, False, True])  # None - do not unlock
+@pytest.mark.parametrize("lock_options, is_locked", [
+    ({}, False),
+    ({"environment": True}, False),
+    ({"queue": True}, True),  # Queue is locked
+    ({"environment": True, "queue": True}, True),  # Queue is locked
+])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_zmq_api_lock_4(
+    re_manager, fastapi_server, lock_options, is_locked, unlock_with_param, library, protocol  # noqa: F811
+):
+    """
+    ``lock`` API: check the API for queue control are properly locked and unlocked
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    lock_key = "custom-key"
+
+    unlock_params = {"lock_key": lock_key} if unlock_with_param is True else {}
+    plan3 = BPlan("count", ["det1", "det2"], num=5, delay=1)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+        if unlock_with_param is False:
+            RM.lock_key = lock_key
+            RM.enable_locked_api = True
+        else:
+            RM.lock_key = "invalid-key"
+
+        # Add 4 plans to the queue
+        resp0 = RM.item_add_batch(items=[plan3, plan3, plan3, plan3])
+        assert resp0["success"] is True
+
+        def call_api(method_name, *args, **kwargs):
+            success_expected = not is_locked or (unlock_with_param is not None)
+            if success_expected:
+                return getattr(RM, method_name)(*args, **kwargs)
+            else:
+                with pytest.raises(RM.RequestFailedError, match="Invalid lock key"):
+                    getattr(RM, method_name)(*args, **kwargs)
+
+        if lock_options:
+            RM.lock(**lock_options, lock_key=lock_key)
+
+        # API for uploading permissions
+        call_api("permissions_reload", **unlock_params)
+        resp = RM.permissions_get()
+        permissions = resp["user_group_permissions"]
+        call_api("permissions_set", user_group_permissions=permissions, **unlock_params)
+
+        # Setting queue mode
+        call_api("queue_mode_set", mode={"loop": False}, **unlock_params)
+
+        # Adding items to the queue
+        call_api("item_add", item=plan3, **unlock_params)
+        call_api("item_add_batch", items=[plan3, plan3, plan3], **unlock_params)
+
+        # Read the plan queue
+        resp = RM.queue_get()
+        plan_queue = resp["items"]
+        assert len(plan_queue) >= 4  # It must contain at least 4 plans
+
+        # Updating a queue item
+        plan = plan_queue[0]
+        call_api("item_update", item=plan, **unlock_params)
+
+        # Move queue items
+        call_api("item_move", pos=0, pos_dest=1, **unlock_params)
+        uids = [_["item_uid"] for _ in plan_queue[2:4]]
+        call_api("item_move_batch", uids=uids, pos_dest="front", **unlock_params)
+
+        # Remove queue items
+        call_api("item_remove", pos=3, **unlock_params)
+        call_api("item_remove_batch", uids=uids, **unlock_params)
+
+        # Clearing the history and the queue
+        call_api("history_clear", **unlock_params)
+        call_api("queue_clear", **unlock_params)
+
+        RM.unlock(lock_key=lock_key)
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            if unlock_with_param is False:
+                RM.lock_key = lock_key
+                RM.enable_locked_api = True
+            else:
+                RM.lock_key = "invalid-key"
+
+            # Add 4 plans to the queue
+            resp0 = await RM.item_add_batch(items=[plan3, plan3, plan3, plan3])
+            assert resp0["success"] is True
+
+            async def call_api(method_name, *args, **kwargs):
+                success_expected = not is_locked or (unlock_with_param is not None)
+                if success_expected:
+                    return await getattr(RM, method_name)(*args, **kwargs)
+                else:
+                    with pytest.raises(RM.RequestFailedError, match="Invalid lock key"):
+                        await getattr(RM, method_name)(*args, **kwargs)
+
+            if lock_options:
+                await RM.lock(**lock_options, lock_key=lock_key)
+
+            # API for uploading permissions
+            await call_api("permissions_reload", **unlock_params)
+            resp = await RM.permissions_get()
+            permissions = resp["user_group_permissions"]
+            await call_api("permissions_set", user_group_permissions=permissions, **unlock_params)
+
+            # Setting queue mode
+            await call_api("queue_mode_set", mode={"loop": False}, **unlock_params)
+
+            # Adding items to the queue
+            await call_api("item_add", item=plan3, **unlock_params)
+            await call_api("item_add_batch", items=[plan3, plan3, plan3], **unlock_params)
+
+            # Read the plan queue
+            resp = await RM.queue_get()
+            plan_queue = resp["items"]
+            assert len(plan_queue) >= 4  # It must contain at least 4 plans
+
+            # Updating a queue item
+            plan = plan_queue[0]
+            await call_api("item_update", item=plan, **unlock_params)
+
+            # Move queue items
+            await call_api("item_move", pos=0, pos_dest=1, **unlock_params)
+            uids = [_["item_uid"] for _ in plan_queue[2:4]]
+            await call_api("item_move_batch", uids=uids, pos_dest="front", **unlock_params)
+
+            # Remove queue items
+            await call_api("item_remove", pos=3, **unlock_params)
+            await call_api("item_remove_batch", uids=uids, **unlock_params)
+
+            # Clearing the history and the queue
+            await call_api("history_clear", **unlock_params)
+            await call_api("queue_clear", **unlock_params)
+
+            await RM.unlock(lock_key=lock_key)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("unlock_with_param", [None, False, True])  # None - do not unlock
+@pytest.mark.parametrize("lock_options, is_locked", [
+    ({}, False),
+    ({"queue": True}, False),
+    ({"environment": True}, True),  # Queue is locked
+    ({"environment": True, "queue": True}, True),  # Queue is locked
+])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_zmq_api_lock_5(
+    re_manager, fastapi_server, lock_options, is_locked, unlock_with_param, library, protocol  # noqa: F811
+):
+    """
+    ``lock`` API: check the API for environment control are properly locked and unlocked
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    lock_key = "custom-key"
+
+    unlock_params = {"lock_key": lock_key} if unlock_with_param is True else {}
+    plan1 = BPlan("count", ["det1", "det2"], num=1)
+    plan3 = BPlan("count", ["det1", "det2"], num=5, delay=1)
+    func = BFunc("function_sleep", 0.5)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+        if unlock_with_param is False:
+            RM.lock_key = lock_key
+            RM.enable_locked_api = True
+        else:
+            RM.lock_key = "invalid-key"
+
+        def call_api(method_name, *args, **kwargs):
+            success_expected = not is_locked or (unlock_with_param is not None)
+            if success_expected:
+                return getattr(RM, method_name)(*args, **kwargs)
+            else:
+                with pytest.raises(RM.RequestFailedError, match="Invalid lock key"):
+                    getattr(RM, method_name)(*args, **kwargs)
+
+        if lock_options:
+            RM.lock(**lock_options, lock_key=lock_key)
+
+        # Open and destroy the environment
+        call_api("environment_open", **unlock_params)
+        RM.wait_for_idle(timeout=20)
+        assert RM.status()["worker_environment_exists"] == (not is_locked or unlock_with_param is not None)
+        call_api("environment_destroy", **unlock_params)
+        RM.wait_for_idle(timeout=20)
+        assert RM.status()["worker_environment_exists"] is False
+
+        # Open the environment again
+        call_api("environment_open", **unlock_params)
+        RM.wait_for_idle(timeout=20)
+        assert RM.status()["worker_environment_exists"] == (not is_locked or unlock_with_param is not None)
+
+        for api_to_test in ("re_resume", "re_stop", "re_abort", "re_halt"):
+            print("=======================================================================")
+            print(f"                       TESTING {api_to_test!r}")
+            print("=======================================================================")
+            # Always add the plan (not part of the test, but necessary for the test to complete)
+            RM.item_add(item=plan3, lock_key=lock_key)
+
+            call_api("queue_start", **unlock_params)
+
+            # Wait until the queue starts. Otherwise 'queue_stop' may stop the queue
+            #   before execution of the first plan is started and the test will fail
+            ttime.sleep(0.5)
+
+            call_api("queue_stop", **unlock_params)
+            call_api("queue_stop_cancel", **unlock_params)
+
+            ttime.sleep(1)
+
+            call_api("re_pause", **unlock_params)
+            RM.wait_for_idle_or_paused(timeout=20)
+            manager_state = "paused" if not is_locked or (unlock_with_param is not None) else "idle"
+            assert RM.status()["manager_state"] == manager_state
+
+            call_api(api_to_test, **unlock_params)
+
+            RM.wait_for_idle(timeout=20)
+
+        call_api("item_execute", item=plan1, **unlock_params)
+        RM.wait_for_idle(timeout=20)
+
+        call_api("script_upload", script="", **unlock_params)
+        RM.wait_for_idle(timeout=20)
+
+        call_api("function_execute", item=func, **unlock_params)
+        RM.wait_for_idle(timeout=20)
+
+        # Close the environment
+        call_api("environment_close", **unlock_params)
+        RM.wait_for_idle(timeout=20)
+        assert RM.status()["worker_environment_exists"] is False
+
+        RM.unlock(lock_key=lock_key)
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            if unlock_with_param is False:
+                RM.lock_key = lock_key
+                RM.enable_locked_api = True
+            else:
+                RM.lock_key = "invalid-key"
+
+            async def call_api(method_name, *args, **kwargs):
+                success_expected = not is_locked or (unlock_with_param is not None)
+                if success_expected:
+                    return await getattr(RM, method_name)(*args, **kwargs)
+                else:
+                    with pytest.raises(RM.RequestFailedError, match="Invalid lock key"):
+                        await getattr(RM, method_name)(*args, **kwargs)
+
+            if lock_options:
+                await RM.lock(**lock_options, lock_key=lock_key)
+
+            # Open and destroy the environment
+            await call_api("environment_open", **unlock_params)
+            await RM.wait_for_idle(timeout=20)
+            status = await RM.status()
+            assert status["worker_environment_exists"] == (not is_locked or unlock_with_param is not None)
+            await call_api("environment_destroy", **unlock_params)
+            await RM.wait_for_idle(timeout=20)
+            status = await RM.status()
+            assert status["worker_environment_exists"] is False
+
+            # Open the environment again
+            await call_api("environment_open", **unlock_params)
+            await RM.wait_for_idle(timeout=20)
+            status = await RM.status()
+            assert status["worker_environment_exists"] == (not is_locked or unlock_with_param is not None)
+
+            for api_to_test in ("re_resume", "re_stop", "re_abort", "re_halt"):
+                print("=======================================================================")
+                print(f"                       TESTING {api_to_test!r}")
+                print("=======================================================================")
+                # Always add the plan (not part of the test, but necessary for the test to complete)
+                await RM.item_add(item=plan3, lock_key=lock_key)
+
+                await call_api("queue_start", **unlock_params)
+
+                # Wait until the queue starts. Otherwise 'queue_stop' may stop the queue
+                #   before execution of the first plan is started and the test will fail
+                await asyncio.sleep(0.5)
+
+                await call_api("queue_stop", **unlock_params)
+                await call_api("queue_stop_cancel", **unlock_params)
+
+                await asyncio.sleep(1)
+
+                await call_api("re_pause", **unlock_params)
+                await RM.wait_for_idle_or_paused(timeout=20)
+                manager_state = "paused" if not is_locked or (unlock_with_param is not None) else "idle"
+                status = await RM.status()
+                assert status["manager_state"] == manager_state
+
+                await call_api(api_to_test, **unlock_params)
+
+                await RM.wait_for_idle(timeout=20)
+
+            await call_api("item_execute", item=plan1, **unlock_params)
+            await RM.wait_for_idle(timeout=20)
+
+            await call_api("script_upload", script="", **unlock_params)
+            await RM.wait_for_idle(timeout=20)
+
+            await call_api("function_execute", item=func, **unlock_params)
+            await RM.wait_for_idle(timeout=20)
+
+            # Close the environment
+            await call_api("environment_close", **unlock_params)
+            await RM.wait_for_idle(timeout=20)
+            status = await RM.status()
+            assert status["worker_environment_exists"] is False
 
             await RM.close()
 

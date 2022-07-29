@@ -154,6 +154,26 @@ API for Controlling RE History
     zmq.REManagerAPI.history_get
     zmq.REManagerAPI.history_clear
 
+API for Locking RE Manager
+**************************
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    zmq.REManagerAPI.lock
+    zmq.REManagerAPI.lock_environment
+    zmq.REManagerAPI.lock_queue
+    zmq.REManagerAPI.lock_all
+    zmq.REManagerAPI.unlock
+    zmq.REManagerAPI.lock_info
+    zmq.REManagerAPI.lock_key
+    zmq.REManagerAPI.enable_locked_api
+    zmq.REManagerAPI.get_default_lock_key
+    zmq.REManagerAPI.set_default_lock_key
+    zmq.REManagerAPI.default_lock_key_path
+
+
 API for Executing Tasks
 ***********************
 

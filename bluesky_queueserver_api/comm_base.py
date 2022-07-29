@@ -57,6 +57,9 @@ rest_api_method_map = {
     "function_execute": ("POST", "/api/function/execute"),
     "task_status": ("GET", "/api/task/status"),
     "task_result": ("GET", "/api/task/result"),
+    "lock": ("POST", "/api/lock"),
+    "unlock": ("POST", "/api/unlock"),
+    "lock_info": ("GET", "/api/lock/info"),
     "manager_stop": ("POST", "/api/manager/stop"),
     "manager_kill": ("POST", "/api/test/manager/kill"),
 }

@@ -269,7 +269,19 @@ class API_Base:
         if value is not None:
             request_params[name] = value
 
-    def _prepare_item_add(self, *, item, pos, before_uid, after_uid, user, user_group):
+    def _add_lock_key(self, request_params, lock_key):
+        """
+        Add lock key to ``request_params`` if lock key is not ``None``.
+        If ``lock_key`` is None, then try to use the 'current' lock key.
+        If the passed and 'current' lock key is None, then do not add the key.
+        """
+        self._validate_lock_key(lock_key)
+        if not lock_key and self._enable_locked_api:
+            lock_key = self._lock_key
+        if lock_key:
+            request_params["lock_key"] = lock_key
+
+    def _prepare_item_add(self, *, item, pos, before_uid, after_uid, user, user_group, lock_key):
         """
         Prepare parameters for ``item_add`` operation.
         """
@@ -283,9 +295,10 @@ class API_Base:
         self._add_request_param(request_params, "before_uid", before_uid)
         self._add_request_param(request_params, "after_uid", after_uid)
         self._request_params_add_user_info(request_params, user=user, user_group=user_group)
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
-    def _prepare_item_add_batch(self, *, items, pos, before_uid, after_uid, user, user_group):
+    def _prepare_item_add_batch(self, *, items, pos, before_uid, after_uid, user, user_group, lock_key):
         """
         Prepare parameters for ``item_add_batch`` operation.
         """
@@ -305,9 +318,10 @@ class API_Base:
         self._add_request_param(request_params, "before_uid", before_uid)
         self._add_request_param(request_params, "after_uid", after_uid)
         self._request_params_add_user_info(request_params, user=user, user_group=user_group)
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
-    def _prepare_item_update(self, *, item, replace, user, user_group):
+    def _prepare_item_update(self, *, item, replace, user, user_group, lock_key):
         """
         Prepare parameters for ``item_update`` operation.
         """
@@ -319,9 +333,10 @@ class API_Base:
         request_params = {"item": item}
         self._add_request_param(request_params, "replace", replace)
         self._request_params_add_user_info(request_params, user=user, user_group=user_group)
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
-    def _prepare_item_move(self, *, pos, uid, pos_dest, before_uid, after_uid):
+    def _prepare_item_move(self, *, pos, uid, pos_dest, before_uid, after_uid, lock_key):
         """
         Prepare parameters for ``item_add`` operation.
         """
@@ -331,10 +346,11 @@ class API_Base:
         self._add_request_param(request_params, "pos_dest", pos_dest)
         self._add_request_param(request_params, "before_uid", before_uid)
         self._add_request_param(request_params, "after_uid", after_uid)
+        self._add_lock_key(request_params, lock_key)
 
         return request_params
 
-    def _prepare_item_move_batch(self, *, uids, pos_dest, before_uid, after_uid, reorder):
+    def _prepare_item_move_batch(self, *, uids, pos_dest, before_uid, after_uid, reorder, lock_key):
         """
         Prepare parameters for ``item_add`` operation.
         """
@@ -344,10 +360,11 @@ class API_Base:
         self._add_request_param(request_params, "before_uid", before_uid)
         self._add_request_param(request_params, "after_uid", after_uid)
         self._add_request_param(request_params, "reorder", reorder)
+        self._add_lock_key(request_params, lock_key)
 
         return request_params
 
-    def _prepare_item_get_remove(self, *, pos, uid):
+    def _prepare_item_get(self, *, pos, uid):
         """
         Prepare parameters for ``item_get`` and ``item_remove`` operation
         """
@@ -356,15 +373,26 @@ class API_Base:
         self._add_request_param(request_params, "uid", uid)
         return request_params
 
-    def _prepare_item_remove_batch(self, *, uids, ignore_missing):
+    def _prepare_item_remove(self, *, pos, uid, lock_key):
+        """
+        Prepare parameters for ``item_get`` and ``item_remove`` operation
+        """
+        request_params = {}
+        self._add_request_param(request_params, "pos", pos)
+        self._add_request_param(request_params, "uid", uid)
+        self._add_lock_key(request_params, lock_key)
+        return request_params
+
+    def _prepare_item_remove_batch(self, *, uids, ignore_missing, lock_key):
         """
         Prepare parameters for ``item_remove_batch`` operation
         """
         request_params = {"uids": uids}
         self._add_request_param(request_params, "ignore_missing", ignore_missing)
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
-    def _prepare_item_execute(self, *, item, user, user_group):
+    def _prepare_item_execute(self, *, item, user, user_group, lock_key):
         """
         Prepare parameters for ``item_execute`` operation.
         """
@@ -375,16 +403,35 @@ class API_Base:
 
         request_params = {"item": item}
         self._request_params_add_user_info(request_params, user=user, user_group=user_group)
+        self._add_lock_key(request_params, lock_key)
+        return request_params
+
+    def _prepare_history_clear(self, *, lock_key):
+        """
+        Prepare parameters for ``history_clear``
+        """
+        request_params = {}
+        self._add_lock_key(request_params, lock_key)
+        return request_params
+
+    def _prepare_queue_clear(self, *, lock_key):
+        """
+        Prepare parameters for ``queue_clear``
+        """
+        request_params = {}
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
     def _prepare_queue_mode_set(self, **kwargs):
         """
         Prepare parameters for ``queue_mode_set`` operation.
         """
+        lock_key = kwargs.pop("lock_key", None)
         if "mode" in kwargs:
             request_params = {"mode": kwargs["mode"]}
         else:
             request_params = {"mode": kwargs}
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
     def _process_response_queue_get(self, response):
@@ -532,23 +579,33 @@ class API_Base:
         }
         return response
 
-    def _prepare_permissions_reload(self, *, restore_plans_devices, restore_permissions):
+    def _prepare_permissions_reload(self, *, restore_plans_devices, restore_permissions, lock_key):
         """
         Prepare parameters for ``permissions_reload``
         """
         request_params = {}
         self._add_request_param(request_params, "restore_plans_devices", restore_plans_devices)
         self._add_request_param(request_params, "restore_permissions", restore_permissions)
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
-    def _prepare_permissions_set(self, *, user_group_permissions):
+    def _prepare_permissions_set(self, *, user_group_permissions, lock_key):
         """
         Prepare parameters for ``permissions_set``
         """
         request_params = {"user_group_permissions": user_group_permissions}
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
-    def _prepare_script_upload(self, *, script, update_lists, update_re, run_in_background):
+    def _prepare_environment_control(self, *, lock_key):
+        """
+        Prepare parameters for generic API for environment control which accepts only 'lock_key'``
+        """
+        request_params = {}
+        self._add_lock_key(request_params, lock_key)
+        return request_params
+
+    def _prepare_script_upload(self, *, script, update_lists, update_re, run_in_background, lock_key):
         """
         Prepare parameters for ``script_upload``
         """
@@ -556,9 +613,10 @@ class API_Base:
         self._add_request_param(request_params, "update_lists", update_lists)
         self._add_request_param(request_params, "update_re", update_re)
         self._add_request_param(request_params, "run_in_background", run_in_background)
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
-    def _prepare_function_execute(self, *, item, run_in_background, user, user_group):
+    def _prepare_function_execute(self, *, item, run_in_background, user, user_group, lock_key):
         """
         Prepare parameters for ``script_upload``
         """
@@ -570,6 +628,7 @@ class API_Base:
         request_params = {"item": item}
         self._add_request_param(request_params, "run_in_background", run_in_background)
         self._request_params_add_user_info(request_params, user=user, user_group=user_group)
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
     def _prepare_task_result(self, *, task_uid):
@@ -622,12 +681,13 @@ class API_Base:
         }
         return response
 
-    def _prepare_re_pause(self, *, option):
+    def _prepare_re_pause(self, *, option, lock_key):
         """
         Prepare parameters for ``re_pause`` operation
         """
         request_params = {}
         self._add_request_param(request_params, "option", option)
+        self._add_lock_key(request_params, lock_key)
         return request_params
 
     def _validate_lock_key(self, lock_key):
@@ -636,7 +696,7 @@ class API_Base:
             if not isinstance(lock_key, str) or not lock_key:
                 raise ValueError(f"Parameter 'lock_key' must be non-empty string or None: lock_key={lock_key!r}")
 
-    def _prepare_lock(self, *, environment, queue, lock_key, note):
+    def _prepare_lock(self, *, environment, queue, lock_key, note, user):
         # Lock key may be None. Use self.lock_key in this case.
         self._validate_lock_key(lock_key)
         if not lock_key:
@@ -654,7 +714,11 @@ class API_Base:
         if queue:
             request_params["queue"] = queue
         request_params["lock_key"] = lock_key
-        request_params["user"] = self._user
+
+        self._request_params_add_user_info(request_params, user=user, user_group=None)
+        if "user_group" in request_params:
+            del request_params["user_group"]
+
         if note:
             request_params["note"] = note
 
@@ -697,15 +761,15 @@ class API_Base:
 
     @property
     def default_lock_key_path(self):
-        return self._default_lock_key_path
-
-    @default_lock_key_path.setter
-    def default_lock_key_path(self, lock_key_path):
         """
         Get/set path of the file with the default lock key. The default path is
         ``<user-home-dir>.config/qserver/default_lock_key.txt``. In some workflows
         it may be useful to set a different path.
         """
+        return self._default_lock_key_path
+
+    @default_lock_key_path.setter
+    def default_lock_key_path(self, lock_key_path):
         self._default_lock_key_path = lock_key_path
 
     def get_default_lock_key(self, new_key=False):
