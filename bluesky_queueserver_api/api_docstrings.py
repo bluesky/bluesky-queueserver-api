@@ -462,6 +462,11 @@ _doc_api_item_add = """
         ``user_group`` properties). The default user or user group name is used
         if the respective parameter is not specified or ``None``. The parameters are
         ignored by the HTTP version of the API.
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -558,6 +563,11 @@ _doc_api_item_add_batch = """
         ``user_group`` properties). The default user or user group name is used
         if the respective parameter is not specified or ``None``. The parameters are
         ignored by the HTTP version of the API.
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -625,6 +635,11 @@ _doc_api_item_update = """
         ``user_group`` properties). The default user or user group name is used
         if the respective parameter is not specified or ``None``. The parameters are
         ignored by the HTTP version of the API.
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -733,6 +748,11 @@ _doc_api_item_remove = """
         is not specified.
     uid: str or None
         UID of the item. If ``None`` (default), then the parameter are not specified.
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -787,6 +807,11 @@ _doc_api_item_remove_batch = """
         items or some of the batch items are not found in the queue. If ``True`` (default),
         then the method attempts to remove all items in the batch and ignores missing
         items. The method returns the list of items that were removed from the queue.
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -842,6 +867,11 @@ _doc_api_item_move = """
     before_uid, after_uid: str or None
         UID of an existing item in the queue. The selected item is moved before
         or after this item. If ``None`` (default), then the parameter are not specified.
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -906,6 +936,11 @@ _doc_api_item_move_batch = """
     reorder: boolean
         Arrange moved items in the order of UIDs in the ``uids`` list (False, default) or
         according to the original item positions in the queue (True).
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -964,6 +999,11 @@ _doc_api_item_execute = """
         ``user_group`` properties). The default user or user group name is used
         if the respective parameter is not specified or ``None``. The parameters are
         ignored by the HTTP version of the API.
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -1005,6 +1045,14 @@ _doc_api_queue_start = """
     then ``"executing_queue"``. Once queue execution is completed or stopped,
     the manager state returns to ``"idle"``.
 
+    Parameters
+    ----------
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
+
     Returns
     -------
     response: dict
@@ -1038,6 +1086,14 @@ _doc_api_queue_stop = """
     running plan. The request succeeds only if the queue is currently running (``manager_state``
     status field has value ``executing_queue``). Use the status field ``queue_stop_pending``
     to verify if the request is pending.
+
+    Parameters
+    ----------
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -1073,6 +1129,14 @@ _doc_api_queue_stop_cancel = """
     Cancel the pending request to stop execution of the queue after the currently running plan.
     Use the status field ``queue_stop_pending``  to check if the request is pending.
 
+    Parameters
+    ----------
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
+
     Returns
     -------
     response: dict
@@ -1106,6 +1170,14 @@ _doc_api_queue_clear = """
     Remove all items from the plan queue. The currently running plan does not belong
     to the queue and is not affected by this operation. Failed or stopped plans are
     pushed to the front of the queue.
+
+    Parameters
+    ----------
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -1152,6 +1224,11 @@ _doc_api_queue_mode_set = """
         ignored if ``mode`` kwarg is passed.
     loop: boolean
         Turns LOOP mode ON and OFF
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -1289,6 +1366,14 @@ _doc_api_history_get = """
 
 _doc_api_history_clear = """
     Remove all items from the history.
+
+    Parameters
+    ----------
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -1523,10 +1608,15 @@ _doc_api_permissions_reload = """
     ----------
     restore_plans_devices: boolean (optional)
         Reload the lists of existing plans and devices from disk if True, otherwise
-        use current lists stored in memory. Default: False.
+        use current lists stored in memory. Default: ``False``.
     restore_permissions: boolean (optional)
         Reload user group permissions from disk if True, otherwise use current
-        permissions. Default: True.
+        permissions. Default: ``True``.
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -1605,6 +1695,11 @@ _doc_api_permissions_set = """
     ----------
     user_group_permissions: dict
         Dictionary, which contains user group permissions.
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -1648,6 +1743,14 @@ _doc_api_environment_open = """
     changed back to ``idle`` when the operation is complete. Check
     ``worker_environment_exists`` to see if the environment was opened successfully.
 
+    Parameters
+    ----------
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
+
     Returns
     -------
     response: dict
@@ -1683,6 +1786,14 @@ _doc_api_environment_close = """
     to change to ``closing_environment`` and then back to ``idle`` when the operation
     is completed. Check ``worker_environment_exists`` status flag to see if
     the environment was closed.
+
+    Parameters
+    ----------
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -1722,6 +1833,14 @@ _doc_api_environment_destroy = """
     to change to ``destroying_environment`` and then to ``idle`` when the operation
     is completed. Check ``worker_environment_exists`` status flag to see if
     the environment was destroyed.
+
+    Parameters
+    ----------
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -1787,6 +1906,11 @@ _doc_api_script_upload = r"""
         are executed in separate threads and only thread-safe scripts should be uploaded
         in the background. **Developers of data acquisition workflows and/or user specific
         code are responsible for thread safety.**
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -1861,6 +1985,11 @@ _doc_api_function_execute = """
         ``user_group`` properties). The default user or user group name is used
         if the respective parameter is not specified or ``None``. The parameters are
         ignored by the HTTP version of the API.
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -2106,6 +2235,11 @@ _doc_api_re_pause = """
     option: str ('immediate' or 'deferred', optional)
         Pause the plan immediately (roll back to the previous checkpoint) or continue to
         the next checkpoint. Default: ``"deferred"``.
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
 
     Returns
     -------
@@ -2154,21 +2288,109 @@ _doc_api_re_pause = """
 _doc_api_re_resume = """
     Request Run Engine to resume paused plan. See documentation for ``re_pause`` API
     for more detailed information.
+
+    Parameters
+    ----------
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
+
+    Returns
+    -------
+    dict
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager.
+
+    Raises
+    ------
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 """
 
 _doc_api_re_stop = """
     Request Run Engine to stop paused plan. See documentation for ``re_pause`` API
     for more detailed information.
+
+    Parameters
+    ----------
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
+
+    Returns
+    -------
+    dict
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager.
+
+    Raises
+    ------
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 """
 
 _doc_api_re_abort = """
     Request Run Engine to abort paused plan. See documentation for ``re_pause`` API
     for more detailed information.
+
+    Parameters
+    ----------
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
+
+    Returns
+    -------
+    dict
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager.
+
+    Raises
+    ------
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 """
 
 _doc_api_re_halt = """
     Request Run Engine to halt paused plan. See documentation for ``re_pause`` API
     for more detailed information.
+
+    Parameters
+    ----------
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
+
+    Returns
+    -------
+    dict
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager.
+
+    Raises
+    ------
+    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+        All exceptions raised by ``send_request`` API.
 """
 
 _doc_api_lock = """
