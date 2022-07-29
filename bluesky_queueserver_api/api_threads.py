@@ -47,6 +47,12 @@ from .api_docstrings import (
     _doc_api_re_stop,
     _doc_api_re_abort,
     _doc_api_re_halt,
+    _doc_api_lock,
+    _doc_api_lock_environment,
+    _doc_api_lock_queue,
+    _doc_api_lock_all,
+    _doc_api_lock_info,
+    _doc_api_unlock,
 )
 
 
@@ -684,3 +690,9 @@ API_Threads_Mixin.re_resume.__doc__ = _doc_api_re_resume
 API_Threads_Mixin.re_stop.__doc__ = _doc_api_re_stop
 API_Threads_Mixin.re_abort.__doc__ = _doc_api_re_abort
 API_Threads_Mixin.re_halt.__doc__ = _doc_api_re_halt
+API_Threads_Mixin.lock.__doc__ = _doc_api_lock
+API_Threads_Mixin.lock_environment.__doc__ = _doc_api_lock_environment
+API_Threads_Mixin.lock_queue.__doc__ = _doc_api_lock_queue
+API_Threads_Mixin.lock_all.__doc__ = _doc_api_lock_all
+API_Threads_Mixin.lock_info.__doc__ = _doc_api_lock_info
+API_Threads_Mixin.unlock.__doc__ = _doc_api_unlock

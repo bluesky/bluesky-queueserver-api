@@ -761,15 +761,15 @@ class API_Base:
 
     @property
     def default_lock_key_path(self):
-        return self._default_lock_key_path
-
-    @default_lock_key_path.setter
-    def default_lock_key_path(self, lock_key_path):
         """
         Get/set path of the file with the default lock key. The default path is
         ``<user-home-dir>.config/qserver/default_lock_key.txt``. In some workflows
         it may be useful to set a different path.
         """
+        return self._default_lock_key_path
+
+    @default_lock_key_path.setter
+    def default_lock_key_path(self, lock_key_path):
         self._default_lock_key_path = lock_key_path
 
     def get_default_lock_key(self, new_key=False):

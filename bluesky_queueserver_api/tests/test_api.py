@@ -3952,8 +3952,7 @@ def test_zmq_api_lock_4(
     ({"environment": True}, True),  # Queue is locked
     ({"environment": True, "queue": True}, True),  # Queue is locked
 ])
-# @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-@pytest.mark.parametrize("library", ["ASYNC"])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
 def test_zmq_api_lock_5(
