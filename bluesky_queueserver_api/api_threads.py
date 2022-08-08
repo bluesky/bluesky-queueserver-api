@@ -555,7 +555,7 @@ class API_Threads_Mixin(API_Base):
 
     def task_status(self, task_uid):
         # Docstring is maintained separately
-        request_params = self._prepare_task_result(task_uid=task_uid)
+        request_params = self._prepare_task_status(task_uid=task_uid)
         return self.send_request(method="task_status", params=request_params)
 
     def task_result(self, task_uid):

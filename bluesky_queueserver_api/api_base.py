@@ -17,6 +17,10 @@ class WaitCancelError(TimeoutError):
     ...
 
 
+class RequestParameterError(ValueError):
+    ...
+
+
 class WaitMonitor:
     """
     Creates ``monitor`` object for ``wait_...`` operations, such as ``wait_for_idle``.
@@ -164,6 +168,7 @@ class WaitMonitor:
 class API_Base:
     WaitTimeoutError = WaitTimeoutError
     WaitCancelError = WaitCancelError
+    RequestParameterError = RequestParameterError
 
     def __init__(self, *, status_expiration_period, status_polling_period):
 
@@ -631,10 +636,33 @@ class API_Base:
         self._add_lock_key(request_params, lock_key)
         return request_params
 
+    def _prepare_task_status(self, *, task_uid):
+        """
+        Prepare parameters for ``task_status``
+        """
+        if isinstance(task_uid, str):
+            # A string should remain a string.
+            task_uid_prepared = task_uid
+        elif isinstance(task_uid, Iterable):
+            # Status of multiple tasks can be fetched from the manager per a single request.
+            # Iterable may be a tuple, a set etc, but it is best to convert it to a list.
+            task_uid_prepared = list(task_uid)
+        else:
+            raise self.RequestParameterError(
+                f"Invalid type of parameter 'task_uid' ({type(task_uid)}). String or iterable (list) is expected."
+            )
+        request_params = {"task_uid": task_uid_prepared}
+        return request_params
+
     def _prepare_task_result(self, *, task_uid):
         """
-        Prepare parameters for ``task_result`` and ``task_status``
+        Prepare parameters for ``task_result``
         """
+        if not isinstance(task_uid, str):
+            # Only a result of a single task can be fetched per request.
+            raise self.RequestParameterError(
+                f"Invalid type of parameter 'task_uid' ({type(task_uid)}). String is expected."
+            )
         request_params = {"task_uid": task_uid}
         return request_params
 

@@ -1926,6 +1926,122 @@ def test_permissions_get_set_01(re_manager, fastapi_server, protocol, library): 
 
 
 # fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_task_status_result_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    'task_status' and 'task_result' API: basic functionality and parameter type ('task_uid') validation.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+    function = BFunc("function_sleep", 5)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+        return resp
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        # Open the environment
+        check_resp(RM.environment_open())
+        RM.wait_for_idle()
+        status = RM.status()
+        assert status["worker_environment_exists"] is True
+
+        resp_f1 = check_resp(RM.function_execute(function))
+        resp_f2 = check_resp(RM.function_execute(function, run_in_background=True))
+
+        ttime.sleep(1)
+        status = RM.status()
+        assert status["manager_state"] == "executing_task"
+        assert status["worker_background_tasks"] == 1
+
+        resp = check_resp(RM.task_status(resp_f1["task_uid"]))
+        assert resp["status"] == "running"
+        resp = check_resp(RM.task_status(resp_f2["task_uid"]))
+        assert resp["status"] == "running"
+        resp = check_resp(RM.task_status([resp_f1["task_uid"], resp_f2["task_uid"]]))  # List
+        assert len(resp["status"]) == 2
+        for _, task_uid in resp["status"].items():
+            assert task_uid == "running"
+        resp = check_resp(RM.task_status([resp_f1["task_uid"]]))  # List - single item
+        assert len(resp["status"]) == 1
+        for _, task_uid in resp["status"].items():
+            assert task_uid == "running"
+        resp = check_resp(RM.task_status((resp_f1["task_uid"], resp_f2["task_uid"])))  # Tuple
+        for _, task_uid in resp["status"].items():
+            assert task_uid == "running"
+        resp = check_resp(RM.task_status({resp_f1["task_uid"], resp_f2["task_uid"]}))  # Set
+        for _, task_uid in resp["status"].items():
+            assert task_uid == "running"
+        with pytest.raises(RM.RequestParameterError):
+            RM.task_status(10)  # Invalid parameter type
+
+        resp = check_resp(RM.task_result(resp_f1["task_uid"]))
+        assert resp["status"] == "running"
+        assert resp["result"]["task_uid"] == resp_f1["task_uid"]
+        with pytest.raises(RM.RequestParameterError):
+            RM.task_result([resp_f1["task_uid"], resp_f2["task_uid"]])  # Only single task is allowed
+
+        RM.wait_for_idle()
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            # Open the environment
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle()
+            status = await RM.status()
+            assert status["worker_environment_exists"] is True
+
+            resp_f1 = check_resp(await RM.function_execute(function))
+            resp_f2 = check_resp(await RM.function_execute(function, run_in_background=True))
+
+            await asyncio.sleep(1)
+            status = await RM.status()
+            assert status["manager_state"] == "executing_task"
+            assert status["worker_background_tasks"] == 1
+
+            resp = check_resp(await RM.task_status(resp_f1["task_uid"]))
+            assert resp["status"] == "running"
+            resp = check_resp(await RM.task_status(resp_f2["task_uid"]))
+            assert resp["status"] == "running"
+            resp = check_resp(await RM.task_status([resp_f1["task_uid"], resp_f2["task_uid"]]))  # List
+            assert len(resp["status"]) == 2
+            for _, task_uid in resp["status"].items():
+                assert task_uid == "running"
+            resp = check_resp(await RM.task_status([resp_f1["task_uid"]]))  # List - single item
+            assert len(resp["status"]) == 1
+            for _, task_uid in resp["status"].items():
+                assert task_uid == "running"
+            resp = check_resp(await RM.task_status((resp_f1["task_uid"], resp_f2["task_uid"])))  # Tuple
+            for _, task_uid in resp["status"].items():
+                assert task_uid == "running"
+            resp = check_resp(await RM.task_status({resp_f1["task_uid"], resp_f2["task_uid"]}))  # Set
+            for _, task_uid in resp["status"].items():
+                assert task_uid == "running"
+            with pytest.raises(RM.RequestParameterError):
+                await RM.task_status(10)  # Invalid parameter type
+
+            resp = check_resp(await RM.task_result(resp_f1["task_uid"]))
+            assert resp["status"] == "running"
+            assert resp["result"]["task_uid"] == resp_f1["task_uid"]
+            with pytest.raises(RM.RequestParameterError):
+                await RM.task_result([resp_f1["task_uid"], resp_f2["task_uid"]])  # Only single task is allowed
+
+            await RM.wait_for_idle()
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
 @pytest.mark.parametrize("test_option", ["script_upload", "function_execute"])
 @pytest.mark.parametrize("run_in_background", [False, True])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])

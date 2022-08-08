@@ -2039,8 +2039,8 @@ _doc_api_task_status = """
 
     Parameters
     ----------
-    task_uid: str or list(str)
-        A single task UID (*str*) or a list of one or multiple UIDs.
+    task_uid: str or Iterable(str)
+        A single task UID (*str*) or an iterable (list, tuple, set etc.) of one or multiple UIDs.
 
     Returns
     -------
@@ -2065,6 +2065,8 @@ _doc_api_task_status = """
     ------
     RequestTimeoutError, RequestFailedError, RequestError, ClientError
         All exceptions raised by ``send_request`` API.
+    RequestParameterError
+        Invalid parameter value or type
 
     Examples
     --------
@@ -2133,6 +2135,8 @@ _doc_api_task_result = """
     ------
     RequestTimeoutError, RequestFailedError, RequestError, ClientError
         All exceptions raised by ``send_request`` API.
+    RequestParameterError
+        Invalid parameter value or type
 
     Examples
     --------
