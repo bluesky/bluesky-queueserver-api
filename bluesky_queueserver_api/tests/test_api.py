@@ -2100,6 +2100,7 @@ def test_wait_for_completed_task_01(re_manager, fastapi_server, protocol, librar
 
         # Check if the wait can be successfully cancelled
         monitor = WaitMonitor()
+
         def cancel_wait():
             ttime.sleep(1)
             monitor.cancel()
@@ -2159,6 +2160,7 @@ def test_wait_for_completed_task_01(re_manager, fastapi_server, protocol, librar
 
             # Check if the wait can be successfully cancelled
             monitor = WaitMonitor()
+
             async def cancel_wait():
                 await asyncio.sleep(1)
                 monitor.cancel()
@@ -2241,7 +2243,6 @@ def test_wait_for_completed_task_02(re_manager, fastapi_server, protocol, librar
             await RM.close()
 
         asyncio.run(testing())
-
 
 
 # fmt: off

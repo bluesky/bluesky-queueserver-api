@@ -603,7 +603,9 @@ class API_Async_Mixin(API_Base):
             new_task_results_uid = status["task_results_uid"]
             return new_task_results_uid != task_results_uid
 
-        await self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor, reset_time_start=False)
+        await self._wait_for_condition(
+            condition=condition, timeout=timeout, monitor=monitor, reset_time_start=False
+        )
 
     async def wait_for_completed_task(
         self, task_uid, *, timeout=default_wait_timeout, monitor=None, treat_not_found_as_completed=True
