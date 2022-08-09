@@ -583,6 +583,64 @@ class API_Async_Mixin(API_Base):
         self._clear_status_timestamp()
         return await self.send_request(method="task_result", params=request_params)
 
+    async def _wait_for_task_results_update(
+        self, task_results_uid, *, timeout=default_wait_timeout, monitor=None, reset_time_start=True
+    ):
+        """
+        Wait for ``task_results_uid`` to change in RE Manager status.
+        """
+        new_task_results_uid = task_results_uid
+
+        if not monitor:
+            reset_time_start = True
+            monitor = WaitMonitor()
+        if reset_time_start:
+            monitor._time_start = ttime.time()
+        monitor.set_timeout(timeout)
+
+        def condition(status):
+            nonlocal new_task_results_uid
+            new_task_results_uid = status["task_results_uid"]
+            return new_task_results_uid != task_results_uid
+
+        await self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor, reset_time_start=False)
+
+    async def wait_for_completed_task(
+        self, task_uid, *, timeout=default_wait_timeout, monitor=None, treat_not_found_as_completed=True
+    ):
+        # Docstring is maintained separately
+        task_uid = self._prepare_wait_for_completed_task(task_uid=task_uid)
+
+        monitor = monitor or WaitMonitor()
+        monitor._time_start = ttime.time()
+        monitor.set_timeout(timeout)
+
+        async def detect_completed_tasks():
+            task_status_reply = await self.task_status(task_uid=task_uid)
+            completed_tasks = self._list_completed_tasks(
+                task_status_reply, treat_not_found_as_completed=treat_not_found_as_completed
+            )
+            return completed_tasks
+
+        current_task_results_uid = (await self.status())["task_results_uid"]
+
+        completed_tasks = await detect_completed_tasks()
+        if completed_tasks:
+            return completed_tasks
+
+        while True:
+            # Loop until the 'wait' function is timed out or cancelled or until
+            #   some tasks are completed.
+            await self._wait_for_task_results_update(
+                current_task_results_uid,
+                timeout=timeout,
+                monitor=monitor,
+                reset_time_start=False,
+            )
+            completed_tasks = await detect_completed_tasks()
+            if completed_tasks:
+                return completed_tasks
+
     async def re_runs(self, option=None, *, reload=False):
         # Docstring is maintained separately
         self._verify_options_re_runs(option=option)

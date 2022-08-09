@@ -732,7 +732,7 @@ class API_Base:
             )
         return task_uid
 
-    def _list_completed_tasks(task_status_reply, *, treat_not_found_as_completed):
+    def _list_completed_tasks(self, task_status_reply, *, treat_not_found_as_completed):
         """
         Returns a list of completed tasks based on reply retured by ``task_status`` API.
 

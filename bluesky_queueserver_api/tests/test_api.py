@@ -1987,6 +1987,11 @@ def test_task_status_result_01(re_manager, fastapi_server, protocol, library):  
 
         RM.wait_for_idle()
 
+        check_resp(RM.environment_close())
+        RM.wait_for_idle()
+        status = RM.status()
+        assert status["worker_environment_exists"] is False
+
         RM.close()
     else:
 
@@ -2036,9 +2041,207 @@ def test_task_status_result_01(re_manager, fastapi_server, protocol, library):  
 
             await RM.wait_for_idle()
 
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle()
+            status = await RM.status()
+            assert status["worker_environment_exists"] is False
+
             await RM.close()
 
         asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_wait_for_completed_task_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    'wait_for_completed_task' API: basic functionality.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+        return resp
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        # Open the environment
+        check_resp(RM.environment_open())
+        RM.wait_for_idle()
+        status = RM.status()
+        assert status["worker_environment_exists"] is True
+
+        resp_f1 = check_resp(RM.function_execute(BFunc("function_sleep", 2), run_in_background=True))
+        resp_f2 = check_resp(RM.function_execute(BFunc("function_sleep", 5), run_in_background=True))
+        resp_f3 = check_resp(RM.function_execute(BFunc("function_sleep", 30), run_in_background=True))
+
+        task_uids = [resp_f1["task_uid"], resp_f2["task_uid"], resp_f3["task_uid"]]
+        task_uids_set = set(task_uids)
+
+        ttime.sleep(0.5)
+        status = RM.status()
+        assert status["manager_state"] == "idle"
+        assert status["worker_background_tasks"] == 3
+
+        completed_uids = RM.wait_for_completed_task(task_uids[0])
+        assert completed_uids == [task_uids[0]]
+
+        task_uids_set -= set(completed_uids)
+
+        completed_uids = RM.wait_for_completed_task("non-existing-uid")
+        assert completed_uids == ["non-existing-uid"]
+
+        completed_uids = RM.wait_for_completed_task(task_uids_set)
+        assert completed_uids == [task_uids[1]]
+
+        # Check if the wait can be successfully cancelled
+        monitor = WaitMonitor()
+        def cancel_wait():
+            ttime.sleep(1)
+            monitor.cancel()
+
+        thread = threading.Thread(target=cancel_wait)
+        thread.start()
+        with pytest.raises(RM.WaitCancelError, match="Wait for condition was cancelled"):
+            RM.wait_for_completed_task([task_uids[2]], monitor=monitor)
+        thread.join()
+
+        assert monitor.is_cancelled is True
+
+        # Check if the function times out properly
+        with pytest.raises(RM.WaitTimeoutError, match="Timeout while waiting for condition"):
+            RM.wait_for_completed_task([task_uids[2]], timeout=1)
+
+        # Background tasks are still running, but we can close the environment
+        check_resp(RM.environment_close())
+        RM.wait_for_idle()
+        status = RM.status()
+        assert status["worker_environment_exists"] is False
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            # Open the environment
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle()
+            status = await RM.status()
+            assert status["worker_environment_exists"] is True
+
+            resp_f1 = check_resp(await RM.function_execute(BFunc("function_sleep", 2), run_in_background=True))
+            resp_f2 = check_resp(await RM.function_execute(BFunc("function_sleep", 5), run_in_background=True))
+            resp_f3 = check_resp(await RM.function_execute(BFunc("function_sleep", 30), run_in_background=True))
+
+            task_uids = [resp_f1["task_uid"], resp_f2["task_uid"], resp_f3["task_uid"]]
+            task_uids_set = set(task_uids)
+
+            await asyncio.sleep(0.5)
+            status = await RM.status()
+            assert status["manager_state"] == "idle"
+            assert status["worker_background_tasks"] == 3
+
+            completed_uids = await RM.wait_for_completed_task(task_uids[0])
+            assert completed_uids == [task_uids[0]]
+
+            task_uids_set -= set(completed_uids)
+
+            completed_uids = await RM.wait_for_completed_task("non-existing-uid")
+            assert completed_uids == ["non-existing-uid"]
+
+            completed_uids = await RM.wait_for_completed_task(task_uids_set)
+            assert completed_uids == [task_uids[1]]
+
+            # Check if the wait can be successfully cancelled
+            monitor = WaitMonitor()
+            async def cancel_wait():
+                await asyncio.sleep(1)
+                monitor.cancel()
+
+            asyncio.create_task(cancel_wait())
+            with pytest.raises(RM.WaitCancelError, match="Wait for condition was cancelled"):
+                await RM.wait_for_completed_task([task_uids[2]], monitor=monitor)
+
+            assert monitor.is_cancelled is True
+
+            # Check if the function times out properly
+            with pytest.raises(RM.WaitTimeoutError, match="Timeout while waiting for condition"):
+                await RM.wait_for_completed_task([task_uids[2]], timeout=1)
+
+            # Background tasks are still running, but we can close the environment
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle()
+            status = await RM.status()
+            assert status["worker_environment_exists"] is False
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_wait_for_completed_task_02(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    'wait_for_completed_task' API: failing cases and parameter validation.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+        return resp
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        with pytest.raises(RM.RequestParameterError, match="task UID must be a non-empty string"):
+            RM.wait_for_completed_task("")
+
+        with pytest.raises(RM.RequestParameterError, match="task UID must be a non-empty list"):
+            RM.wait_for_completed_task([])
+
+        with pytest.raises(RM.RequestParameterError, match="Invalid type of parameter 'task_uid'"):
+            RM.wait_for_completed_task(20)
+
+        # 'not_found' items are considered completed by default
+        assert RM.wait_for_completed_task("some_uid") == ["some_uid"]
+        # This could be disabled
+        with pytest.raises(RM.WaitTimeoutError):
+            RM.wait_for_completed_task("some_uid", treat_not_found_as_completed=False, timeout=1)
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            with pytest.raises(RM.RequestParameterError, match="task UID must be a non-empty string"):
+                await RM.wait_for_completed_task("")
+
+            with pytest.raises(RM.RequestParameterError, match="task UID must be a non-empty list"):
+                await RM.wait_for_completed_task([])
+
+            with pytest.raises(RM.RequestParameterError, match="Invalid type of parameter 'task_uid'"):
+                await RM.wait_for_completed_task(20)
+
+            # 'not_found' items are considered completed by default
+            assert (await RM.wait_for_completed_task("some_uid")) == ["some_uid"]
+            # This could be disabled
+            with pytest.raises(RM.WaitTimeoutError):
+                await RM.wait_for_completed_task("some_uid", treat_not_found_as_completed=False, timeout=1)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
 
 
 # fmt: off
