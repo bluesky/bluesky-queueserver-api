@@ -4,6 +4,7 @@ import getpass
 import os
 from pathlib import Path
 import secrets
+import time as ttime
 
 
 from .item import BItem
@@ -102,7 +103,6 @@ class WaitMonitor:
 
     def __init__(self):
         self._time_start = 0
-        self._time_elapsed = 0
         self._timeout = 0
         self._cancel_callbacks = []
 
@@ -120,7 +120,7 @@ class WaitMonitor:
         """
         Time since the operation started (seconds).
         """
-        return self._time_elapsed
+        return ttime.time() - self.time_start
 
     @property
     def timeout(self):
@@ -717,6 +717,57 @@ class API_Base:
         self._add_request_param(request_params, "option", option)
         self._add_lock_key(request_params, lock_key)
         return request_params
+
+    def _prepare_wait_for_completed_task(self, *, task_uid):
+        """
+        Preprocessing parameters for ``wait_for_completed_task``.
+        """
+        params = self._prepare_task_status(task_uid=task_uid)
+        task_uid = params["task_uid"]
+        if not task_uid:
+            # At this point, 'task_uid' is a string or a list.
+            msg_type = "string" if isinstance(task_uid, str) else "list"
+            raise self.RequestParameterError(
+                f"Invalid value of parameter 'task_uid': task UID must be a non-empty {msg_type}"
+            )
+        return task_uid
+
+    def _list_completed_tasks(task_status_reply, *, treat_not_found_as_completed):
+        """
+        Returns a list of completed tasks based on reply retured by ``task_status`` API.
+
+        Parameters
+        ----------
+        task_status_reply: dict
+            Dictionary returned by ``REManagerAPI.task_status`` API. It is assumed, that
+            the API call was successful.
+        treat_not_found_as_completed: boolean
+            The tasks with status 'not_found' are treated as 'completed' if ``True``.
+            Typically 'not_found' means that the task was completed and then expired
+            and deleted from the list of active tasks, so this assumption is valid in
+            most cases.
+
+        Returns
+        -------
+        list(str)
+            List of task UIDs that are completed (or not found). The list is empty
+            if there are no completed tasks.
+        """
+        completed_status_vals = ["completed"]
+        if treat_not_found_as_completed:
+            completed_status_vals.append("not_found")
+
+        task_uids = task_status_reply["task_uid"]
+        task_status = task_status_reply["status"]
+
+        if (task_uids is None) or (task_status is None):
+            return []
+        elif isinstance(task_uids, str):
+            return [task_uids] if task_status in completed_status_vals else []
+        elif isinstance(task_uids, list):
+            return [_ for _ in task_uids if task_status[_] in completed_status_vals]
+        else:
+            return []
 
     def _validate_lock_key(self, lock_key):
         # lock key may be a non-empty string or None

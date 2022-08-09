@@ -148,7 +148,7 @@ class API_Async_Mixin(API_Base):
         """
         return await self.send_request(method="status")
 
-    async def _wait_for_condition(self, *, condition, timeout, monitor):
+    async def _wait_for_condition(self, *, condition, timeout, monitor, reset_time_start=True):
         """
         Blocking function, which is waiting for the returned status to satisfy
         the specified conditions. The function is raises ``WaitTimeoutError``
@@ -169,14 +169,21 @@ class API_Async_Mixin(API_Base):
 
         timeout: float
             timeout in seconds
+        monitor: WaitMonitor or None
+            Reference to wait monitor
+        reset_time_start: boolean (optional, default: True)
+            Set ``False`` to use start time that is already set in the monitor.
+            It is automatically set ``True`` if ``monitor`` is ``None``.
         """
 
         timeout_occurred = False
         wait_cancelled = False
-        t_started = ttime.time()
 
-        monitor = monitor or WaitMonitor()
-        monitor._time_start = t_started
+        if not monitor:
+            reset_time_start = True
+            monitor = WaitMonitor()
+        if reset_time_start:
+            monitor._time_start = ttime.time()
         monitor.set_timeout(timeout)
 
         event = asyncio.Event()
@@ -184,7 +191,6 @@ class API_Async_Mixin(API_Base):
         def cb(status):
             nonlocal timeout_occurred, wait_cancelled, event, monitor
             result = condition(status) if status else False
-            monitor._time_elapsed = ttime.time() - monitor.time_start
 
             if not result and (monitor.time_elapsed > monitor.timeout):
                 timeout_occurred = True
