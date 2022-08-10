@@ -2196,11 +2196,6 @@ def test_wait_for_completed_task_02(re_manager, fastapi_server, protocol, librar
     """
     rm_api_class = _select_re_manager_api(protocol, library)
 
-    def check_resp(resp):
-        assert resp["success"] is True
-        assert resp["msg"] == ""
-        return resp
-
     if not _is_async(library):
         RM = instantiate_re_api_class(rm_api_class)
 
@@ -2239,6 +2234,59 @@ def test_wait_for_completed_task_02(re_manager, fastapi_server, protocol, librar
             # This could be disabled
             with pytest.raises(RM.WaitTimeoutError):
                 await RM.wait_for_completed_task("some_uid", treat_not_found_as_completed=False, timeout=1)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_wait_for_completed_task_03_fail(protocol, library):  # noqa: F811
+    """
+    'wait_for_completed_task' API: failure to communicate with the server.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_wait_for_completed_task_04(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    'wait_for_completed_task' API: check that monitor is properly tracking timeout.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+        return resp
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
 
             await RM.close()
 
