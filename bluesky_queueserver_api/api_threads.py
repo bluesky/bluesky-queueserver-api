@@ -41,6 +41,7 @@ from .api_docstrings import (
     _doc_api_function_execute,
     _doc_api_task_status,
     _doc_api_task_result,
+    _doc_api_wait_for_completed_task,
     _doc_api_re_runs,
     _doc_api_re_pause,
     _doc_api_re_resume,
@@ -748,6 +749,7 @@ API_Threads_Mixin.script_upload.__doc__ = _doc_api_script_upload
 API_Threads_Mixin.function_execute.__doc__ = _doc_api_function_execute
 API_Threads_Mixin.task_status.__doc__ = _doc_api_task_status
 API_Threads_Mixin.task_result.__doc__ = _doc_api_task_result
+API_Threads_Mixin.wait_for_completed_task.__doc__ = _doc_api_wait_for_completed_task
 API_Threads_Mixin.re_runs.__doc__ = _doc_api_re_runs
 API_Threads_Mixin.re_pause.__doc__ = _doc_api_re_pause
 API_Threads_Mixin.re_resume.__doc__ = _doc_api_re_resume

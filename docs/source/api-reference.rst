@@ -185,6 +185,7 @@ API for Executing Tasks
     zmq.REManagerAPI.function_execute
     zmq.REManagerAPI.task_status
     zmq.REManagerAPI.task_result
+    zmq.REManagerAPI.wait_for_completed_task
 
 API for controlling Run Engine
 ******************************

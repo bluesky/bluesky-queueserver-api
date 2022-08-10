@@ -2311,7 +2311,7 @@ def test_wait_for_completed_task_04(re_manager, fastapi_server, protocol, librar
 
         monitor = WaitMonitor()
         t_start = ttime.time()
-        RM.wait_for_completed_task(task_uid, monitor=monitor, timeout=10, treat_not_found_as_completed=False)
+        RM.wait_for_completed_task(task_uid, monitor=monitor, timeout=10)
 
         assert t_start <= monitor.time_start < t_start + 1
         assert 4 < monitor.time_elapsed < 7
@@ -2339,9 +2339,7 @@ def test_wait_for_completed_task_04(re_manager, fastapi_server, protocol, librar
 
             monitor = WaitMonitor()
             t_start = ttime.time()
-            await RM.wait_for_completed_task(
-                task_uid, monitor=monitor, timeout=10, treat_not_found_as_completed=False
-            )
+            await RM.wait_for_completed_task(task_uid, monitor=monitor, timeout=10)
 
             assert t_start <= monitor.time_start < t_start + 1
             assert 4 < monitor.time_elapsed < 7
