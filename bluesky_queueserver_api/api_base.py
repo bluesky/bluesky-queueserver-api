@@ -732,9 +732,11 @@ class API_Base:
             )
         return task_uid
 
-    def _list_completed_tasks(self, task_status_reply, *, treat_not_found_as_completed):
+    def _pick_completed_tasks(self, task_status_reply, *, treat_not_found_as_completed):
         """
-        Returns a list of completed tasks based on reply retured by ``task_status`` API.
+        Returns a dictionary of completed tasks based on reply retured by ``task_status`` API.
+        The dictionary maps task UID to the status. Status may be 'completed' or 'not_found'
+        (if ``treat_not_found_as_completed`` is ``True``).
 
         Parameters
         ----------
@@ -749,9 +751,9 @@ class API_Base:
 
         Returns
         -------
-        list(str)
-            List of task UIDs that are completed (or not found). The list is empty
-            if there are no completed tasks.
+        dict(str: str)
+            Dictionary that maps task UIDs to its status (``'completed'`` or ``'not_found'``).
+            The dictionary may be empty if there are no completed tasks.
         """
         completed_status_vals = ["completed"]
         if treat_not_found_as_completed:
@@ -761,13 +763,13 @@ class API_Base:
         task_status = task_status_reply["status"]
 
         if (task_uids is None) or (task_status is None):
-            return []
+            return {}
         elif isinstance(task_uids, str):
-            return [task_uids] if task_status in completed_status_vals else []
+            return {task_uids: task_status} if task_status in completed_status_vals else []
         elif isinstance(task_uids, list):
-            return [_ for _ in task_uids if task_status[_] in completed_status_vals]
+            return {_: task_status[_] for _ in task_uids if task_status[_] in completed_status_vals}
         else:
-            return []
+            return {}
 
     def _validate_lock_key(self, lock_key):
         # lock key may be a non-empty string or None

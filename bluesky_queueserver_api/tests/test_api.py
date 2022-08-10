@@ -2088,15 +2088,15 @@ def test_wait_for_completed_task_01(re_manager, fastapi_server, protocol, librar
         assert status["worker_background_tasks"] == 3
 
         completed_uids = RM.wait_for_completed_task(task_uids[0])
-        assert completed_uids == [task_uids[0]]
+        assert completed_uids == {task_uids[0]: "completed"}
 
         task_uids_set -= set(completed_uids)
 
         completed_uids = RM.wait_for_completed_task("non-existing-uid")
-        assert completed_uids == ["non-existing-uid"]
+        assert completed_uids == {"non-existing-uid": "not_found"}
 
         completed_uids = RM.wait_for_completed_task(task_uids_set)
-        assert completed_uids == [task_uids[1]]
+        assert completed_uids == {task_uids[1]: "completed"}
 
         # Check if the wait can be successfully cancelled
         monitor = WaitMonitor()
@@ -2148,15 +2148,15 @@ def test_wait_for_completed_task_01(re_manager, fastapi_server, protocol, librar
             assert status["worker_background_tasks"] == 3
 
             completed_uids = await RM.wait_for_completed_task(task_uids[0])
-            assert completed_uids == [task_uids[0]]
+            assert completed_uids == {task_uids[0]: "completed"}
 
             task_uids_set -= set(completed_uids)
 
             completed_uids = await RM.wait_for_completed_task("non-existing-uid")
-            assert completed_uids == ["non-existing-uid"]
+            assert completed_uids == {"non-existing-uid": "not_found"}
 
             completed_uids = await RM.wait_for_completed_task(task_uids_set)
-            assert completed_uids == [task_uids[1]]
+            assert completed_uids == {task_uids[1]: "completed"}
 
             # Check if the wait can be successfully cancelled
             monitor = WaitMonitor()
@@ -2209,7 +2209,7 @@ def test_wait_for_completed_task_02(re_manager, fastapi_server, protocol, librar
             RM.wait_for_completed_task(20)
 
         # 'not_found' items are considered completed by default
-        assert RM.wait_for_completed_task("some_uid") == ["some_uid"]
+        assert RM.wait_for_completed_task("some_uid") == {"some_uid": "not_found"}
         # This could be disabled
         with pytest.raises(RM.WaitTimeoutError):
             RM.wait_for_completed_task("some_uid", treat_not_found_as_completed=False, timeout=1)
@@ -2230,7 +2230,7 @@ def test_wait_for_completed_task_02(re_manager, fastapi_server, protocol, librar
                 await RM.wait_for_completed_task(20)
 
             # 'not_found' items are considered completed by default
-            assert (await RM.wait_for_completed_task("some_uid")) == ["some_uid"]
+            assert (await RM.wait_for_completed_task("some_uid")) == {"some_uid": "not_found"}
             # This could be disabled
             with pytest.raises(RM.WaitTimeoutError):
                 await RM.wait_for_completed_task("some_uid", treat_not_found_as_completed=False, timeout=1)
@@ -2250,14 +2250,33 @@ def test_wait_for_completed_task_03_fail(protocol, library):  # noqa: F811
     """
     rm_api_class = _select_re_manager_api(protocol, library)
 
+    def get_exception_and_match(RM):
+        if protocol == "ZMQ":
+            exception = RM.RequestTimeoutError
+            match = "timeout occurred"
+        elif protocol == "HTTP":
+            exception = RM.RequestError
+            match = "(All connection attempts failed)|(Connection refused)"
+        else:
+            assert False, f"Unknown protocol: {protocol}"
+        return exception, match
+
     if not _is_async(library):
         RM = instantiate_re_api_class(rm_api_class)
+
+        exception, match = get_exception_and_match(RM)
+        with pytest.raises(exception, match=match):
+            RM.wait_for_completed_task("some-uid")
 
         RM.close()
     else:
 
         async def testing():
             RM = instantiate_re_api_class(rm_api_class)
+
+            exception, match = get_exception_and_match(RM)
+            with pytest.raises(exception, match=match):
+                await RM.wait_for_completed_task("some-uid")
 
             await RM.close()
 
@@ -2282,11 +2301,57 @@ def test_wait_for_completed_task_04(re_manager, fastapi_server, protocol, librar
     if not _is_async(library):
         RM = instantiate_re_api_class(rm_api_class)
 
+        check_resp(RM.environment_open())
+        RM.wait_for_idle()
+        status = RM.status()
+        assert status["worker_environment_exists"] is True
+
+        resp = check_resp(RM.function_execute(BFunc("function_sleep", 5), run_in_background=True))
+        task_uid = resp["task_uid"]
+
+        monitor = WaitMonitor()
+        t_start = ttime.time()
+        RM.wait_for_completed_task(task_uid, monitor=monitor, timeout=10, treat_not_found_as_completed=False)
+
+        assert t_start <= monitor.time_start < t_start + 1
+        assert 4 < monitor.time_elapsed < 7
+        assert monitor.timeout == 10
+        assert monitor.is_cancelled is False
+
+        check_resp(RM.environment_close())
+        RM.wait_for_idle()
+        status = RM.status()
+        assert status["worker_environment_exists"] is False
+
         RM.close()
     else:
 
         async def testing():
             RM = instantiate_re_api_class(rm_api_class)
+
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle()
+            status = await RM.status()
+            assert status["worker_environment_exists"] is True
+
+            resp = check_resp(await RM.function_execute(BFunc("function_sleep", 5), run_in_background=True))
+            task_uid = resp["task_uid"]
+
+            monitor = WaitMonitor()
+            t_start = ttime.time()
+            await RM.wait_for_completed_task(
+                task_uid, monitor=monitor, timeout=10, treat_not_found_as_completed=False
+            )
+
+            assert t_start <= monitor.time_start < t_start + 1
+            assert 4 < monitor.time_elapsed < 7
+            assert monitor.timeout == 10
+            assert monitor.is_cancelled is False
+
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle()
+            status = await RM.status()
+            assert status["worker_environment_exists"] is False
 
             await RM.close()
 

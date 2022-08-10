@@ -619,7 +619,7 @@ class API_Async_Mixin(API_Base):
 
         async def detect_completed_tasks():
             task_status_reply = await self.task_status(task_uid=task_uid)
-            completed_tasks = self._list_completed_tasks(
+            completed_tasks = self._pick_completed_tasks(
                 task_status_reply, treat_not_found_as_completed=treat_not_found_as_completed
             )
             return completed_tasks
