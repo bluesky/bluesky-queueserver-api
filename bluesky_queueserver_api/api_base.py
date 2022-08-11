@@ -4,6 +4,7 @@ import getpass
 import os
 from pathlib import Path
 import secrets
+import time as ttime
 
 
 from .item import BItem
@@ -14,6 +15,10 @@ class WaitTimeoutError(TimeoutError):
 
 
 class WaitCancelError(TimeoutError):
+    ...
+
+
+class RequestParameterError(ValueError):
     ...
 
 
@@ -98,7 +103,6 @@ class WaitMonitor:
 
     def __init__(self):
         self._time_start = 0
-        self._time_elapsed = 0
         self._timeout = 0
         self._cancel_callbacks = []
 
@@ -116,7 +120,7 @@ class WaitMonitor:
         """
         Time since the operation started (seconds).
         """
-        return self._time_elapsed
+        return ttime.time() - self.time_start
 
     @property
     def timeout(self):
@@ -164,6 +168,7 @@ class WaitMonitor:
 class API_Base:
     WaitTimeoutError = WaitTimeoutError
     WaitCancelError = WaitCancelError
+    RequestParameterError = RequestParameterError
 
     def __init__(self, *, status_expiration_period, status_polling_period):
 
@@ -631,10 +636,33 @@ class API_Base:
         self._add_lock_key(request_params, lock_key)
         return request_params
 
+    def _prepare_task_status(self, *, task_uid):
+        """
+        Prepare parameters for ``task_status``
+        """
+        if isinstance(task_uid, str):
+            # A string should remain a string.
+            task_uid_prepared = task_uid
+        elif isinstance(task_uid, Iterable):
+            # Status of multiple tasks can be fetched from the manager per a single request.
+            # Iterable may be a tuple, a set etc, but it is best to convert it to a list.
+            task_uid_prepared = list(task_uid)
+        else:
+            raise self.RequestParameterError(
+                f"Invalid type of parameter 'task_uid' ({type(task_uid)}). String or iterable (list) is expected."
+            )
+        request_params = {"task_uid": task_uid_prepared}
+        return request_params
+
     def _prepare_task_result(self, *, task_uid):
         """
-        Prepare parameters for ``task_result`` and ``task_status``
+        Prepare parameters for ``task_result``
         """
+        if not isinstance(task_uid, str):
+            # Only a result of a single task can be fetched per request.
+            raise self.RequestParameterError(
+                f"Invalid type of parameter 'task_uid' ({type(task_uid)}). String is expected."
+            )
         request_params = {"task_uid": task_uid}
         return request_params
 
@@ -689,6 +717,59 @@ class API_Base:
         self._add_request_param(request_params, "option", option)
         self._add_lock_key(request_params, lock_key)
         return request_params
+
+    def _prepare_wait_for_completed_task(self, *, task_uid):
+        """
+        Preprocessing parameters for ``wait_for_completed_task``.
+        """
+        params = self._prepare_task_status(task_uid=task_uid)
+        task_uid = params["task_uid"]
+        if not task_uid:
+            # At this point, 'task_uid' is a string or a list.
+            msg_type = "string" if isinstance(task_uid, str) else "list"
+            raise self.RequestParameterError(
+                f"Invalid value of parameter 'task_uid': task UID must be a non-empty {msg_type}"
+            )
+        return task_uid
+
+    def _pick_completed_tasks(self, task_status_reply, *, treat_not_found_as_completed):
+        """
+        Returns a dictionary of completed tasks based on reply retured by ``task_status`` API.
+        The dictionary maps task UID to the status. Status may be 'completed' or 'not_found'
+        (if ``treat_not_found_as_completed`` is ``True``).
+
+        Parameters
+        ----------
+        task_status_reply: dict
+            Dictionary returned by ``REManagerAPI.task_status`` API. It is assumed, that
+            the API call was successful.
+        treat_not_found_as_completed: boolean
+            The tasks with status 'not_found' are treated as 'completed' if ``True``.
+            Typically 'not_found' means that the task was completed and then expired
+            and deleted from the list of active tasks, so this assumption is valid in
+            most cases.
+
+        Returns
+        -------
+        dict(str: str)
+            Dictionary that maps task UIDs to its status (``'completed'`` or ``'not_found'``).
+            The dictionary may be empty if there are no completed tasks.
+        """
+        completed_status_vals = ["completed"]
+        if treat_not_found_as_completed:
+            completed_status_vals.append("not_found")
+
+        task_uids = task_status_reply["task_uid"]
+        task_status = task_status_reply["status"]
+
+        if (task_uids is None) or (task_status is None):
+            return {}
+        elif isinstance(task_uids, str):
+            return {task_uids: task_status} if task_status in completed_status_vals else []
+        elif isinstance(task_uids, list):
+            return {_: task_status[_] for _ in task_uids if task_status[_] in completed_status_vals}
+        else:
+            return {}
 
     def _validate_lock_key(self, lock_key):
         # lock key may be a non-empty string or None

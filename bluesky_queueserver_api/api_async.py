@@ -41,6 +41,7 @@ from .api_docstrings import (
     _doc_api_function_execute,
     _doc_api_task_status,
     _doc_api_task_result,
+    _doc_api_wait_for_completed_task,
     _doc_api_re_runs,
     _doc_api_re_pause,
     _doc_api_re_resume,
@@ -148,7 +149,7 @@ class API_Async_Mixin(API_Base):
         """
         return await self.send_request(method="status")
 
-    async def _wait_for_condition(self, *, condition, timeout, monitor):
+    async def _wait_for_condition(self, *, condition, timeout, monitor, reset_time_start=True):
         """
         Blocking function, which is waiting for the returned status to satisfy
         the specified conditions. The function is raises ``WaitTimeoutError``
@@ -169,14 +170,21 @@ class API_Async_Mixin(API_Base):
 
         timeout: float
             timeout in seconds
+        monitor: WaitMonitor or None
+            Reference to wait monitor
+        reset_time_start: boolean (optional, default: True)
+            Set ``False`` to use start time that is already set in the monitor.
+            It is automatically set ``True`` if ``monitor`` is ``None``.
         """
 
         timeout_occurred = False
         wait_cancelled = False
-        t_started = ttime.time()
 
-        monitor = monitor or WaitMonitor()
-        monitor._time_start = t_started
+        if not monitor:
+            reset_time_start = True
+            monitor = WaitMonitor()
+        if reset_time_start:
+            monitor._time_start = ttime.time()
         monitor.set_timeout(timeout)
 
         event = asyncio.Event()
@@ -184,7 +192,6 @@ class API_Async_Mixin(API_Base):
         def cb(status):
             nonlocal timeout_occurred, wait_cancelled, event, monitor
             result = condition(status) if status else False
-            monitor._time_elapsed = ttime.time() - monitor.time_start
 
             if not result and (monitor.time_elapsed > monitor.timeout):
                 timeout_occurred = True
@@ -567,7 +574,7 @@ class API_Async_Mixin(API_Base):
 
     async def task_status(self, task_uid):
         # Docstring is maintained separately
-        request_params = self._prepare_task_result(task_uid=task_uid)
+        request_params = self._prepare_task_status(task_uid=task_uid)
         self._clear_status_timestamp()
         return await self.send_request(method="task_status", params=request_params)
 
@@ -576,6 +583,66 @@ class API_Async_Mixin(API_Base):
         request_params = self._prepare_task_result(task_uid=task_uid)
         self._clear_status_timestamp()
         return await self.send_request(method="task_result", params=request_params)
+
+    async def _wait_for_task_results_update(
+        self, task_results_uid, *, timeout=default_wait_timeout, monitor=None, reset_time_start=True
+    ):
+        """
+        Wait for ``task_results_uid`` to change in RE Manager status.
+        """
+        new_task_results_uid = task_results_uid
+
+        if not monitor:
+            reset_time_start = True
+            monitor = WaitMonitor()
+        if reset_time_start:
+            monitor._time_start = ttime.time()
+        monitor.set_timeout(timeout)
+
+        def condition(status):
+            nonlocal new_task_results_uid
+            new_task_results_uid = status["task_results_uid"]
+            return new_task_results_uid != task_results_uid
+
+        await self._wait_for_condition(
+            condition=condition, timeout=timeout, monitor=monitor, reset_time_start=False
+        )
+
+    async def wait_for_completed_task(
+        self, task_uid, *, timeout=default_wait_timeout, monitor=None, treat_not_found_as_completed=True
+    ):
+        # Docstring is maintained separately
+        task_uid = self._prepare_wait_for_completed_task(task_uid=task_uid)
+
+        monitor = monitor or WaitMonitor()
+        monitor._time_start = ttime.time()
+        monitor.set_timeout(timeout)
+
+        async def detect_completed_tasks():
+            task_status_reply = await self.task_status(task_uid=task_uid)
+            completed_tasks = self._pick_completed_tasks(
+                task_status_reply, treat_not_found_as_completed=treat_not_found_as_completed
+            )
+            return completed_tasks
+
+        current_task_results_uid = (await self.status())["task_results_uid"]
+
+        completed_tasks = await detect_completed_tasks()
+        if completed_tasks:
+            return completed_tasks
+
+        while True:
+            # Loop until the 'wait' function is timed out or cancelled or until
+            #   some tasks are completed.
+            await self._wait_for_task_results_update(
+                current_task_results_uid,
+                timeout=timeout,
+                monitor=monitor,
+                reset_time_start=False,
+            )
+            completed_tasks = await detect_completed_tasks()
+            if completed_tasks:
+                return completed_tasks
 
     async def re_runs(self, option=None, *, reload=False):
         # Docstring is maintained separately
@@ -693,6 +760,7 @@ API_Async_Mixin.script_upload.__doc__ = _doc_api_script_upload
 API_Async_Mixin.function_execute.__doc__ = _doc_api_function_execute
 API_Async_Mixin.task_status.__doc__ = _doc_api_task_status
 API_Async_Mixin.task_result.__doc__ = _doc_api_task_result
+API_Async_Mixin.wait_for_completed_task.__doc__ = _doc_api_wait_for_completed_task
 API_Async_Mixin.re_runs.__doc__ = _doc_api_re_runs
 API_Async_Mixin.re_pause.__doc__ = _doc_api_re_pause
 API_Async_Mixin.re_resume.__doc__ = _doc_api_re_resume
