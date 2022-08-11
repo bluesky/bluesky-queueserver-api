@@ -2,6 +2,21 @@
 Release History
 ===============
 
+v0.0.8 (2022-08-11)
+===================
+
+Added
+-----
+
+- New API: ``REManagerAPI.wait_for_completed_task()``.
+
+Changed
+-------
+
+- ``REManagerAPI.task_status()`` now accepts any iterable with task UIDs, not only a list.
+  Iterables are converted to lists internally.
+
+
 v0.0.7 (2022-07-30)
 ===================
 
