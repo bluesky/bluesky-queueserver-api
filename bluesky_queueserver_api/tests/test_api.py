@@ -2249,20 +2249,23 @@ def test_wait_for_completed_task_03_fail(protocol, library):  # noqa: F811
     'wait_for_completed_task' API: failure to communicate with the server.
     """
     rm_api_class = _select_re_manager_api(protocol, library)
+    # HTTP server is running, so we want to intentionally tell the client to communicate with
+    #   non-existing server by setting incorrect port (1111).
+    rm_params = {"http_server_uri": "http://localhost:1111"} if (protocol == "HTTP") else {}
 
     def get_exception_and_match(RM):
         if protocol == "ZMQ":
             exception = RM.RequestTimeoutError
             match = "timeout occurred"
         elif protocol == "HTTP":
-            exception = (RM.ClientError, RM.RequestError)
+            exception = RM.RequestError
             match = "(All connection attempts failed)|(Connection refused)"
         else:
             assert False, f"Unknown protocol: {protocol}"
         return exception, match
 
     if not _is_async(library):
-        RM = instantiate_re_api_class(rm_api_class)
+        RM = instantiate_re_api_class(rm_api_class, **rm_params)
 
         exception, match = get_exception_and_match(RM)
         with pytest.raises(exception, match=match):
@@ -2272,7 +2275,7 @@ def test_wait_for_completed_task_03_fail(protocol, library):  # noqa: F811
     else:
 
         async def testing():
-            RM = instantiate_re_api_class(rm_api_class)
+            RM = instantiate_re_api_class(rm_api_class, **rm_params)
 
             exception, match = get_exception_and_match(RM)
             with pytest.raises(exception, match=match):
