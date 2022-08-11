@@ -2255,7 +2255,7 @@ def test_wait_for_completed_task_03_fail(protocol, library):  # noqa: F811
             exception = RM.RequestTimeoutError
             match = "timeout occurred"
         elif protocol == "HTTP":
-            exception = RM.RequestError
+            exception = (RM.ClientError, RM.RequestError)
             match = "(All connection attempts failed)|(Connection refused)"
         else:
             assert False, f"Unknown protocol: {protocol}"
