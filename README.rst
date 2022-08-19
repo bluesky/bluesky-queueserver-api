@@ -8,9 +8,8 @@ Bluesky Queue Server API
 .. image:: https://img.shields.io/conda/vn/conda-forge/bluesky-queueserver-api
         :target: https://anaconda.org/conda-forge/bluesky-queueserver-api
 
-..
-  .. image:: https://img.shields.io/codecov/c/github/bluesky/bluesky-queueserver-api
-          :target: https://codecov.io/gh/bluesky/bluesky-queueserver-api
+.. image:: https://img.shields.io/codecov/c/github/bluesky/bluesky-queueserver-api
+        :target: https://codecov.io/gh/bluesky/bluesky-queueserver-api
 
 .. image:: https://img.shields.io/github/commits-since/bluesky/bluesky-queueserver-api/latest
         :target: https://github.com/bluesky/bluesky-queueserver-api
