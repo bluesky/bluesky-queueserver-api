@@ -53,11 +53,12 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pytest --cov=./ --cov-report=xml --cov-report=term-missing -vv -k test_item_get_01
+        pytest --cov=./ --cov-report=xml --cov-report=term-missing -vv
 
     - name: Check if coverage data needs to be uploaded to Codecov
-      if: github.repository_owner == 'bluesky' && github.ref == 'refs/heads/main' && matrix.python-version == 3.9
-      # if: github.repository_owner == 'dmgav' && matrix.python-version == 3.9
+      # if: github.repository_owner == 'bluesky' && github.ref == 'refs/heads/main' && matrix.python-version == 3.9
+      # Upload only for 'main' branch and given version of Python of the repository
+      if: github.ref == 'refs/heads/main' && matrix.python-version == 3.9
       run: |
         echo "codecov_dry_run=false" >> $GITHUB_ENV
         echo "Enabling upload to Codecov ..."
