@@ -1,10 +1,6 @@
-# show coverage in CI status, not as a comment. 
+# show coverage in CI status, not as a comment.
 comment: off
 coverage:
   status:
-    project:
-      default:
-        target: auto
-    patch:
-      default:
-        target: auto
+    project: off
+    patch: off

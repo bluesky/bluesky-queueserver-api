@@ -53,10 +53,11 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pytest --cov=./ --cov-report=xml --cov-report=term -vv -k test_item_get_01
+        pytest --cov=./ --cov-report=xml --cov-report=term-missing -vv -k test_item_get_01
 
     - name: Check if coverage data needs to be uploaded to Codecov
       if: github.repository_owner == 'bluesky' && github.ref == 'refs/heads/main' && matrix.python-version == 3.9
+      # if: github.repository_owner == 'dmgav' && matrix.python-version == 3.9
       run: |
         echo "codecov_dry_run=false" >> $GITHUB_ENV
         echo "Enabling upload to Codecov ..."
@@ -71,10 +72,8 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
-        # directory: ./coverage/reports/
+        files: ./coverage.xml
         fail_ci_if_error: true
-        flags: unittests
-        # name: codecov-umbrella
-        # path_to_write_report: ./coverage/codecov_report.txt
+        # flags: unittests
         verbose: true
         dry_run: ${{ env.codecov_dry_run }}
