@@ -74,7 +74,7 @@ jobs:
         # directory: ./coverage/reports/
         fail_ci_if_error: true
         flags: unittests
-        name: codecov-umbrella
+        # name: codecov-umbrella
         # path_to_write_report: ./coverage/codecov_report.txt
         verbose: true
         dry_run: ${{ env.codecov_dry_run }}
