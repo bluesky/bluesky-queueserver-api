@@ -4,12 +4,14 @@ on: [push, pull_request]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.7, 3.8, 3.9]
       fail-fast: false
+
+    env:
+      codecov_dry_run: true
 
     steps:
     - uses: actions/checkout@v2
@@ -51,15 +53,28 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pytest --cov=./ --cov-report=xml -vv
+        pytest --cov=./ --cov-report=xml --cov-report=term -vv -k test_item_get_01
+
+    - name: Check if coverage data needs to be uploaded to Codecov
+      if: github.repository_owner == 'bluesky' && github.ref == 'refs/heads/main' && matrix.python-version == 3.9
+      run: |
+        echo "codecov_dry_run=false" >> $GITHUB_ENV
+        echo "Enabling upload to Codecov ..."
+
+    - name: Print parameters
+      run: |
+          echo "github.repository_owner = ${{ github.repository_owner }}"
+          echo "github.ref = ${{ github.ref }}"
+          echo "matrix.python-version = ${{ matrix.python-version }}"
+          echo "env.codecov_dry_run = ${{ env.codecov_dry_run }}"
 
     - name: Upload coverage to Codecov
-      if: github.repository_owner == 'bluesky' && github.ref == 'refs/heads/main'
       uses: codecov/codecov-action@v3
       with:
-        directory: ./coverage/reports/
+        # directory: ./coverage/reports/
         fail_ci_if_error: true
         flags: unittests
         name: codecov-umbrella
-        path_to_write_report: ./coverage/codecov_report.txt
+        # path_to_write_report: ./coverage/codecov_report.txt
         verbose: true
+        dry_run: ${{ env.codecov_dry_run }}
