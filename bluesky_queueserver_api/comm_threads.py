@@ -88,7 +88,11 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         self._client.close()
 
     def login(self, username, password, *, provider=None):
-        pass
+        # Docstring is maintained separately
+        endpoint, data = self._prepare_login(username=username, password=password, provider=provider)
+        response = self.send_request(method=("POST", endpoint), data=data)
+        response = self._process_login_response(response=response)
+        return response
 
 
 ReManagerComm_ZMQ_Threads.send_request.__doc__ = _doc_send_request

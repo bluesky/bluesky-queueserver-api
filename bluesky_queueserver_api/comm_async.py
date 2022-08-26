@@ -87,6 +87,13 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_period * 10)
         await self._client.aclose()
 
+    async def login(self, username, password, *, provider=None):
+        # Docstring is maintained separately
+        endpoint, data = self._prepare_login(username=username, password=password, provider=provider)
+        response = await self.send_request(method=("POST", endpoint), data=data)
+        response = self._process_login_response(response=response)
+        return response
+
 
 ReManagerComm_ZMQ_Async.send_request.__doc__ = _doc_send_request
 ReManagerComm_HTTP_Async.send_request.__doc__ = _doc_send_request

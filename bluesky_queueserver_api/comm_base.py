@@ -227,6 +227,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self,
         *,
         http_server_uri=None,
+        http_auth_provider=None,
         api_prefix=None,
         timeout=default_http_request_timeout,
         console_monitor_poll_period=default_console_monitor_poll_period,
@@ -255,10 +256,15 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self._console_monitor_max_lines = console_monitor_max_lines
 
         self._rest_api_method_map = rest_api_method_map
+
         if api_prefix:
             api_prefix = api_prefix.strip()
             api_prefix = api_prefix if api_prefix.startswith("/") else f"/{api_prefix}"
         self._rest_api_prefix = api_prefix
+
+        self._http_auth_provider = self._preprocess_endpoint_name(
+            http_auth_provider, msg="Authentication provider path"
+        )
 
         self._client = self._create_client(http_server_uri=http_server_uri, timeout=timeout)
 
@@ -267,11 +273,23 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
     def _create_client(self, http_server_uri, timeout):
         raise NotImplementedError()
 
+    def _preprocess_endpoint_name(self, endpoint_name, *, msg):
+        if not isinstance(endpoint_name, (str, type(None))):
+            raise ValueError(f"{msg.capitalize()} must be a string or None: {endpoint_name!r}")
+        if endpoint_name:
+            endpoint_name = endpoint_name.strip()
+        if endpoint_name and not endpoint_name.startswith("/"):
+            endpoint_name = f"/{endpoint_name}"
+        return endpoint_name or None
+
     def _prepare_headers(self):
+        headers = None
         if self.auth_method == self.AuthorizationMethods.API_KEY:
             headers = {"Authorization": f"ApiKey {self.auth_key}"}
-        else:
-            headers = None
+        elif self.auth_method == self.AuthorizationMethods.TOKEN:
+            access_token, _ = self.auth_key
+            if access_token:
+                headers = {"Authorization": f"Bearer {access_token}"}
         return headers
 
     def _prepare_request(self, *, method, params=None):
@@ -393,3 +411,29 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         else:
             self._auth_method = self.AuthorizationMethods.NONE
             self._auth_key = None
+
+    def _prepare_login(self, *, username, password, provider):
+        if not isinstance(username, str):
+            raise ValueError(f"'username' is not string: type(username)={type(username)}")
+        if not isinstance(password, str):
+            raise ValueError(f"'password' is not string: type(password)={type(password)}")
+
+        provider = self._preprocess_endpoint_name(provider, msg="Authentication provider path")
+
+        selected_provider = provider or self._http_auth_provider
+        if not selected_provider:
+            raise self.RequestError(
+                "Authentication provider is not specified: set default authentication provider "
+                "or pass the provider endpoint as a parameter"
+            )
+
+        data = {"username": username, "password": password}
+
+        endpoint = f"/api/auth/provider{selected_provider}"
+        return endpoint, data
+
+    def _process_login_response(self, response):
+        access_token = response.get("access_token", None)
+        refresh_token = response.get("refresh_token", None)
+        self.set_authorization_key(token=access_token, refresh_token=refresh_token)
+        return response
