@@ -58,14 +58,21 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
     def _create_client(self, http_server_uri, timeout):
         return httpx.Client(base_url=http_server_uri, timeout=timeout)
 
-    def send_request(self, *, method, params=None):
+    def send_request(self, *, method, params=None, headers=None, data=None, timeout=None):
+        # Docstring is maintained separately
         try:
             client_response = None
             request_method, endpoint, payload = self._prepare_request(method=method, params=params)
-            headers = self._prepare_headers()
+            headers = headers or self._prepare_headers()
             kwargs = {"json": payload}
             if headers:
                 kwargs.update({"headers": headers})
+            if data:
+                kwargs.update({"data": data})
+            if timeout is not None:
+                # If timeout is None, then use the default value, if timeout is 0 or negative,
+                #   then disable timeout, otherwise set timeout for current request
+                kwargs.update({"timeout": timeout if (timeout > 0) else None})
             client_response = self._client.request(request_method, endpoint, **kwargs)
             response = self._process_response(client_response=client_response)
 
@@ -79,6 +86,9 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
     def close(self):
         self._console_monitor.disable_wait(timeout=self._console_monitor_poll_period * 10)
         self._client.close()
+
+    def login(self, username, password, *, provider=None):
+        pass
 
 
 ReManagerComm_ZMQ_Threads.send_request.__doc__ = _doc_send_request

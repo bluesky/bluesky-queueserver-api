@@ -1,5 +1,5 @@
 from bluesky_queueserver import CommTimeoutError
-from collections.abc import Mapping
+from collections.abc import Mapping, Iterable
 import enum
 import httpx
 import os
@@ -275,9 +275,19 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         return headers
 
     def _prepare_request(self, *, method, params=None):
-        if method not in self._rest_api_method_map:
-            raise KeyError(f"Unknown method {method!r}")
-        request_method, endpoint = rest_api_method_map[method]
+        if isinstance(method, str):
+            if method not in self._rest_api_method_map:
+                raise KeyError(f"Unknown method {method!r}")
+            request_method, endpoint = rest_api_method_map[method]
+        elif isinstance(method, Iterable):
+            mtd = tuple(method)
+            if len(mtd) != 2 or any([not isinstance(_, str) for _ in mtd]):
+                raise ValueError(f"If method is an iterable, it must consist of 2 string elements: method={mtd!r}")
+            request_method, endpoint = mtd
+        else:
+            raise TypeError(
+                f"Method must be a string or an iterable: method={method!r} type(method)={type(method)!r}"
+            )
         endpoint = f"{self._rest_api_prefix}{endpoint}" if self._rest_api_prefix else endpoint
         payload = params or {}
         return request_method, endpoint, payload

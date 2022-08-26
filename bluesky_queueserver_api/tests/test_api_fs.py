@@ -123,3 +123,125 @@ def test_ReManagerAPI_parameters_01(
                 assert "RE Environment is ready" in text, text
 
         asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_send_request_1(re_manager_cmd, fastapi_server_fs, protocol, library):  # noqa: F811
+    """
+    ``send_request`` API: basic functionality and error handling (for HTTP requests).
+    """
+    re_manager_cmd()
+    fastapi_server_fs()
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        status = RM.status()
+        status2 = RM.send_request(method="status")
+        assert status2 == status
+        status3 = RM.send_request(method=("GET", "/api/status"))
+        assert status3 == status
+
+        with pytest.raises(KeyError, match="Unknown method"):
+            RM.send_request(method="abc")
+
+        with pytest.raises(TypeError, match="must be a string or an iterable"):
+            RM.send_request(method=10)
+
+        for method in (
+            ("GET", "/api/status", "aaa"),
+            ("GET",),
+            (10, "/api/status"),
+            ("GET", {}),
+            (10, 20),
+        ):
+            print(f"Testing method: {method}")
+            with pytest.raises(ValueError, match="must consist of 2 string elements"):
+                RM.send_request(method=method)
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            status = await RM.status()
+            status2 = await RM.send_request(method="status")
+            assert status2 == status
+            status3 = await RM.send_request(method=("GET", "/api/status"))
+            assert status3 == status
+
+            with pytest.raises(KeyError, match="Unknown method"):
+                await RM.send_request(method="abc")
+
+            with pytest.raises(TypeError, match="must be a string or an iterable"):
+                await RM.send_request(method=10)
+
+            for method in (
+                ("GET", "/api/status", "aaa"),
+                ("GET",),
+                (10, "/api/status"),
+                ("GET", {}),
+                (10, 20),
+            ):
+                print(f"Testing method: {method}")
+                with pytest.raises(ValueError, match="must consist of 2 string elements"):
+                    await RM.send_request(method=method)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_send_request_2(fastapi_server_fs, protocol, library):  # noqa: F811
+    """
+    ``send_request`` API: timeout (for HTTP requests).
+    """
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        # No timeout
+        status = RM.send_request(method=("GET", "/api/test/server/sleep"), params={"time": 3})
+        assert status["success"] is True
+
+        # Set timeout for the given request
+        with pytest.raises(RM.RequestTimeoutError):
+            RM.send_request(method=("GET", "/api/test/server/sleep"), params={"time": 3}, timeout=1)
+
+        # Use the defaut timeout
+        with pytest.raises(RM.RequestTimeoutError):
+            RM.send_request(method=("GET", "/api/test/server/sleep"), params={"time": RM._timeout + 1})
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            # No timeout
+            status = await RM.send_request(method=("GET", "/api/test/server/sleep"), params={"time": 3})
+            assert status["success"] is True
+
+            # Set timeout for the given request
+            with pytest.raises(RM.RequestTimeoutError):
+                await RM.send_request(method=("GET", "/api/test/server/sleep"), params={"time": 3}, timeout=1)
+
+            # Use the defaut timeout
+            with pytest.raises(RM.RequestTimeoutError):
+                await RM.send_request(method=("GET", "/api/test/server/sleep"), params={"time": RM._timeout + 1})
+
+            await RM.close()
+
+        asyncio.run(testing())

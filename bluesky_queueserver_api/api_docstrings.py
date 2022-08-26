@@ -266,10 +266,21 @@ _doc_send_request = """
 
     Parameters
     ----------
-    method: str
-        Name of the API method
+    method: str, list or tuple
+        Name of the API method (e.g. ``'status'`, 0MQ and HTTP requests) or
+        a tuple (e.g. ``('GET', '/api/status')``, only HTTP requests).
+        Tuple should be used to call custom REST API that are not supported by
+        the library.
     params: dict or None, optional
         Dictionary of API parameters or ``None`` if no parameters are passed.
+    headers: dict or None, optional
+        Header data (supported only for HTTP requests). Default: None.
+    data: dict or None, optional
+        Form data (supported only for HTTP requests). Default: None.
+    timeout: float or None, optional
+        Timeout in seconds (supported only for HTTP requests). If the value
+        is zero or negative, then timeout is diabled. The default timeout
+        is used if the value is ``None``. Default: None.
 
     Returns
     -------

@@ -58,7 +58,8 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
     def _create_client(self, http_server_uri, timeout):
         return httpx.AsyncClient(base_url=http_server_uri, timeout=timeout)
 
-    async def send_request(self, *, method, params=None):
+    async def send_request(self, *, method, params=None, headers=None, data=None, timeout=None):
+        # Docstring is maintained separately
         try:
             client_response = None
             request_method, endpoint, payload = self._prepare_request(method=method, params=params)
@@ -66,6 +67,12 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
             kwargs = {"json": payload}
             if headers:
                 kwargs.update({"headers": headers})
+            if data:
+                kwargs.update({"data": data})
+            if timeout is not None:
+                # If timeout is None, then use the default value, if timeout is 0 or negative,
+                #   then disable timeout, otherwise set timeout for current request
+                kwargs.update({"timeout": timeout if (timeout > 0) else None})
             client_response = await self._client.request(request_method, endpoint, **kwargs)
             response = self._process_response(client_response=client_response)
 
