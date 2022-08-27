@@ -197,12 +197,6 @@ _doc_REManagerAPI_HTTP = """
     http_server_uri: str or None
         URI of Bluesky HTTP Server. If ``None``, then the default URI
         `"http://localhost:60610"`` is used.
-    api_prefix: str or None
-        Prefix added to REST API. For example if ``api_prefix='/srx'``,
-        then **status** API calls ``https://<server_uri>/srx/api/status``.
-        The leading ``'/'`` may be skipped: ``'/srx'`` and ``'srx'``
-        result in the same API call. If the prefix is ``None`` (default),
-        then no prefix is added.
     timeout: float, optional
         Request timeout. Positive value sets timeout in seconds, 0 (zero) disables
         timeouts, ``None`` sets timeout to the default value. Default value

@@ -234,7 +234,6 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         *,
         http_server_uri=None,
         http_auth_provider=None,
-        api_prefix=None,
         timeout=default_http_request_timeout,
         timeout_login=default_http_login_timeout,
         console_monitor_poll_period=default_console_monitor_poll_period,
@@ -266,11 +265,6 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self._console_monitor_max_lines = console_monitor_max_lines
 
         self._rest_api_method_map = rest_api_method_map
-
-        if api_prefix:
-            api_prefix = api_prefix.strip()
-            api_prefix = api_prefix if api_prefix.startswith("/") else f"/{api_prefix}"
-        self._rest_api_prefix = api_prefix
 
         self._http_auth_provider = self._preprocess_endpoint_name(
             http_auth_provider, msg="Authentication provider path"
@@ -325,7 +319,6 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             raise TypeError(
                 f"Method must be a string or an iterable: method={method!r} type(method)={type(method)!r}"
             )
-        endpoint = f"{self._rest_api_prefix}{endpoint}" if self._rest_api_prefix else endpoint
         payload = params or {}
         return request_method, endpoint, payload
 
