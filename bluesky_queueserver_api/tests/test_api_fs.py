@@ -1,4 +1,5 @@
 import asyncio
+import os
 import pytest
 
 from bluesky_queueserver import generate_zmq_keys
@@ -241,6 +242,117 @@ def test_send_request_2(fastapi_server_fs, protocol, library):  # noqa: F811
             # Use the defaut timeout
             with pytest.raises(RM.RequestTimeoutError):
                 await RM.send_request(method=("GET", "/api/test/server/sleep"), params={"time": RM._timeout + 1})
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# Configuration file for 'toy' authentication provider. The passwords are explicitly listed.
+config_toy_yml = """
+uvicorn:
+    host: localhost
+    port: 60610
+authentication:
+    providers:
+        - provider: toy
+          authenticator: bluesky_httpserver.authenticators:DictionaryAuthenticator
+          args:
+              users_to_passwords:
+                  alice: alice_password
+                  bob: bob_password
+                  cara: cara_password
+    qserver_admins:
+        - provider: toy
+          id: alice
+"""
+
+
+# fmt: off
+@pytest.mark.parametrize("default_provider", [True, False])
+@pytest.mark.parametrize("use_kwargs", [True, False])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_login_1(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+    default_provider,
+    use_kwargs,
+):
+    """
+    ``send_request`` API: timeout (for HTTP requests).
+    """
+    re_manager_cmd()
+
+    config_dir = os.path.join(tmpdir, "config")
+    config_path = os.path.join(config_dir, "config_toy.yml")
+    os.makedirs(config_dir)
+    with open(config_path, "wt") as f:
+        f.writelines(config_toy_yml)
+
+    monkeypatch.setenv("QSERVER_HTTP_SERVER_CONFIG", config_path)
+    monkeypatch.chdir(tmpdir)
+
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        params = {"http_auth_provider": "/toy/token"} if default_provider else {}
+        RM = instantiate_re_api_class(rm_api_class, **params)
+
+        # Make sure access does not work without authentication
+        with pytest.raises(RM.ClientError, match="401"):
+            RM.status()
+
+        login_args, login_kwargs = [], {}
+        if not default_provider:
+            login_kwargs.update({"provider": "/toy/token"})
+        if use_kwargs:
+            login_kwargs.update({"username": "bob", "password": "bob_password"})
+        else:
+            login_args.extend(["bob", "bob_password"])
+
+        token_info = RM.login(*login_args, **login_kwargs)
+        auth_key = RM.auth_key
+        assert isinstance(auth_key, tuple), auth_key
+        assert auth_key[0] == token_info["access_token"]
+        assert auth_key[1] == token_info["refresh_token"]
+
+        # Now make sure that access works
+        RM.status()
+
+        RM.close()
+    else:
+
+        async def testing():
+            params = {"http_auth_provider": "/toy/token"} if default_provider else {}
+            RM = instantiate_re_api_class(rm_api_class, **params)
+
+            # Make sure access does not work without authentication
+            with pytest.raises(RM.ClientError, match="401"):
+                await RM.status()
+
+            login_args, login_kwargs = [], {}
+            if not default_provider:
+                login_kwargs.update({"provider": "/toy/token"})
+            if use_kwargs:
+                login_kwargs.update({"username": "bob", "password": "bob_password"})
+            else:
+                login_args.extend(["bob", "bob_password"])
+
+            token_info = await RM.login(*login_args, **login_kwargs)
+            auth_key = RM.auth_key
+            assert isinstance(auth_key, tuple), auth_key
+            assert auth_key[0] == token_info["access_token"]
+            assert auth_key[1] == token_info["refresh_token"]
+
+            # Now make sure that access works
+            await RM.status()
 
             await RM.close()
 
