@@ -65,6 +65,10 @@ rest_api_method_map = {
 }
 
 
+class RequestParameterError(ValueError):
+    ...
+
+
 class RequestError(httpx.RequestError):
     ...
 
@@ -103,6 +107,7 @@ class AuthorizationMethods(enum.Enum):
 
 class ReManagerAPI_Base:
 
+    RequestParameterError = RequestParameterError
     RequestTimeoutError = RequestTimeoutError
     RequestFailedError = RequestFailedError
     RequestError = RequestError
@@ -422,7 +427,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
         selected_provider = provider or self._http_auth_provider
         if not selected_provider:
-            raise self.RequestError(
+            raise self.RequestParameterError(
                 "Authentication provider is not specified: set default authentication provider "
                 "or pass the provider endpoint as a parameter"
             )

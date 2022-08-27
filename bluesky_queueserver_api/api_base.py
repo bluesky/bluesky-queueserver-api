@@ -6,8 +6,8 @@ from pathlib import Path
 import secrets
 import time as ttime
 
-
 from .item import BItem
+from .comm_base import RequestParameterError
 
 
 class WaitTimeoutError(TimeoutError):
@@ -15,10 +15,6 @@ class WaitTimeoutError(TimeoutError):
 
 
 class WaitCancelError(TimeoutError):
-    ...
-
-
-class RequestParameterError(ValueError):
     ...
 
 
@@ -168,7 +164,6 @@ class WaitMonitor:
 class API_Base:
     WaitTimeoutError = WaitTimeoutError
     WaitCancelError = WaitCancelError
-    RequestParameterError = RequestParameterError
 
     def __init__(self, *, status_expiration_period, status_polling_period):
 
@@ -648,7 +643,7 @@ class API_Base:
             # Iterable may be a tuple, a set etc, but it is best to convert it to a list.
             task_uid_prepared = list(task_uid)
         else:
-            raise self.RequestParameterError(
+            raise RequestParameterError(
                 f"Invalid type of parameter 'task_uid' ({type(task_uid)}). String or iterable (list) is expected."
             )
         request_params = {"task_uid": task_uid_prepared}
@@ -660,7 +655,7 @@ class API_Base:
         """
         if not isinstance(task_uid, str):
             # Only a result of a single task can be fetched per request.
-            raise self.RequestParameterError(
+            raise RequestParameterError(
                 f"Invalid type of parameter 'task_uid' ({type(task_uid)}). String is expected."
             )
         request_params = {"task_uid": task_uid}
@@ -727,7 +722,7 @@ class API_Base:
         if not task_uid:
             # At this point, 'task_uid' is a string or a list.
             msg_type = "string" if isinstance(task_uid, str) else "list"
-            raise self.RequestParameterError(
+            raise RequestParameterError(
                 f"Invalid value of parameter 'task_uid': task UID must be a non-empty {msg_type}"
             )
         return task_uid
