@@ -203,8 +203,15 @@ _doc_REManagerAPI_HTTP = """
         The leading ``'/'`` may be skipped: ``'/srx'`` and ``'srx'``
         result in the same API call. If the prefix is ``None`` (default),
         then no prefix is added.
-    timeout: float
-        Request timeout. Default value is 5.0 seconds.
+    timeout: float, optional
+        Request timeout. Positive value sets timeout in seconds, 0 (zero) disables
+        timeouts, ``None`` sets timeout to the default value. Default value
+        is 5.0 seconds.
+    timeout_login: float, optional
+        Request timeout used for login requests. Login requests may take substantial
+        time to process at the server, especially in case of 2FA. See the description
+        for the parameter ``timeout`` for more information. Default value
+        is 60.0 seconds.
     console_monitor_poll_period: float
         Polling period defines interval between consecutive HTTP requests
         to the server. Default: 0.5 s.

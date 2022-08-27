@@ -103,6 +103,9 @@ def test_ReManagerAPI_parameters_01(
 
             text = RM.console_monitor.text()
             assert "RE Environment is ready" in text, text
+
+        RM.close()
+
     else:
 
         async def testing():
@@ -122,6 +125,41 @@ def test_ReManagerAPI_parameters_01(
 
                 text = await RM.console_monitor.text()
                 assert "RE Environment is ready" in text, text
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("tout, tout_login, tset, tset_login", [
+    (0.5, 10, 0.5, 10),
+    (None, None, 5.0, 60.0),  # Default values
+    (0, 0, 0, 0),  # Disables timeout by default
+])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_ReManagerAPI_parameters_02(protocol, library, tout, tout_login, tset, tset_login):
+    """
+    classes ReManagerComm_HTTP_Threads and ReManagerComm_HTTP_Async:
+    Test that 'timeout' and 'timeout_login' are set correctly.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, timeout=tout, timeout_login=tout_login)
+        assert RM._timeout == tset
+        assert RM._timeout_login == tset_login
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, timeout=tout, timeout_login=tout_login)
+            assert RM._timeout == tset
+            assert RM._timeout_login == tset_login
+            await RM.close()
 
         asyncio.run(testing())
 

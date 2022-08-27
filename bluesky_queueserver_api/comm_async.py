@@ -56,6 +56,7 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         )
 
     def _create_client(self, http_server_uri, timeout):
+        timeout = self._adjust_timeout(timeout)
         return httpx.AsyncClient(base_url=http_server_uri, timeout=timeout)
 
     async def send_request(self, *, method, params=None, headers=None, data=None, timeout=None):
@@ -70,9 +71,7 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
             if data:
                 kwargs.update({"data": data})
             if timeout is not None:
-                # If timeout is None, then use the default value, if timeout is 0 or negative,
-                #   then disable timeout, otherwise set timeout for current request
-                kwargs.update({"timeout": timeout if (timeout > 0) else None})
+                kwargs.update({"timeout": self._adjust_timeout(timeout)})
             client_response = await self._client.request(request_method, endpoint, **kwargs)
             response = self._process_response(client_response=client_response)
 
@@ -90,7 +89,7 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
     async def login(self, username, password, *, provider=None):
         # Docstring is maintained separately
         endpoint, data = self._prepare_login(username=username, password=password, provider=provider)
-        response = await self.send_request(method=("POST", endpoint), data=data)
+        response = await self.send_request(method=("POST", endpoint), data=data, timeout=self._timeout_login)
         response = self._process_login_response(response=response)
         return response
 

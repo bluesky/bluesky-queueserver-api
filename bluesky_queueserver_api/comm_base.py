@@ -9,6 +9,7 @@ from ._defaults import (
     default_zmq_request_timeout_recv,
     default_zmq_request_timeout_send,
     default_http_request_timeout,
+    default_http_login_timeout,
     default_http_server_uri,
     default_console_monitor_poll_timeout,
     default_console_monitor_poll_period,
@@ -235,6 +236,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         http_auth_provider=None,
         api_prefix=None,
         timeout=default_http_request_timeout,
+        timeout_login=default_http_login_timeout,
         console_monitor_poll_period=default_console_monitor_poll_period,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
         console_monitor_max_lines=default_console_monitor_max_lines,
@@ -254,7 +256,10 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         http_server_uri = http_server_uri or os.environ.get("QSERVER_HTTP_SERVER_URI")
         http_server_uri = http_server_uri or default_http_server_uri
 
-        self._timeout = timeout
+        # The timeout may still have explicitly passed value of None, so replace it with the default value.
+        self._timeout = timeout if timeout is not None else default_http_request_timeout
+        self._timeout_login = timeout_login if timeout_login is not None else default_http_login_timeout
+
         self._request_fail_exceptions = request_fail_exceptions
         self._console_monitor_poll_period = console_monitor_poll_period
         self._console_monitor_max_msgs = console_monitor_max_msgs
@@ -271,12 +276,21 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             http_auth_provider, msg="Authentication provider path"
         )
 
-        self._client = self._create_client(http_server_uri=http_server_uri, timeout=timeout)
+        self._client = self._create_client(http_server_uri=http_server_uri, timeout=self._timeout)
 
         self._init_console_monitor()
 
     def _create_client(self, http_server_uri, timeout):
         raise NotImplementedError()
+
+    def _adjust_timeout(self, timeout):
+        """
+        Adjust timeout value. In ``httpx``, the timeout is disabled if timeout is None.
+        We are using 0 (or negative value) to disable timeout and None to use
+        the default timeout. So the timeout value needs to be adjusted before it is
+        passed to ``httpx``.
+        """
+        return timeout if (timeout > 0) else None
 
     def _preprocess_endpoint_name(self, endpoint_name, *, msg):
         if not isinstance(endpoint_name, (str, type(None))):

@@ -4,6 +4,7 @@ from ..comm_threads import ReManagerComm_HTTP_Threads
 from .._defaults import (
     default_allow_request_fail_exceptions,
     default_http_request_timeout,
+    default_http_login_timeout,
     default_status_expiration_period,
     default_status_polling_period,
     default_console_monitor_poll_period,
@@ -22,6 +23,7 @@ class REManagerAPI(ReManagerComm_HTTP_Threads, API_Threads_Mixin):
         http_auth_provider=None,
         api_prefix=None,
         timeout=default_http_request_timeout,
+        timeout_login=default_http_login_timeout,
         console_monitor_poll_period=default_console_monitor_poll_period,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
         console_monitor_max_lines=default_console_monitor_max_lines,
@@ -35,6 +37,7 @@ class REManagerAPI(ReManagerComm_HTTP_Threads, API_Threads_Mixin):
             http_auth_provider=http_auth_provider,
             api_prefix=api_prefix,
             timeout=timeout,
+            timeout_login=timeout_login,
             console_monitor_poll_period=console_monitor_poll_period,
             console_monitor_max_msgs=console_monitor_max_msgs,
             console_monitor_max_lines=console_monitor_max_lines,
