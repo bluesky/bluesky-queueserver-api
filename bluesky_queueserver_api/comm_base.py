@@ -299,7 +299,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         elif endpoint_name is not None:
             raise TypeError(f"{msg.capitalize()} must be a string or None: {endpoint_name!r}")
         return endpoint_name
- 
+
     def _prepare_headers(self):
         headers = None
         if self.auth_method == self.AuthorizationMethods.API_KEY:
@@ -434,12 +434,12 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             raise TypeError(f"'username' is not string: type(username)={type(username)}")
         username = username.strip()
         if not username:
-            raise ValueError(f"'username' is an empty string")
+            raise ValueError("'username' is an empty string")
         if not isinstance(password, str):
             raise TypeError(f"'password' is not string: type(password)={type(password)}")
         password = password.strip()
         if not password:
-            raise ValueError(f"'password' is an empty string")
+            raise ValueError("'password' is an empty string")
 
         provider = self._preprocess_endpoint_name(provider, msg="Authentication provider path")
 

@@ -436,13 +436,13 @@ def test_login_2_fail(
         ("bob", "", ValueError, "'password' is an empty string"),
         (10, "bob-password", TypeError, "'username' is not string"),
         ("", "bob-password", ValueError, "'username' is an empty string"),
-        ("bob", "rand_pwd", rm_api_class.ClientError, "401: Incorrect username or password"), 
-        ("rand_user", "bob-password", rm_api_class.ClientError, "401: Incorrect username or password"), 
-        ("rand_user", "rand_pwd", rm_api_class.ClientError, "401: Incorrect username or password"),        
+        ("bob", "rand_pwd", rm_api_class.ClientError, "401: Incorrect username or password"),
+        ("rand_user", "bob-password", rm_api_class.ClientError, "401: Incorrect username or password"),
+        ("rand_user", "rand_pwd", rm_api_class.ClientError, "401: Incorrect username or password"),
     ]
 
     if not _is_async(library):
-        
+
         for provider, except_type, msg in invalid_providers:
             with pytest.raises(except_type, match=msg):
                 RM = instantiate_re_api_class(rm_api_class, http_auth_provider=provider)
@@ -500,4 +500,3 @@ def test_login_2_fail(
             await RM.close()
 
         asyncio.run(testing())
-
