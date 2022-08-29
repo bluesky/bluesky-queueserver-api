@@ -1,6 +1,7 @@
 from bluesky_queueserver import CommTimeoutError
 from collections.abc import Mapping, Iterable
 import enum
+import getpass
 import httpx
 import os
 
@@ -63,6 +64,8 @@ rest_api_method_map = {
     "lock_info": ("GET", "/api/lock/info"),
     "manager_stop": ("POST", "/api/manager/stop"),
     "manager_kill": ("POST", "/api/test/manager/kill"),
+    # API available only in HTTP version
+    "session_refresh": ("POST", "/api/auth/session/refresh"),
 }
 
 
@@ -430,6 +433,12 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             self._auth_key = None
 
     def _prepare_login(self, *, username, password, provider):
+        # Interactively ask for username and password if they were not passed as parameters
+        if username is None:
+            username = input("Username: ")
+        if password is None:
+            password = getpass.getpass()
+
         if not isinstance(username, str):
             raise TypeError(f"'username' is not string: type(username)={type(username)}")
         username = username.strip()
@@ -456,7 +465,30 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         return endpoint, data
 
     def _process_login_response(self, response):
+        """
+        Process response to 'login' or 'refresh_session' request. The responses are structured
+        identically and contain a new access token and a new refresh token.
+        """
         access_token = response.get("access_token", None)
         refresh_token = response.get("refresh_token", None)
         self.set_authorization_key(token=access_token, refresh_token=refresh_token)
         return response
+
+    def _prepare_refresh_session(self, *, refresh_token):
+        """
+        If no refresh token is passed to API, then use the refresh token from 'auth_key'
+        """
+        if refresh_token is None:
+            if self.auth_method == self.auth_method.TOKEN:
+                _, refresh_token = self.auth_key
+        elif isinstance(refresh_token, str):
+            refresh_token = refresh_token.strip()
+            if not refresh_token:
+                raise ValueError("'refresh_token' is an empty string")
+        else:
+            raise TypeError("'refresh_token' must be a string or None")
+
+        if refresh_token is None:
+            raise self.RequestParameterError("'refresh_token' is not set")
+
+        return refresh_token

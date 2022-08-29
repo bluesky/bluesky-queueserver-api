@@ -197,6 +197,11 @@ _doc_REManagerAPI_HTTP = """
     http_server_uri: str or None
         URI of Bluesky HTTP Server. If ``None``, then the default URI
         `"http://localhost:60610"`` is used.
+    http_auth_provider: str or None, optional
+        Name of the endpoint of authentication provider (such as ``'/toy/token'``)
+        or ``None`` if authentication provider is not needed (e.g. if authorization
+        using API keys is used). The provider may also be passed as a parameter
+        of ``login`` API if needed. Default: None.
     timeout: float, optional
         Request timeout. Positive value sets timeout in seconds, 0 (zero) disables
         timeouts, ``None`` sets timeout to the default value. Default value
@@ -282,6 +287,12 @@ _doc_send_request = """
         Timeout in seconds (supported only for HTTP requests). If the value
         is zero or negative, then timeout is diabled. The default timeout
         is used if the value is ``None``. Default: None.
+    refresh_session: boolean, optional
+        Indicates if the session should be automatically refreshed if the token
+        expired (supported only for HTTP requests). The session could be refreshed
+        only if an expired access token and valid refresh token are available.
+        The option to refresh session should be enabled for most API that require
+        authentication. Default: True.
 
     Returns
     -------

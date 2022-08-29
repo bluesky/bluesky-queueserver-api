@@ -59,8 +59,10 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         timeout = self._adjust_timeout(timeout)
         return httpx.Client(base_url=http_server_uri, timeout=timeout)
 
-    def send_request(self, *, method, params=None, headers=None, data=None, timeout=None):
-        # Docstring is maintained separately
+    def _simple_request(self, *, method, params=None, headers=None, data=None, timeout=None):
+        """
+        The code that formats and sends a simple request.
+        """
         try:
             client_response = None
             request_method, endpoint, payload = self._prepare_request(method=method, params=params)
@@ -82,14 +84,63 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
 
         return response
 
+    def send_request(self, *, method, params=None, headers=None, data=None, timeout=None, refresh_session=True):
+        # Docstring is maintained separately
+        refresh = False
+        request_params = {"method": method, "params": params, "headers": headers, "data": data, "timeout": timeout}
+        try:
+            response = self._simple_request(**request_params)
+        except self.ClientError as ex:
+            # The session is supposed to be automatically refreshed only if the expired token is passed
+            #   to the server. Otherwise the request is expected to fail.
+            if (
+                refresh_session
+                and ("401: Access token has expired" in str(ex))
+                and (self.auth_method == self.AuthorizationMethods.TOKEN)
+                and (self.auth_key[1] is not None)
+            ):
+                refresh = True
+            else:
+                raise
+
+        if refresh:
+            try:
+                self.refresh_session()
+            except Exception as ex:
+                print(f"Failed to refresh session: {ex}")
+
+            # Try calling the API with the new token (or the old one if refresh failed).
+            response = self._simple_request(**request_params)
+
+        return response
+
     def close(self):
         self._console_monitor.disable_wait(timeout=self._console_monitor_poll_period * 10)
         self._client.close()
 
-    def login(self, username, password, *, provider=None):
+    def login(self, username=None, *, password=None, provider=None):
+        """
+        Parameters
+        ----------
+        username: str
+        password: str
+        provider: str or None
+            The endpoint of the authentication provider (e.g. '/toy/token') or
+        """
         # Docstring is maintained separately
         endpoint, data = self._prepare_login(username=username, password=password, provider=provider)
-        response = self.send_request(method=("POST", endpoint), data=data, timeout=self._timeout_login)
+        response = self.send_request(
+            method=("POST", endpoint), data=data, timeout=self._timeout_login, refresh_session=False
+        )
+        response = self._process_login_response(response=response)
+        return response
+
+    def refresh_session(self, *, token=None):
+        # Docstring is maintained separately
+        refresh_token = self._prepare_refresh_session(refresh_token=token)
+        response = self.send_request(
+            method="session_refresh", params={"refresh_token": refresh_token}, refresh_session=False
+        )
         response = self._process_login_response(response=response)
         return response
 

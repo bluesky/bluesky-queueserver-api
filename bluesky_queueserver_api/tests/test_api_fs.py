@@ -1,4 +1,6 @@
 import asyncio
+import getpass
+from io import StringIO
 import os
 import pytest
 
@@ -347,13 +349,13 @@ def test_login_1(
         with pytest.raises(RM.ClientError, match="401"):
             RM.status()
 
-        login_args, login_kwargs = [], {}
+        login_args, login_kwargs = [], {"password": "bob_password"}
         if not default_provider:
             login_kwargs.update({"provider": "/toy/token"})
         if use_kwargs:
-            login_kwargs.update({"username": "bob", "password": "bob_password"})
+            login_kwargs.update({"username": "bob"})
         else:
-            login_args.extend(["bob", "bob_password"])
+            login_args.extend(["bob"])
 
         token_info = RM.login(*login_args, **login_kwargs)
         auth_key = RM.auth_key
@@ -375,13 +377,13 @@ def test_login_1(
             with pytest.raises(RM.ClientError, match="401"):
                 await RM.status()
 
-            login_args, login_kwargs = [], {}
+            login_args, login_kwargs = [], {"password": "bob_password"}
             if not default_provider:
                 login_kwargs.update({"provider": "/toy/token"})
             if use_kwargs:
-                login_kwargs.update({"username": "bob", "password": "bob_password"})
+                login_kwargs.update({"username": "bob"})
             else:
-                login_args.extend(["bob", "bob_password"])
+                login_args.extend(["bob"])
 
             token_info = await RM.login(*login_args, **login_kwargs)
             auth_key = RM.auth_key
@@ -398,10 +400,83 @@ def test_login_1(
 
 
 # fmt: off
+@pytest.mark.parametrize("interactive_username", [False, True])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["HTTP"])
 # fmt: on
-def test_login_2_fail(
+def test_login_2(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+    interactive_username,
+):
+    """
+    ``login`` API (for HTTP requests). Interactive input of username and password.
+    """
+    re_manager_cmd()
+
+    config_dir = os.path.join(tmpdir, "config")
+    config_path = os.path.join(config_dir, "config_toy.yml")
+    os.makedirs(config_dir)
+    with open(config_path, "wt") as f:
+        f.writelines(config_toy_yml)
+
+    monkeypatch.setenv("QSERVER_HTTP_SERVER_CONFIG", config_path)
+    monkeypatch.chdir(tmpdir)
+
+    monkeypatch.setattr(getpass, "getpass", lambda: "bob_password")
+
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Make sure access does not work without authentication
+        with pytest.raises(RM.ClientError, match="401"):
+            RM.status()
+
+        if interactive_username:
+            monkeypatch.setattr("sys.stdin", StringIO("bob\n"))
+            RM.login()
+        else:
+            RM.login("bob")
+
+        # Now make sure that access works
+        RM.status()
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Make sure access does not work without authentication
+            with pytest.raises(RM.ClientError, match="401"):
+                await RM.status()
+
+            if interactive_username:
+                monkeypatch.setattr("sys.stdin", StringIO("bob\n"))
+                await RM.login()
+            else:
+                await RM.login("bob")
+
+            # Now make sure that access works
+            await RM.status()
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_login_3_fail(
     tmpdir,
     monkeypatch,
     re_manager_cmd,  # noqa: F811
@@ -456,12 +531,12 @@ def test_login_2_fail(
         # Invalid provider
         for provider, except_type, msg in invalid_providers:
             with pytest.raises(except_type, match=msg):
-                RM.login("bob", "bob-password", provider=provider)
+                RM.login("bob", password="bob_password", provider=provider)
 
         # Invalid username, password or both
         for username, password, except_type, msg in invalid_username_password:
             with pytest.raises(except_type, match=msg):
-                RM.login(username, password)
+                RM.login(username, password=password)
 
         # Make sure access does not work without authentication
         with pytest.raises(RM.ClientError, match="401"):
@@ -486,12 +561,12 @@ def test_login_2_fail(
             # Invalid provider
             for provider, except_type, msg in invalid_providers:
                 with pytest.raises(except_type, match=msg):
-                    await RM.login("bob", "bob-password", provider=provider)
+                    await RM.login("bob", password="bob_password", provider=provider)
 
             # Invalid username, password or both
             for username, password, except_type, msg in invalid_username_password:
                 with pytest.raises(except_type, match=msg):
-                    await RM.login(username, password)
+                    await RM.login(username, password=password)
 
             # Make sure access does not work without authentication
             with pytest.raises(RM.ClientError, match="401"):

@@ -59,8 +59,10 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         timeout = self._adjust_timeout(timeout)
         return httpx.AsyncClient(base_url=http_server_uri, timeout=timeout)
 
-    async def send_request(self, *, method, params=None, headers=None, data=None, timeout=None):
-        # Docstring is maintained separately
+    async def _simple_request(self, *, method, params=None, headers=None, data=None, timeout=None):
+        """
+        The code that formats and sends a simple request.
+        """
         try:
             client_response = None
             request_method, endpoint, payload = self._prepare_request(method=method, params=params)
@@ -82,14 +84,53 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
 
         return response
 
+    async def send_request(
+        self, *, method, params=None, headers=None, data=None, timeout=None, refresh_session=True
+    ):
+        # Docstring is maintained separately
+        refresh = False
+        request_params = {"method": method, "params": params, "headers": headers, "data": data, "timeout": timeout}
+        try:
+            response = await self._simple_request(**request_params)
+        except self.ClientError as ex:
+            # The session is supposed to be automatically refreshed only if the expired token is passed
+            #   to the server. Otherwise the request is expected to fail.
+            if (
+                refresh_session
+                and ("401: Access token has expired" in str(ex))
+                and (self.auth_method == self.AuthorizationMethods.TOKEN)
+                and (self.auth_key[1] is not None)
+            ):
+                refresh = True
+            else:
+                raise
+
+        if refresh:
+            try:
+                await self.refresh_session()
+            except Exception as ex:
+                print(f"Failed to refresh session: {ex}")
+
+            # Try calling the API with the new token (or the old one if refresh failed).
+            response = await self._simple_request(**request_params)
+
+        return response
+
     async def close(self):
         await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_period * 10)
         await self._client.aclose()
 
-    async def login(self, username, password, *, provider=None):
+    async def login(self, username=None, *, password=None, provider=None):
         # Docstring is maintained separately
         endpoint, data = self._prepare_login(username=username, password=password, provider=provider)
         response = await self.send_request(method=("POST", endpoint), data=data, timeout=self._timeout_login)
+        response = self._process_login_response(response=response)
+        return response
+
+    async def refresh_session(self, *, token=None):
+        # Docstring is maintained separately
+        refresh_token = self._prepare_refresh_session(refresh_token=token)
+        response = await self.send_request(method="session_refresh", params={"refresh_token": refresh_token})
         response = self._process_login_response(response=response)
         return response
 
