@@ -323,7 +323,7 @@ def test_login_1(
     use_kwargs,
 ):
     """
-    ``send_request`` API: timeout (for HTTP requests).
+    ``login`` API (for HTTP requests). Basic functionality.
     """
     re_manager_cmd()
 
@@ -395,3 +395,109 @@ def test_login_1(
             await RM.close()
 
         asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_login_2_fail(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+):
+    """
+    ``login`` API (for HTTP requests). Failing cases due to invalid parameters.
+    """
+    re_manager_cmd()
+
+    config_dir = os.path.join(tmpdir, "config")
+    config_path = os.path.join(config_dir, "config_toy.yml")
+    os.makedirs(config_dir)
+    with open(config_path, "wt") as f:
+        f.writelines(config_toy_yml)
+
+    monkeypatch.setenv("QSERVER_HTTP_SERVER_CONFIG", config_path)
+    monkeypatch.chdir(tmpdir)
+
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    invalid_providers = [
+        (10, TypeError, "must be a string or None"),
+        ("", ValueError, "is an empty string"),
+    ]
+
+    invalid_username_password = [
+        ("bob", 10, TypeError, "'password' is not string"),
+        ("bob", "", ValueError, "'password' is an empty string"),
+        (10, "bob-password", TypeError, "'username' is not string"),
+        ("", "bob-password", ValueError, "'username' is an empty string"),
+        ("bob", "rand_pwd", rm_api_class.ClientError, "401: Incorrect username or password"), 
+        ("rand_user", "bob-password", rm_api_class.ClientError, "401: Incorrect username or password"), 
+        ("rand_user", "rand_pwd", rm_api_class.ClientError, "401: Incorrect username or password"),        
+    ]
+
+    if not _is_async(library):
+        
+        for provider, except_type, msg in invalid_providers:
+            with pytest.raises(except_type, match=msg):
+                RM = instantiate_re_api_class(rm_api_class, http_auth_provider=provider)
+
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Make sure access does not work without authentication
+        with pytest.raises(RM.ClientError, match="401"):
+            RM.status()
+
+        # Invalid provider
+        for provider, except_type, msg in invalid_providers:
+            with pytest.raises(except_type, match=msg):
+                RM.login("bob", "bob-password", provider=provider)
+
+        # Invalid username, password or both
+        for username, password, except_type, msg in invalid_username_password:
+            with pytest.raises(except_type, match=msg):
+                RM.login(username, password)
+
+        # Make sure access does not work without authentication
+        with pytest.raises(RM.ClientError, match="401"):
+            RM.status()
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            for provider, except_type, msg in invalid_providers:
+                with pytest.raises(except_type, match=msg):
+                    RM = instantiate_re_api_class(rm_api_class, http_auth_provider=provider)
+
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Make sure access does not work without authentication
+            with pytest.raises(RM.ClientError, match="401"):
+                await RM.status()
+
+            # Invalid provider
+            for provider, except_type, msg in invalid_providers:
+                with pytest.raises(except_type, match=msg):
+                    await RM.login("bob", "bob-password", provider=provider)
+
+            # Invalid username, password or both
+            for username, password, except_type, msg in invalid_username_password:
+                with pytest.raises(except_type, match=msg):
+                    await RM.login(username, password)
+
+            # Make sure access does not work without authentication
+            with pytest.raises(RM.ClientError, match="401"):
+                await RM.status()
+
+            await RM.close()
+
+        asyncio.run(testing())
+

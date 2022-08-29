@@ -287,14 +287,19 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         return timeout if (timeout > 0) else None
 
     def _preprocess_endpoint_name(self, endpoint_name, *, msg):
-        if not isinstance(endpoint_name, (str, type(None))):
-            raise ValueError(f"{msg.capitalize()} must be a string or None: {endpoint_name!r}")
-        if endpoint_name:
+        """
+        Endpoint name may be a non-empty string or None.
+        """
+        if isinstance(endpoint_name, str):
             endpoint_name = endpoint_name.strip()
-        if endpoint_name and not endpoint_name.startswith("/"):
-            endpoint_name = f"/{endpoint_name}"
-        return endpoint_name or None
-
+            if not endpoint_name:
+                raise ValueError(f"{msg.capitalize()} is an empty string")
+            if not endpoint_name.startswith("/"):
+                endpoint_name = f"/{endpoint_name}"
+        elif endpoint_name is not None:
+            raise TypeError(f"{msg.capitalize()} must be a string or None: {endpoint_name!r}")
+        return endpoint_name
+ 
     def _prepare_headers(self):
         headers = None
         if self.auth_method == self.AuthorizationMethods.API_KEY:
@@ -426,9 +431,15 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
     def _prepare_login(self, *, username, password, provider):
         if not isinstance(username, str):
-            raise ValueError(f"'username' is not string: type(username)={type(username)}")
+            raise TypeError(f"'username' is not string: type(username)={type(username)}")
+        username = username.strip()
+        if not username:
+            raise ValueError(f"'username' is an empty string")
         if not isinstance(password, str):
-            raise ValueError(f"'password' is not string: type(password)={type(password)}")
+            raise TypeError(f"'password' is not string: type(password)={type(password)}")
+        password = password.strip()
+        if not password:
+            raise ValueError(f"'password' is an empty string")
 
         provider = self._preprocess_endpoint_name(provider, msg="Authentication provider path")
 
