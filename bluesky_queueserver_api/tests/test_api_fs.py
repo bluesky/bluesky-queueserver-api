@@ -3,6 +3,7 @@ import getpass
 from io import StringIO
 import os
 import pytest
+import time as ttime
 
 from bluesky_queueserver import generate_zmq_keys
 
@@ -15,6 +16,8 @@ from .common import (
     _select_re_manager_api,
     instantiate_re_api_class,
 )
+
+from ..comm_base import RequestParameterError
 
 
 # fmt: off
@@ -308,6 +311,45 @@ authentication:
 """
 
 
+# Configuration file for 'toy' authentication provider. The passwords are explicitly listed.
+config_toy_yml_short_token_expiration = """
+uvicorn:
+    host: localhost
+    port: 60610
+authentication:
+    providers:
+        - provider: toy
+          authenticator: bluesky_httpserver.authenticators:DictionaryAuthenticator
+          args:
+              users_to_passwords:
+                  alice: alice_password
+                  bob: bob_password
+                  cara: cara_password
+    qserver_admins:
+        - provider: toy
+          id: alice
+    access_token_max_age: 2
+"""
+
+
+def _setup_server_with_config_file(*, config_file_str, tmpdir, monkeypatch):
+    """
+    Creates config file for the server in ``tmpdir/config/`` directory and
+    sets up the respective environment variable. Sets ``tmpdir`` as a current directory.
+    """
+    config_fln = "config_httpserver.yml"
+    config_dir = os.path.join(tmpdir, "config")
+    config_path = os.path.join(config_dir, config_fln)
+    os.makedirs(config_dir)
+    with open(config_path, "wt") as f:
+        f.writelines(config_file_str)
+
+    monkeypatch.setenv("QSERVER_HTTP_SERVER_CONFIG", config_path)
+    monkeypatch.chdir(tmpdir)
+
+    return config_path
+
+
 # fmt: off
 @pytest.mark.parametrize("default_provider", [True, False])
 @pytest.mark.parametrize("use_kwargs", [True, False])
@@ -328,16 +370,7 @@ def test_login_1(
     ``login`` API (for HTTP requests). Basic functionality.
     """
     re_manager_cmd()
-
-    config_dir = os.path.join(tmpdir, "config")
-    config_path = os.path.join(config_dir, "config_toy.yml")
-    os.makedirs(config_dir)
-    with open(config_path, "wt") as f:
-        f.writelines(config_toy_yml)
-
-    monkeypatch.setenv("QSERVER_HTTP_SERVER_CONFIG", config_path)
-    monkeypatch.chdir(tmpdir)
-
+    _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)
 
@@ -417,18 +450,8 @@ def test_login_2(
     ``login`` API (for HTTP requests). Interactive input of username and password.
     """
     re_manager_cmd()
-
-    config_dir = os.path.join(tmpdir, "config")
-    config_path = os.path.join(config_dir, "config_toy.yml")
-    os.makedirs(config_dir)
-    with open(config_path, "wt") as f:
-        f.writelines(config_toy_yml)
-
-    monkeypatch.setenv("QSERVER_HTTP_SERVER_CONFIG", config_path)
-    monkeypatch.chdir(tmpdir)
-
+    _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     monkeypatch.setattr(getpass, "getpass", lambda: "bob_password")
-
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)
 
@@ -488,16 +511,7 @@ def test_login_3_fail(
     ``login`` API (for HTTP requests). Failing cases due to invalid parameters.
     """
     re_manager_cmd()
-
-    config_dir = os.path.join(tmpdir, "config")
-    config_path = os.path.join(config_dir, "config_toy.yml")
-    os.makedirs(config_dir)
-    with open(config_path, "wt") as f:
-        f.writelines(config_toy_yml)
-
-    monkeypatch.setenv("QSERVER_HTTP_SERVER_CONFIG", config_path)
-    monkeypatch.chdir(tmpdir)
-
+    _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)
 
@@ -573,5 +587,205 @@ def test_login_3_fail(
                 await RM.status()
 
             await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("token_as_param", [False, True])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_session_refresh_1(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+    token_as_param,
+):
+    """
+    ``session_refresh`` API (for HTTP requests). Interactive input of username and password.
+    """
+    re_manager_cmd()
+    _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    monkeypatch.setattr(getpass, "getpass", lambda: "bob_password")
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Make sure access does not work without authentication
+        with pytest.raises(RM.ClientError, match="401"):
+            RM.status()
+
+        RM.login("bob", password="bob_password")
+        RM.status()
+
+        if token_as_param:
+            refresh_token = RM.auth_key[1]
+            RM.set_authorization_key()  # Clear all tokens
+            response = RM.session_refresh(refresh_token=refresh_token)
+        else:
+            RM.set_authorization_key(refresh_token=RM.auth_key[1])  # Clear the access token
+            response = RM.session_refresh()
+
+        assert response["access_token"] == RM.auth_key[0]
+        assert response["refresh_token"] == RM.auth_key[1]
+
+        RM.status()
+
+        # Invalid refresh token
+        if token_as_param:
+            RM.set_authorization_key()  # Clear all tokens
+            with pytest.raises(RM.ClientError, match="401"):
+                RM.session_refresh(refresh_token="invalidtoken")
+        else:
+            RM.set_authorization_key(refresh_token="invalidtoken")  # Clear the access token
+            with pytest.raises(RM.ClientError, match="401"):
+                RM.session_refresh()
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Make sure access does not work without authentication
+            with pytest.raises(RM.ClientError, match="401"):
+                await RM.status()
+
+            await RM.login("bob", password="bob_password")
+            await RM.status()
+
+            if token_as_param:
+                refresh_token = RM.auth_key[1]
+                RM.set_authorization_key()  # Clear all tokens
+                response = await RM.session_refresh(refresh_token=refresh_token)
+            else:
+                RM.set_authorization_key(refresh_token=RM.auth_key[1])  # Clear the access token
+                response = await RM.session_refresh()
+
+            assert response["access_token"] == RM.auth_key[0]
+            assert response["refresh_token"] == RM.auth_key[1]
+
+            await RM.status()
+
+            # Invalid refresh token
+            if token_as_param:
+                RM.set_authorization_key()  # Clear all tokens
+                with pytest.raises(RM.ClientError, match="401"):
+                    await RM.session_refresh(refresh_token="invalidtoken")
+            else:
+                RM.set_authorization_key(refresh_token="invalidtoken")  # Clear the access token
+                with pytest.raises(RM.ClientError, match="401"):
+                    await RM.session_refresh()
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("token, except_type, msg", [
+    (10, TypeError, "'refresh_token' must be a string or None"),
+    ("", ValueError, "'refresh_token' is an empty string"),
+    (None, RequestParameterError, "'refresh_token' is not set"),
+])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_session_refresh_2_fail(protocol, library, token, except_type, msg):
+    """
+    ``session_refresh`` API (for HTTP requests). Failing cases due to invalid parameters.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        with pytest.raises(except_type, match=msg):
+            RM.session_refresh(refresh_token=token)
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            with pytest.raises(except_type, match=msg):
+                await RM.session_refresh(refresh_token=token)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_session_refresh_3(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+):
+    """
+    ``session_refresh`` API (for HTTP requests). Test that the session is automatically refreshed
+    as the access token expires. Consider the server with very short session expiration time and
+    then repeatedly try to load status from the server.
+    """
+    re_manager_cmd()
+    _setup_server_with_config_file(
+        config_file_str=config_toy_yml_short_token_expiration, tmpdir=tmpdir, monkeypatch=monkeypatch
+    )
+    # _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    monkeypatch.setattr(getpass, "getpass", lambda: "bob_password")
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        RM.login("bob", password="bob_password")
+
+        n_expirations = 0
+        for _ in range(10):
+            try:
+                RM._simple_request(method="status")
+            except Exception:
+                n_expirations += 1
+
+            RM.status()
+            ttime.sleep(1)
+
+        assert n_expirations > 0
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            await RM.login("bob", password="bob_password")
+
+            n_expirations = 0
+            for _ in range(10):
+                try:
+                    await RM._simple_request(method="status")
+                except Exception:
+                    n_expirations += 1
+
+                await RM.status()
+                await asyncio.sleep(1)
+
+            await RM.close()
+
+            assert n_expirations > 0
 
         asyncio.run(testing())

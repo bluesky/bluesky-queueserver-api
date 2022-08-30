@@ -107,7 +107,7 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
 
         if refresh:
             try:
-                await self.refresh_session()
+                await self.session_refresh()
             except Exception as ex:
                 print(f"Failed to refresh session: {ex}")
 
@@ -127,9 +127,9 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         response = self._process_login_response(response=response)
         return response
 
-    async def refresh_session(self, *, token=None):
+    async def session_refresh(self, *, refresh_token=None):
         # Docstring is maintained separately
-        refresh_token = self._prepare_refresh_session(refresh_token=token)
+        refresh_token = self._prepare_refresh_session(refresh_token=refresh_token)
         response = await self.send_request(method="session_refresh", params={"refresh_token": refresh_token})
         response = self._process_login_response(response=response)
         return response

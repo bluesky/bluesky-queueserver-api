@@ -69,7 +69,7 @@ rest_api_method_map = {
 }
 
 
-class RequestParameterError(ValueError):
+class RequestParameterError(Exception):
     ...
 
 
