@@ -2844,3 +2844,98 @@ _doc_api_unlock = """
         The lock key (``lock_key`` parameter) is not passed and the current lock key
         (``REManagerAPI.lock_key``) is not set.
 """
+
+_doc_api_login = """
+    Parameters
+    ----------
+    username: str, optional
+        Login username. If the parameter is omitted or ``None``, then the function asks
+        for the username interactively.
+    password: str, optional
+        Login password. If the parameter is omitted or ``None``, the the function asks
+        of the password interactively.
+
+        .. note::
+
+            Passwords should never be explicitly included in Python scripts or typed
+            as API parameters in IPython environment. Use interactive input (manual entry,
+            preferable) or environment variables to pass passwords. For example,
+            the following script is using password contained in the environment variable
+            ``MY_PASSWORD``. If the environment variable is not set, then the script
+            is interactively asking for the password::
+
+                ...
+                username = "bob"
+                RM.login(username, password=os.environ.get("MY_PASSWORD", None))
+                ...
+
+            Starting the script from command line::
+
+                $ MY_PASSWORD=bob_password python experiment.py
+
+    provider: str or None
+        The endpoint of the authentication provider (e.g. '/toy/token'). The passed
+        value overrides the default provider (set by passing ``http_auth_provider`` to
+        the constructor of ``REManagerAPI``). Setting the default provider is preferable
+        for interactive IPython-based workflows. Default: None.
+
+    Returns
+    -------
+    dict
+        Dictionary with the following keys:
+
+        - **access_token** *(str)* - access token.
+
+        - **expires_in** *(float)* - life time of the token in seconds.
+
+        - **refresh_token** *(str)* - refresh token.
+
+        - **refresh_token_expires_in** *(str)* - life time of the refresh token in seconds.
+
+        - **token_type** *(str)* - ``'bearer'``.
+
+    Raises
+    ------
+    RequestParameterError
+        Incorrect or insufficient parameters in the API call.
+    HTTPRequestError, HTTPClientError, HTTPServerError
+        Error while sending and processing HTTP request.
+"""
+
+_doc_api_session_refresh = """
+    Refresh session using valid refresh token. If the client is successfully authenticated or
+    configured to use tokens, then the API will use the existing refresh token stored in
+    ``REManagerAPI.auth_key``. The refresh token may also be set using
+    `REManagerAPI.set_authorization_key()``. The API is not using the access token, which
+    could be expired, invalid or missing. Alternatively, the refresh token may be passed
+    with the API parameter. In this case the internally stored refresh token is ignored.
+    If successful, the API call automatically updates access and refresh tokens in
+    ``REManagerAPI.auth_key``.
+
+    .. note::
+
+        It is not necessary to refresh the session during normal operation. If the access token
+        is valid, but expired, and the refresh token is valid, the client will refresh
+        the expired session automatically. Auto refresh will not work if the access
+        token is invalid or missing. If only refresh token is available, then explicitly
+        call ``REManagerAPI.session_refresh()`` API to obtain valid access token.
+
+    Parameters
+    ----------
+    refresh_token: str or None
+        Valid refresh token or *None*. If the parameter is omitted or *None*, then
+        the token stored in ``REManagerAPI.auth_key`` is used. If no refresh token
+        passed or stored by the class, the ``RequestParameterError`` is raised.
+
+    Returns
+    -------
+    dict
+        See the description of ``REManagerAPI.login()`` API for the list of keys.
+
+    Raises
+    ------
+    RequestParameterError
+        Invalid parameter type or value.
+    HTTPRequestError, HTTPClientError, HTTPServerError
+        Error while sending and processing HTTP request.
+"""

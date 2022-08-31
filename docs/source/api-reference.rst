@@ -271,6 +271,8 @@ API for authentication and authorization (HTTP)
     http.REManagerAPI.auth_method
     http.REManagerAPI.auth_key
     http.REManagerAPI.set_authorization_key
+    http.REManagerAPI.login
+    http.REManagerAPI.session_refresh
 
 ASynchronous Communication with HTTP Server
 -------------------------------------------

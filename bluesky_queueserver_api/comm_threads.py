@@ -3,7 +3,7 @@ import httpx
 from .comm_base import ReManagerAPI_ZMQ_Base, ReManagerAPI_HTTP_Base
 from bluesky_queueserver import ZMQCommSendThreads
 
-from .api_docstrings import _doc_send_request, _doc_close
+from .api_docstrings import _doc_send_request, _doc_close, _doc_api_login, _doc_api_session_refresh
 from .console_monitor import ConsoleMonitor_ZMQ_Threads, ConsoleMonitor_HTTP_Threads
 
 
@@ -119,14 +119,6 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         self._client.close()
 
     def login(self, username=None, *, password=None, provider=None):
-        """
-        Parameters
-        ----------
-        username: str
-        password: str
-        provider: str or None
-            The endpoint of the authentication provider (e.g. '/toy/token') or
-        """
         # Docstring is maintained separately
         endpoint, data = self._prepare_login(username=username, password=password, provider=provider)
         response = self.send_request(
@@ -149,3 +141,5 @@ ReManagerComm_ZMQ_Threads.send_request.__doc__ = _doc_send_request
 ReManagerComm_HTTP_Threads.send_request.__doc__ = _doc_send_request
 ReManagerComm_ZMQ_Threads.close.__doc__ = _doc_close
 ReManagerComm_HTTP_Threads.close.__doc__ = _doc_close
+ReManagerComm_HTTP_Threads.login.__doc__ = _doc_api_login
+ReManagerComm_HTTP_Threads.session_refresh.__doc__ = _doc_api_session_refresh

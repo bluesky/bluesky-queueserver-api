@@ -3,7 +3,7 @@ import httpx
 from .comm_base import ReManagerAPI_ZMQ_Base, ReManagerAPI_HTTP_Base
 from bluesky_queueserver import ZMQCommSendAsync
 
-from .api_docstrings import _doc_send_request, _doc_close
+from .api_docstrings import _doc_send_request, _doc_close, _doc_api_login, _doc_api_session_refresh
 from .console_monitor import ConsoleMonitor_ZMQ_Async, ConsoleMonitor_HTTP_Async
 
 
@@ -139,3 +139,5 @@ ReManagerComm_ZMQ_Async.send_request.__doc__ = _doc_send_request
 ReManagerComm_HTTP_Async.send_request.__doc__ = _doc_send_request
 ReManagerComm_ZMQ_Async.close.__doc__ = _doc_close
 ReManagerComm_HTTP_Async.close.__doc__ = _doc_close
+ReManagerComm_HTTP_Async.login.__doc__ = _doc_api_login
+ReManagerComm_HTTP_Async.session_refresh.__doc__ = _doc_api_session_refresh
