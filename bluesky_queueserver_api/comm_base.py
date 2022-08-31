@@ -81,7 +81,7 @@ class HTTPClientError(httpx.HTTPStatusError):
     ...
 
 
-class ServerError(httpx.HTTPStatusError):
+class HTTPServerError(httpx.HTTPStatusError):
     ...
 
 
@@ -120,7 +120,7 @@ class ReManagerAPI_Base:
     RequestFailedError = RequestFailedError
     HTTPRequestError = HTTPRequestError
     HTTPClientError = HTTPClientError
-    ServerError = ServerError
+    HTTPServerError = HTTPServerError
 
     Protocols = Protocols
     AuthorizationMethods = AuthorizationMethods
@@ -365,7 +365,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
                 )
                 raise self.HTTPClientError(message, **common_params) from exc
             else:
-                raise self.ServerError(exc, **common_params) from exc
+                raise self.HTTPServerError(exc, **common_params) from exc
 
     @property
     def auth_method(self):
