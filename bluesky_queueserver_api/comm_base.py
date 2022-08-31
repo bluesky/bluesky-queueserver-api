@@ -350,6 +350,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             raise self.RequestError(f"HTTP request error: {ex}") from ex
 
         except httpx.HTTPStatusError as exc:
+            common_params = {"request": exc.request, "response": exc.response}
             if client_response and (client_response.status_code < 500):
                 # Include more detail that httpx does by default.
                 message = (
@@ -357,9 +358,9 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
                     f"{exc.response.json()['detail'] if client_response.content else ''} "
                     f"{exc.request.url}"
                 )
-                raise self.ClientError(message, request=exc.request, response=exc.response) from exc
+                raise self.ClientError(message, **common_params) from exc
             else:
-                raise self.ClientError(exc) from exc
+                raise self.ClientError(str(exc), **common_params) from exc
 
     @property
     def auth_method(self):
