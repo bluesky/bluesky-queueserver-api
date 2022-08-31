@@ -179,13 +179,13 @@ def test_ReManagerComm_HTTP_03():
     """
 
     RM = ReManagerComm_HTTP_Threads()
-    with pytest.raises(KeyError, match=re.escape("Unknown method 'unknown_method'")):
+    with pytest.raises(RM.RequestParameterError, match=re.escape("Unknown method 'unknown_method'")):
         RM.send_request(method="unknown_method")
     RM.close()
 
     async def testing():
         RM = ReManagerComm_HTTP_Async()
-        with pytest.raises(KeyError, match=re.escape("Unknown method 'unknown_method'")):
+        with pytest.raises(RM.RequestParameterError, match=re.escape("Unknown method 'unknown_method'")):
             await RM.send_request(method="unknown_method")
         await RM.close()
 
