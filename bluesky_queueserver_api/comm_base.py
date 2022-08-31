@@ -301,11 +301,11 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         if isinstance(endpoint_name, str):
             endpoint_name = endpoint_name.strip()
             if not endpoint_name:
-                raise ValueError(f"{msg.capitalize()} is an empty string")
+                raise self.RequestParameterError(f"{msg.capitalize()} is an empty string")
             if not endpoint_name.startswith("/"):
                 endpoint_name = f"/{endpoint_name}"
         elif endpoint_name is not None:
-            raise TypeError(f"{msg.capitalize()} must be a string or None: {endpoint_name!r}")
+            raise self.RequestParameterError(f"{msg.capitalize()} must be a string or None: {endpoint_name!r}")
         return endpoint_name
 
     def _prepare_headers(self):
@@ -321,15 +321,17 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
     def _prepare_request(self, *, method, params=None):
         if isinstance(method, str):
             if method not in self._rest_api_method_map:
-                raise KeyError(f"Unknown method {method!r}")
+                raise self.RequestParameterError(f"Unknown method {method!r}")
             request_method, endpoint = rest_api_method_map[method]
         elif isinstance(method, Iterable):
             mtd = tuple(method)
             if len(mtd) != 2 or any([not isinstance(_, str) for _ in mtd]):
-                raise ValueError(f"If method is an iterable, it must consist of 2 string elements: method={mtd!r}")
+                raise self.RequestParameterError(
+                    f"If method is an iterable, it must consist of 2 string elements: method={mtd!r}"
+                )
             request_method, endpoint = mtd
         else:
-            raise TypeError(
+            raise self.RequestParameterError(
                 f"Method must be a string or an iterable: method={method!r} type(method)={type(method)!r}"
             )
         payload = params or {}
@@ -416,14 +418,20 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             Refresh token used to request authorization token from the server. Default: ``None``.
         """
         if api_key and (token or refresh_token):
-            raise ValueError("API key and a token are mutually exclusive and can not be specified simultaneously.")
+            raise self.RequestParameterError(
+                "API key and a token are mutually exclusive and can not be specified simultaneously."
+            )
 
         if not isinstance(api_key, (str, type(None))):
-            raise TypeError(f"API key must be a string or None: api_key={api_key} type(api_key)={type(api_key)}")
+            raise self.RequestParameterError(
+                f"API key must be a string or None: api_key={api_key} type(api_key)={type(api_key)}"
+            )
         if not isinstance(token, (str, type(None))):
-            raise TypeError(f"Token must be a string or None: token={token} type(token)={type(token)}")
+            raise self.RequestParameterError(
+                f"Token must be a string or None: token={token} type(token)={type(token)}"
+            )
         if not isinstance(refresh_token, (str, type(None))):
-            raise TypeError(
+            raise self.RequestParameterError(
                 f"Refresh token must be a string or None: refresh_token={refresh_token} "
                 f"type(refresh_token)={type(refresh_token)}"
             )
@@ -446,15 +454,15 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             password = getpass.getpass()
 
         if not isinstance(username, str):
-            raise TypeError(f"'username' is not string: type(username)={type(username)}")
+            raise self.RequestParameterError(f"'username' is not string: type(username)={type(username)}")
         username = username.strip()
         if not username:
-            raise ValueError("'username' is an empty string")
+            raise self.RequestParameterError("'username' is an empty string")
         if not isinstance(password, str):
-            raise TypeError(f"'password' is not string: type(password)={type(password)}")
+            raise self.RequestParameterError(f"'password' is not string: type(password)={type(password)}")
         password = password.strip()
         if not password:
-            raise ValueError("'password' is an empty string")
+            raise self.RequestParameterError("'password' is an empty string")
 
         provider = self._preprocess_endpoint_name(provider, msg="Authentication provider path")
 
@@ -490,9 +498,9 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         elif isinstance(refresh_token, str):
             refresh_token = refresh_token.strip()
             if not refresh_token:
-                raise ValueError("'refresh_token' is an empty string")
+                raise self.RequestParameterError("'refresh_token' is an empty string")
         else:
-            raise TypeError("'refresh_token' must be a string or None")
+            raise self.RequestParameterError("'refresh_token' must be a string or None")
 
         if refresh_token is None:
             raise self.RequestParameterError("'refresh_token' is not set")

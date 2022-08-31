@@ -191,10 +191,10 @@ def test_send_request_1(re_manager_cmd, fastapi_server_fs, protocol, library):  
         status3 = RM.send_request(method=("GET", "/api/status"))
         assert status3 == status
 
-        with pytest.raises(KeyError, match="Unknown method"):
+        with pytest.raises(RM.RequestParameterError, match="Unknown method"):
             RM.send_request(method="abc")
 
-        with pytest.raises(TypeError, match="must be a string or an iterable"):
+        with pytest.raises(RM.RequestParameterError, match="must be a string or an iterable"):
             RM.send_request(method=10)
 
         for method in (
@@ -205,7 +205,7 @@ def test_send_request_1(re_manager_cmd, fastapi_server_fs, protocol, library):  
             (10, 20),
         ):
             print(f"Testing method: {method}")
-            with pytest.raises(ValueError, match="must consist of 2 string elements"):
+            with pytest.raises(RM.RequestParameterError, match="must consist of 2 string elements"):
                 RM.send_request(method=method)
 
         RM.close()
@@ -220,10 +220,10 @@ def test_send_request_1(re_manager_cmd, fastapi_server_fs, protocol, library):  
             status3 = await RM.send_request(method=("GET", "/api/status"))
             assert status3 == status
 
-            with pytest.raises(KeyError, match="Unknown method"):
+            with pytest.raises(RM.RequestParameterError, match="Unknown method"):
                 await RM.send_request(method="abc")
 
-            with pytest.raises(TypeError, match="must be a string or an iterable"):
+            with pytest.raises(RM.RequestParameterError, match="must be a string or an iterable"):
                 await RM.send_request(method=10)
 
             for method in (
@@ -234,7 +234,7 @@ def test_send_request_1(re_manager_cmd, fastapi_server_fs, protocol, library):  
                 (10, 20),
             ):
                 print(f"Testing method: {method}")
-                with pytest.raises(ValueError, match="must consist of 2 string elements"):
+                with pytest.raises(RM.RequestParameterError, match="must consist of 2 string elements"):
                     await RM.send_request(method=method)
 
             await RM.close()
@@ -518,15 +518,15 @@ def test_login_3_fail(
     rm_api_class = _select_re_manager_api(protocol, library)
 
     invalid_providers = [
-        (10, TypeError, "must be a string or None"),
-        ("", ValueError, "is an empty string"),
+        (10, rm_api_class.RequestParameterError, "must be a string or None"),
+        ("", rm_api_class.RequestParameterError, "is an empty string"),
     ]
 
     invalid_username_password = [
-        ("bob", 10, TypeError, "'password' is not string"),
-        ("bob", "", ValueError, "'password' is an empty string"),
-        (10, "bob-password", TypeError, "'username' is not string"),
-        ("", "bob-password", ValueError, "'username' is an empty string"),
+        ("bob", 10, rm_api_class.RequestParameterError, "'password' is not string"),
+        ("bob", "", rm_api_class.RequestParameterError, "'password' is an empty string"),
+        (10, "bob-password", rm_api_class.RequestParameterError, "'username' is not string"),
+        ("", "bob-password", rm_api_class.RequestParameterError, "'username' is an empty string"),
         ("bob", "rand_pwd", rm_api_class.HTTPClientError, "401: Incorrect username or password"),
         ("rand_user", "bob-password", rm_api_class.HTTPClientError, "401: Incorrect username or password"),
         ("rand_user", "rand_pwd", rm_api_class.HTTPClientError, "401: Incorrect username or password"),
@@ -692,8 +692,8 @@ def test_session_refresh_1(
 
 # fmt: off
 @pytest.mark.parametrize("token, except_type, msg", [
-    (10, TypeError, "'refresh_token' must be a string or None"),
-    ("", ValueError, "'refresh_token' is an empty string"),
+    (10, RequestParameterError, "'refresh_token' must be a string or None"),
+    ("", RequestParameterError, "'refresh_token' is an empty string"),
     (None, RequestParameterError, "'refresh_token' is not set"),
 ])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
