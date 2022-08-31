@@ -40,7 +40,7 @@ def test_set_authorization_key_01(
         if success:
             RM.set_authorization_key(api_key=api_key, token=token, refresh_token=refresh_token)
         else:
-            with pytest.raises((TypeError, ValueError), match=msg):
+            with pytest.raises(RM.RequestParameterError, match=msg):
                 RM.set_authorization_key(api_key=api_key, token=token, refresh_token=refresh_token)
 
         assert RM.auth_method == RM.AuthorizationMethods(res_auth_method)
@@ -61,7 +61,7 @@ def test_set_authorization_key_01(
             if success:
                 RM.set_authorization_key(api_key=api_key, token=token, refresh_token=refresh_token)
             else:
-                with pytest.raises((TypeError, ValueError), match=msg):
+                with pytest.raises(RM.RequestParameterError, match=msg):
                     RM.set_authorization_key(api_key=api_key, token=token, refresh_token=refresh_token)
 
             assert RM.auth_method == RM.AuthorizationMethods(res_auth_method)
