@@ -94,8 +94,8 @@ def test_ReManagerAPI_parameters_01(
     if not _is_async(library):
         RM = instantiate_re_api_class(rm_api_class, **params)
         if option == "default_addr":
-            # ZMQ - RequestTimeoutError, HTTP - RequestError
-            with pytest.raises((RM.RequestTimeoutError, RM.RequestError)):
+            # ZMQ - RequestTimeoutError, HTTP - HTTPRequestError
+            with pytest.raises((RM.RequestTimeoutError, RM.HTTPRequestError)):
                 RM.status()
         else:
             RM.status()
@@ -116,8 +116,8 @@ def test_ReManagerAPI_parameters_01(
         async def testing():
             RM = instantiate_re_api_class(rm_api_class, **params)
             if option == "default_addr":
-                # ZMQ - RequestTimeoutError, HTTP - RequestError
-                with pytest.raises((RM.RequestTimeoutError, RM.RequestError)):
+                # ZMQ - RequestTimeoutError, HTTP - HTTPRequestError
+                with pytest.raises((RM.RequestTimeoutError, RM.HTTPRequestError)):
                     await RM.status()
             else:
                 await RM.status()
@@ -329,6 +329,8 @@ authentication:
         - provider: toy
           id: alice
     access_token_max_age: 2
+    refresh_token_max_age: 600
+    session_max_age: 1000
 """
 
 

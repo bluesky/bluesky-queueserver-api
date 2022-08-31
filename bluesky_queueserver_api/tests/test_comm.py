@@ -112,19 +112,21 @@ def test_ReManagerComm_ZMQ_02(monkeypatch, re_manager_cmd):  # noqa: F811
 def test_ReManagerComm_HTTP_01():
     """
     ReManagerComm_HTTP_Thread and ReManagerComm_HTTP_Async: basic test.
-    Create an object, send a request and catch RequestError (the server is not running)
+    Create an object, send a request and catch HTTPRequestError (the server is not running)
     """
 
     params = {"item": _plan1}
 
     RM = ReManagerComm_HTTP_Threads()
-    with pytest.raises(RM.RequestError, match=re.escape("HTTP request error: [Errno 111] Connection refused")):
+    with pytest.raises(RM.HTTPRequestError, match=re.escape("HTTP request error: [Errno 111] Connection refused")):
         RM.send_request(method="queue_item_add", params=params)
     RM.close()
 
     async def testing():
         RM = ReManagerComm_HTTP_Async()
-        with pytest.raises(RM.RequestError, match=re.escape("HTTP request error: All connection attempts failed")):
+        with pytest.raises(
+            RM.HTTPRequestError, match=re.escape("HTTP request error: All connection attempts failed")
+        ):
             await RM.send_request(method="queue_item_add", params=params)
         await RM.close()
 
@@ -151,7 +153,7 @@ def test_ReManagerComm_HTTP_02(re_manager, fastapi_server, server_uri, success):
         result = RM.send_request(method="queue_item_add", params=params)
         assert result["success"] is True
     else:
-        with pytest.raises(RM.RequestError):
+        with pytest.raises(RM.HTTPRequestError):
             RM.send_request(method="queue_item_add", params=params)
     RM.close()
 
@@ -162,7 +164,7 @@ def test_ReManagerComm_HTTP_02(re_manager, fastapi_server, server_uri, success):
             result = await RM.send_request(method="queue_item_add", params=params)
             assert result["success"] is True
         else:
-            with pytest.raises(RM.RequestError):
+            with pytest.raises(RM.HTTPRequestError):
                 await RM.send_request(method="queue_item_add", params=params)
         await RM.close()
 

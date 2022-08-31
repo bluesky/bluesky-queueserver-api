@@ -73,11 +73,15 @@ class RequestParameterError(Exception):
     ...
 
 
-class RequestError(httpx.RequestError):
+class HTTPRequestError(httpx.RequestError):
     ...
 
 
 class ClientError(httpx.HTTPStatusError):
+    ...
+
+
+class ServerError(httpx.HTTPStatusError):
     ...
 
 
@@ -114,8 +118,9 @@ class ReManagerAPI_Base:
     RequestParameterError = RequestParameterError
     RequestTimeoutError = RequestTimeoutError
     RequestFailedError = RequestFailedError
-    RequestError = RequestError
+    HTTPRequestError = HTTPRequestError
     ClientError = ClientError
+    ServerError = ServerError
 
     Protocols = Protocols
     AuthorizationMethods = AuthorizationMethods
@@ -347,7 +352,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             raise self.RequestTimeoutError(ex, {"method": method, "params": params}) from ex
 
         except httpx.RequestError as ex:
-            raise self.RequestError(f"HTTP request error: {ex}") from ex
+            raise self.HTTPRequestError(f"HTTP request error: {ex}") from ex
 
         except httpx.HTTPStatusError as exc:
             common_params = {"request": exc.request, "response": exc.response}
@@ -360,7 +365,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
                 )
                 raise self.ClientError(message, **common_params) from exc
             else:
-                raise self.ClientError(str(exc), **common_params) from exc
+                raise self.ServerError(exc, **common_params) from exc
 
     @property
     def auth_method(self):

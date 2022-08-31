@@ -306,7 +306,7 @@ _doc_send_request = """
     RequestFailedError
         Request failed or rejected by the Queue Server (the response contains
         ``"success": False``).
-    RequestError, ClientError
+    HTTPRequestError, ClientError
         Error while processing the request or communicating with the server.
         Raised only by HTTP requests.
 
@@ -375,7 +375,7 @@ _doc_api_status = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -513,7 +513,7 @@ _doc_api_item_add = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -615,7 +615,7 @@ _doc_api_item_add_batch = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -687,7 +687,7 @@ _doc_api_item_update = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -740,7 +740,7 @@ _doc_api_item_get = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -798,7 +798,7 @@ _doc_api_item_remove = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -857,7 +857,7 @@ _doc_api_item_remove_batch = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -917,7 +917,7 @@ _doc_api_item_move = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -986,7 +986,7 @@ _doc_api_item_move_batch = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1048,7 +1048,7 @@ _doc_api_item_execute = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1091,7 +1091,7 @@ _doc_api_queue_start = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1134,7 +1134,7 @@ _doc_api_queue_stop = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1175,7 +1175,7 @@ _doc_api_queue_stop_cancel = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1217,7 +1217,7 @@ _doc_api_queue_clear = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1268,7 +1268,7 @@ _doc_api_queue_mode_set = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1320,7 +1320,7 @@ _doc_api_queue_get = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1369,7 +1369,7 @@ _doc_api_history_get = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1413,7 +1413,7 @@ _doc_api_history_clear = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1462,7 +1462,7 @@ _doc_api_plans_allowed = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1513,7 +1513,7 @@ _doc_api_devices_allowed = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1558,7 +1558,7 @@ _doc_api_plans_existing = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1603,7 +1603,7 @@ _doc_api_devices_existing = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1656,7 +1656,7 @@ _doc_api_permissions_reload = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1690,7 +1690,7 @@ _doc_api_permissions_get = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1739,7 +1739,7 @@ _doc_api_permissions_set = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1789,7 +1789,7 @@ _doc_api_environment_open = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1833,7 +1833,7 @@ _doc_api_environment_close = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1880,7 +1880,7 @@ _doc_api_environment_destroy = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1952,7 +1952,7 @@ _doc_api_script_upload = r"""
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -2033,7 +2033,7 @@ _doc_api_function_execute = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -2088,7 +2088,7 @@ _doc_api_task_status = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
     RequestParameterError
         Invalid parameter value or type
@@ -2158,7 +2158,7 @@ _doc_api_task_result = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
     RequestParameterError
         Invalid parameter value or type
@@ -2221,7 +2221,7 @@ _doc_api_wait_for_completed_task = """
     REManagerAPI.WaitTimeoutError, REManagerAPI.WaitCancelError
         The manager did not switch to *'idle'* state during the timeout period or
         wait was cancelled using ``monitor.cancel()``.
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
     RequestParameterError
         Invalid parameter value or type
@@ -2304,7 +2304,7 @@ _doc_api_re_runs = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -2369,7 +2369,7 @@ _doc_api_re_pause = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -2425,7 +2425,7 @@ _doc_api_re_resume = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 """
 
@@ -2452,7 +2452,7 @@ _doc_api_re_stop = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 """
 
@@ -2479,7 +2479,7 @@ _doc_api_re_abort = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 """
 
@@ -2506,7 +2506,7 @@ _doc_api_re_halt = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
 """
 
@@ -2733,7 +2733,7 @@ _doc_api_lock = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
     RuntimeError
         The lock key (``lock_key`` parameter) is not passed and the current lock key
@@ -2797,7 +2797,7 @@ _doc_api_lock_info = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
     ValueError
         The lock key is not a non-empty string.
@@ -2836,7 +2836,7 @@ _doc_api_unlock = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, ClientError
         All exceptions raised by ``send_request`` API.
     ValueError
         The lock key is not a non-empty string.
