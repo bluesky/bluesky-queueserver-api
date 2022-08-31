@@ -92,7 +92,7 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         request_params = {"method": method, "params": params, "headers": headers, "data": data, "timeout": timeout}
         try:
             response = await self._simple_request(**request_params)
-        except self.ClientError as ex:
+        except self.HTTPClientError as ex:
             # The session is supposed to be automatically refreshed only if the expired token is passed
             #   to the server. Otherwise the request is expected to fail.
             if (

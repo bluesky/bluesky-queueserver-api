@@ -77,7 +77,7 @@ class HTTPRequestError(httpx.RequestError):
     ...
 
 
-class ClientError(httpx.HTTPStatusError):
+class HTTPClientError(httpx.HTTPStatusError):
     ...
 
 
@@ -119,7 +119,7 @@ class ReManagerAPI_Base:
     RequestTimeoutError = RequestTimeoutError
     RequestFailedError = RequestFailedError
     HTTPRequestError = HTTPRequestError
-    ClientError = ClientError
+    HTTPClientError = HTTPClientError
     ServerError = ServerError
 
     Protocols = Protocols
@@ -363,7 +363,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
                     f"{exc.response.json()['detail'] if client_response.content else ''} "
                     f"{exc.request.url}"
                 )
-                raise self.ClientError(message, **common_params) from exc
+                raise self.HTTPClientError(message, **common_params) from exc
             else:
                 raise self.ServerError(exc, **common_params) from exc
 

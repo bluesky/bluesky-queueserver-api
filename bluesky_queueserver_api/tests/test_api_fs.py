@@ -381,7 +381,7 @@ def test_login_1(
         RM = instantiate_re_api_class(rm_api_class, **params)
 
         # Make sure access does not work without authentication
-        with pytest.raises(RM.ClientError, match="401"):
+        with pytest.raises(RM.HTTPClientError, match="401"):
             RM.status()
 
         login_args, login_kwargs = [], {"password": "bob_password"}
@@ -409,7 +409,7 @@ def test_login_1(
             RM = instantiate_re_api_class(rm_api_class, **params)
 
             # Make sure access does not work without authentication
-            with pytest.raises(RM.ClientError, match="401"):
+            with pytest.raises(RM.HTTPClientError, match="401"):
                 await RM.status()
 
             login_args, login_kwargs = [], {"password": "bob_password"}
@@ -461,7 +461,7 @@ def test_login_2(
         RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
 
         # Make sure access does not work without authentication
-        with pytest.raises(RM.ClientError, match="401"):
+        with pytest.raises(RM.HTTPClientError, match="401"):
             RM.status()
 
         if interactive_username:
@@ -480,7 +480,7 @@ def test_login_2(
             RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
 
             # Make sure access does not work without authentication
-            with pytest.raises(RM.ClientError, match="401"):
+            with pytest.raises(RM.HTTPClientError, match="401"):
                 await RM.status()
 
             if interactive_username:
@@ -527,9 +527,9 @@ def test_login_3_fail(
         ("bob", "", ValueError, "'password' is an empty string"),
         (10, "bob-password", TypeError, "'username' is not string"),
         ("", "bob-password", ValueError, "'username' is an empty string"),
-        ("bob", "rand_pwd", rm_api_class.ClientError, "401: Incorrect username or password"),
-        ("rand_user", "bob-password", rm_api_class.ClientError, "401: Incorrect username or password"),
-        ("rand_user", "rand_pwd", rm_api_class.ClientError, "401: Incorrect username or password"),
+        ("bob", "rand_pwd", rm_api_class.HTTPClientError, "401: Incorrect username or password"),
+        ("rand_user", "bob-password", rm_api_class.HTTPClientError, "401: Incorrect username or password"),
+        ("rand_user", "rand_pwd", rm_api_class.HTTPClientError, "401: Incorrect username or password"),
     ]
 
     if not _is_async(library):
@@ -541,7 +541,7 @@ def test_login_3_fail(
         RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
 
         # Make sure access does not work without authentication
-        with pytest.raises(RM.ClientError, match="401"):
+        with pytest.raises(RM.HTTPClientError, match="401"):
             RM.status()
 
         # Invalid provider
@@ -555,7 +555,7 @@ def test_login_3_fail(
                 RM.login(username, password=password)
 
         # Make sure access does not work without authentication
-        with pytest.raises(RM.ClientError, match="401"):
+        with pytest.raises(RM.HTTPClientError, match="401"):
             RM.status()
 
         RM.close()
@@ -571,7 +571,7 @@ def test_login_3_fail(
             RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
 
             # Make sure access does not work without authentication
-            with pytest.raises(RM.ClientError, match="401"):
+            with pytest.raises(RM.HTTPClientError, match="401"):
                 await RM.status()
 
             # Invalid provider
@@ -585,7 +585,7 @@ def test_login_3_fail(
                     await RM.login(username, password=password)
 
             # Make sure access does not work without authentication
-            with pytest.raises(RM.ClientError, match="401"):
+            with pytest.raises(RM.HTTPClientError, match="401"):
                 await RM.status()
 
             await RM.close()
@@ -620,7 +620,7 @@ def test_session_refresh_1(
         RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
 
         # Make sure access does not work without authentication
-        with pytest.raises(RM.ClientError, match="401"):
+        with pytest.raises(RM.HTTPClientError, match="401"):
             RM.status()
 
         RM.login("bob", password="bob_password")
@@ -642,11 +642,11 @@ def test_session_refresh_1(
         # Invalid refresh token
         if token_as_param:
             RM.set_authorization_key()  # Clear all tokens
-            with pytest.raises(RM.ClientError, match="401"):
+            with pytest.raises(RM.HTTPClientError, match="401"):
                 RM.session_refresh(refresh_token="invalidtoken")
         else:
             RM.set_authorization_key(refresh_token="invalidtoken")  # Clear the access token
-            with pytest.raises(RM.ClientError, match="401"):
+            with pytest.raises(RM.HTTPClientError, match="401"):
                 RM.session_refresh()
 
         RM.close()
@@ -656,7 +656,7 @@ def test_session_refresh_1(
             RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
 
             # Make sure access does not work without authentication
-            with pytest.raises(RM.ClientError, match="401"):
+            with pytest.raises(RM.HTTPClientError, match="401"):
                 await RM.status()
 
             await RM.login("bob", password="bob_password")
@@ -678,11 +678,11 @@ def test_session_refresh_1(
             # Invalid refresh token
             if token_as_param:
                 RM.set_authorization_key()  # Clear all tokens
-                with pytest.raises(RM.ClientError, match="401"):
+                with pytest.raises(RM.HTTPClientError, match="401"):
                     await RM.session_refresh(refresh_token="invalidtoken")
             else:
                 RM.set_authorization_key(refresh_token="invalidtoken")  # Clear the access token
-                with pytest.raises(RM.ClientError, match="401"):
+                with pytest.raises(RM.HTTPClientError, match="401"):
                     await RM.session_refresh()
 
             await RM.close()

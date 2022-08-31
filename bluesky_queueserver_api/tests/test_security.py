@@ -119,7 +119,7 @@ def test_ReManagerAPI_authorization_api_key_01(
                 RM.wait_for_idle(timeout=3)
             assert ttime.time() - t0 > 2
 
-            with pytest.raises(RM.ClientError, match="401"):
+            with pytest.raises(RM.HTTPClientError, match="401"):
                 RM.status()
 
         # Now repeat the test with valid API key
@@ -148,7 +148,7 @@ def test_ReManagerAPI_authorization_api_key_01(
                     await RM.wait_for_idle(timeout=3)
                 assert ttime.time() - t0 > 2
 
-                with pytest.raises(RM.ClientError, match="401"):
+                with pytest.raises(RM.HTTPClientError, match="401"):
                     await RM.status()
 
             # Now repeat the test with valid API key
