@@ -11,7 +11,6 @@ from bluesky_queueserver_api._defaults import default_http_server_uri
 
 from .common import re_manager, re_manager_cmd  # noqa: F401
 from .common import fastapi_server  # noqa: F401
-from .common import _is_async, _select_re_manager_api, instantiate_re_api_class
 from .common import set_qserver_zmq_address, set_qserver_zmq_public_key, API_KEY_FOR_TESTS
 
 _plan1 = {"name": "count", "args": [["det1", "det2"]], "item_type": "plan"}
@@ -113,19 +112,21 @@ def test_ReManagerComm_ZMQ_02(monkeypatch, re_manager_cmd):  # noqa: F811
 def test_ReManagerComm_HTTP_01():
     """
     ReManagerComm_HTTP_Thread and ReManagerComm_HTTP_Async: basic test.
-    Create an object, send a request and catch RequestError (the server is not running)
+    Create an object, send a request and catch HTTPRequestError (the server is not running)
     """
 
     params = {"item": _plan1}
 
     RM = ReManagerComm_HTTP_Threads()
-    with pytest.raises(RM.RequestError, match=re.escape("HTTP request error: [Errno 111] Connection refused")):
+    with pytest.raises(RM.HTTPRequestError, match=re.escape("HTTP request error: [Errno 111] Connection refused")):
         RM.send_request(method="queue_item_add", params=params)
     RM.close()
 
     async def testing():
         RM = ReManagerComm_HTTP_Async()
-        with pytest.raises(RM.RequestError, match=re.escape("HTTP request error: All connection attempts failed")):
+        with pytest.raises(
+            RM.HTTPRequestError, match=re.escape("HTTP request error: All connection attempts failed")
+        ):
             await RM.send_request(method="queue_item_add", params=params)
         await RM.close()
 
@@ -152,7 +153,7 @@ def test_ReManagerComm_HTTP_02(re_manager, fastapi_server, server_uri, success):
         result = RM.send_request(method="queue_item_add", params=params)
         assert result["success"] is True
     else:
-        with pytest.raises(RM.RequestError):
+        with pytest.raises(RM.HTTPRequestError):
             RM.send_request(method="queue_item_add", params=params)
     RM.close()
 
@@ -163,7 +164,7 @@ def test_ReManagerComm_HTTP_02(re_manager, fastapi_server, server_uri, success):
             result = await RM.send_request(method="queue_item_add", params=params)
             assert result["success"] is True
         else:
-            with pytest.raises(RM.RequestError):
+            with pytest.raises(RM.HTTPRequestError):
                 await RM.send_request(method="queue_item_add", params=params)
         await RM.close()
 
@@ -178,50 +179,17 @@ def test_ReManagerComm_HTTP_03():
     """
 
     RM = ReManagerComm_HTTP_Threads()
-    with pytest.raises(KeyError, match=re.escape("Unknown method 'unknown_method'")):
+    with pytest.raises(RM.RequestParameterError, match=re.escape("Unknown method 'unknown_method'")):
         RM.send_request(method="unknown_method")
     RM.close()
 
     async def testing():
         RM = ReManagerComm_HTTP_Async()
-        with pytest.raises(KeyError, match=re.escape("Unknown method 'unknown_method'")):
+        with pytest.raises(RM.RequestParameterError, match=re.escape("Unknown method 'unknown_method'")):
             await RM.send_request(method="unknown_method")
         await RM.close()
 
     asyncio.run(testing())
-
-
-# fmt: off
-@pytest.mark.parametrize("api_prefix, expected_endpoint", [
-    (None, "/api/status"),
-    ("", "/api/status"),
-    ("abc", "/abc/api/status"),
-    ("/abc", "/abc/api/status"),
-    ("abc/def", "/abc/def/api/status"),
-    ("/abc/def", "/abc/def/api/status"),
-])
-@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
-@pytest.mark.parametrize("protocol", ["HTTP"])
-# fmt: on
-def test_ReManagerComm_HTTP_04(api_prefix, expected_endpoint, library, protocol):
-    """
-    Test that ``api_prefix`` parameter is properly handled by HTTP API classes.
-    """
-    rm_api_class = _select_re_manager_api(protocol, library)
-    if not _is_async(library):
-        RM = instantiate_re_api_class(rm_api_class, api_prefix=api_prefix)
-        _, endpoint, _ = RM._prepare_request(method="status")
-        assert endpoint == expected_endpoint
-        RM.close()
-    else:
-
-        async def testing():
-            RM = instantiate_re_api_class(rm_api_class, api_prefix=api_prefix)
-            _, endpoint, _ = RM._prepare_request(method="status")
-            assert endpoint == expected_endpoint
-            await RM.close()
-
-        asyncio.run(testing())
 
 
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])

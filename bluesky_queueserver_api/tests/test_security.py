@@ -40,7 +40,7 @@ def test_set_authorization_key_01(
         if success:
             RM.set_authorization_key(api_key=api_key, token=token, refresh_token=refresh_token)
         else:
-            with pytest.raises((TypeError, ValueError), match=msg):
+            with pytest.raises(RM.RequestParameterError, match=msg):
                 RM.set_authorization_key(api_key=api_key, token=token, refresh_token=refresh_token)
 
         assert RM.auth_method == RM.AuthorizationMethods(res_auth_method)
@@ -61,7 +61,7 @@ def test_set_authorization_key_01(
             if success:
                 RM.set_authorization_key(api_key=api_key, token=token, refresh_token=refresh_token)
             else:
-                with pytest.raises((TypeError, ValueError), match=msg):
+                with pytest.raises(RM.RequestParameterError, match=msg):
                     RM.set_authorization_key(api_key=api_key, token=token, refresh_token=refresh_token)
 
             assert RM.auth_method == RM.AuthorizationMethods(res_auth_method)
@@ -119,7 +119,7 @@ def test_ReManagerAPI_authorization_api_key_01(
                 RM.wait_for_idle(timeout=3)
             assert ttime.time() - t0 > 2
 
-            with pytest.raises(RM.ClientError, match="401"):
+            with pytest.raises(RM.HTTPClientError, match="401"):
                 RM.status()
 
         # Now repeat the test with valid API key
@@ -148,7 +148,7 @@ def test_ReManagerAPI_authorization_api_key_01(
                     await RM.wait_for_idle(timeout=3)
                 assert ttime.time() - t0 > 2
 
-                with pytest.raises(RM.ClientError, match="401"):
+                with pytest.raises(RM.HTTPClientError, match="401"):
                     await RM.status()
 
             # Now repeat the test with valid API key

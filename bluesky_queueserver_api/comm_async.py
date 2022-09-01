@@ -3,7 +3,7 @@ import httpx
 from .comm_base import ReManagerAPI_ZMQ_Base, ReManagerAPI_HTTP_Base
 from bluesky_queueserver import ZMQCommSendAsync
 
-from .api_docstrings import _doc_send_request, _doc_close
+from .api_docstrings import _doc_send_request, _doc_close, _doc_api_login, _doc_api_session_refresh
 from .console_monitor import ConsoleMonitor_ZMQ_Async, ConsoleMonitor_HTTP_Async
 
 
@@ -56,9 +56,13 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         )
 
     def _create_client(self, http_server_uri, timeout):
+        timeout = self._adjust_timeout(timeout)
         return httpx.AsyncClient(base_url=http_server_uri, timeout=timeout)
 
-    async def send_request(self, *, method, params=None):
+    async def _simple_request(self, *, method, params=None, headers=None, data=None, timeout=None):
+        """
+        The code that formats and sends a simple request.
+        """
         try:
             client_response = None
             request_method, endpoint, payload = self._prepare_request(method=method, params=params)
@@ -66,6 +70,10 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
             kwargs = {"json": payload}
             if headers:
                 kwargs.update({"headers": headers})
+            if data:
+                kwargs.update({"data": data})
+            if timeout is not None:
+                kwargs.update({"timeout": self._adjust_timeout(timeout)})
             client_response = await self._client.request(request_method, endpoint, **kwargs)
             response = self._process_response(client_response=client_response)
 
@@ -76,12 +84,60 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
 
         return response
 
+    async def send_request(
+        self, *, method, params=None, headers=None, data=None, timeout=None, auto_refresh_session=True
+    ):
+        # Docstring is maintained separately
+        refresh = False
+        request_params = {"method": method, "params": params, "headers": headers, "data": data, "timeout": timeout}
+        try:
+            response = await self._simple_request(**request_params)
+        except self.HTTPClientError as ex:
+            # The session is supposed to be automatically refreshed only if the expired token is passed
+            #   to the server. Otherwise the request is expected to fail.
+            if (
+                auto_refresh_session
+                and ("401: Access token has expired" in str(ex))
+                and (self.auth_method == self.AuthorizationMethods.TOKEN)
+                and (self.auth_key[1] is not None)
+            ):
+                refresh = True
+            else:
+                raise
+
+        if refresh:
+            try:
+                await self.session_refresh()
+            except Exception as ex:
+                print(f"Failed to refresh session: {ex}")
+
+            # Try calling the API with the new token (or the old one if refresh failed).
+            response = await self._simple_request(**request_params)
+
+        return response
+
     async def close(self):
         await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_period * 10)
         await self._client.aclose()
+
+    async def login(self, username=None, *, password=None, provider=None):
+        # Docstring is maintained separately
+        endpoint, data = self._prepare_login(username=username, password=password, provider=provider)
+        response = await self.send_request(method=("POST", endpoint), data=data, timeout=self._timeout_login)
+        response = self._process_login_response(response=response)
+        return response
+
+    async def session_refresh(self, *, refresh_token=None):
+        # Docstring is maintained separately
+        refresh_token = self._prepare_refresh_session(refresh_token=refresh_token)
+        response = await self.send_request(method="session_refresh", params={"refresh_token": refresh_token})
+        response = self._process_login_response(response=response)
+        return response
 
 
 ReManagerComm_ZMQ_Async.send_request.__doc__ = _doc_send_request
 ReManagerComm_HTTP_Async.send_request.__doc__ = _doc_send_request
 ReManagerComm_ZMQ_Async.close.__doc__ = _doc_close
 ReManagerComm_HTTP_Async.close.__doc__ = _doc_close
+ReManagerComm_HTTP_Async.login.__doc__ = _doc_api_login
+ReManagerComm_HTTP_Async.session_refresh.__doc__ = _doc_api_session_refresh

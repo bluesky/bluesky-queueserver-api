@@ -1,6 +1,7 @@
 from bluesky_queueserver import CommTimeoutError
-from collections.abc import Mapping
+from collections.abc import Mapping, Iterable
 import enum
+import getpass
 import httpx
 import os
 
@@ -9,6 +10,7 @@ from ._defaults import (
     default_zmq_request_timeout_recv,
     default_zmq_request_timeout_send,
     default_http_request_timeout,
+    default_http_login_timeout,
     default_http_server_uri,
     default_console_monitor_poll_timeout,
     default_console_monitor_poll_period,
@@ -62,14 +64,24 @@ rest_api_method_map = {
     "lock_info": ("GET", "/api/lock/info"),
     "manager_stop": ("POST", "/api/manager/stop"),
     "manager_kill": ("POST", "/api/test/manager/kill"),
+    # API available only in HTTP version
+    "session_refresh": ("POST", "/api/auth/session/refresh"),
 }
 
 
-class RequestError(httpx.RequestError):
+class RequestParameterError(Exception):
     ...
 
 
-class ClientError(httpx.HTTPStatusError):
+class HTTPRequestError(httpx.RequestError):
+    ...
+
+
+class HTTPClientError(httpx.HTTPStatusError):
+    ...
+
+
+class HTTPServerError(httpx.HTTPStatusError):
     ...
 
 
@@ -103,10 +115,12 @@ class AuthorizationMethods(enum.Enum):
 
 class ReManagerAPI_Base:
 
+    RequestParameterError = RequestParameterError
     RequestTimeoutError = RequestTimeoutError
     RequestFailedError = RequestFailedError
-    RequestError = RequestError
-    ClientError = ClientError
+    HTTPRequestError = HTTPRequestError
+    HTTPClientError = HTTPClientError
+    HTTPServerError = HTTPServerError
 
     Protocols = Protocols
     AuthorizationMethods = AuthorizationMethods
@@ -227,8 +241,9 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self,
         *,
         http_server_uri=None,
-        api_prefix=None,
+        http_auth_provider=None,
         timeout=default_http_request_timeout,
+        timeout_login=default_http_login_timeout,
         console_monitor_poll_period=default_console_monitor_poll_period,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
         console_monitor_max_lines=default_console_monitor_max_lines,
@@ -248,37 +263,77 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         http_server_uri = http_server_uri or os.environ.get("QSERVER_HTTP_SERVER_URI")
         http_server_uri = http_server_uri or default_http_server_uri
 
-        self._timeout = timeout
+        # The timeout may still have explicitly passed value of None, so replace it with the default value.
+        self._timeout = timeout if timeout is not None else default_http_request_timeout
+        self._timeout_login = timeout_login if timeout_login is not None else default_http_login_timeout
+
         self._request_fail_exceptions = request_fail_exceptions
         self._console_monitor_poll_period = console_monitor_poll_period
         self._console_monitor_max_msgs = console_monitor_max_msgs
         self._console_monitor_max_lines = console_monitor_max_lines
 
         self._rest_api_method_map = rest_api_method_map
-        if api_prefix:
-            api_prefix = api_prefix.strip()
-            api_prefix = api_prefix if api_prefix.startswith("/") else f"/{api_prefix}"
-        self._rest_api_prefix = api_prefix
 
-        self._client = self._create_client(http_server_uri=http_server_uri, timeout=timeout)
+        self._http_auth_provider = self._preprocess_endpoint_name(
+            http_auth_provider, msg="Authentication provider path"
+        )
+
+        self._client = self._create_client(http_server_uri=http_server_uri, timeout=self._timeout)
 
         self._init_console_monitor()
 
     def _create_client(self, http_server_uri, timeout):
         raise NotImplementedError()
 
+    def _adjust_timeout(self, timeout):
+        """
+        Adjust timeout value. In ``httpx``, the timeout is disabled if timeout is None.
+        We are using 0 (or negative value) to disable timeout and None to use
+        the default timeout. So the timeout value needs to be adjusted before it is
+        passed to ``httpx``.
+        """
+        return timeout if (timeout > 0) else None
+
+    def _preprocess_endpoint_name(self, endpoint_name, *, msg):
+        """
+        Endpoint name may be a non-empty string or None.
+        """
+        if isinstance(endpoint_name, str):
+            endpoint_name = endpoint_name.strip()
+            if not endpoint_name:
+                raise self.RequestParameterError(f"{msg.capitalize()} is an empty string")
+            if not endpoint_name.startswith("/"):
+                endpoint_name = f"/{endpoint_name}"
+        elif endpoint_name is not None:
+            raise self.RequestParameterError(f"{msg.capitalize()} must be a string or None: {endpoint_name!r}")
+        return endpoint_name
+
     def _prepare_headers(self):
+        headers = None
         if self.auth_method == self.AuthorizationMethods.API_KEY:
             headers = {"Authorization": f"ApiKey {self.auth_key}"}
-        else:
-            headers = None
+        elif self.auth_method == self.AuthorizationMethods.TOKEN:
+            access_token, _ = self.auth_key
+            if access_token:
+                headers = {"Authorization": f"Bearer {access_token}"}
         return headers
 
     def _prepare_request(self, *, method, params=None):
-        if method not in self._rest_api_method_map:
-            raise KeyError(f"Unknown method {method!r}")
-        request_method, endpoint = rest_api_method_map[method]
-        endpoint = f"{self._rest_api_prefix}{endpoint}" if self._rest_api_prefix else endpoint
+        if isinstance(method, str):
+            if method not in self._rest_api_method_map:
+                raise self.RequestParameterError(f"Unknown method {method!r}")
+            request_method, endpoint = rest_api_method_map[method]
+        elif isinstance(method, Iterable):
+            mtd = tuple(method)
+            if len(mtd) != 2 or any([not isinstance(_, str) for _ in mtd]):
+                raise self.RequestParameterError(
+                    f"If method is an iterable, it must consist of 2 string elements: method={mtd!r}"
+                )
+            request_method, endpoint = mtd
+        else:
+            raise self.RequestParameterError(
+                f"Method must be a string or an iterable: method={method!r} type(method)={type(method)!r}"
+            )
         payload = params or {}
         return request_method, endpoint, payload
 
@@ -299,9 +354,10 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             raise self.RequestTimeoutError(ex, {"method": method, "params": params}) from ex
 
         except httpx.RequestError as ex:
-            raise self.RequestError(f"HTTP request error: {ex}") from ex
+            raise self.HTTPRequestError(f"HTTP request error: {ex}") from ex
 
         except httpx.HTTPStatusError as exc:
+            common_params = {"request": exc.request, "response": exc.response}
             if client_response and (client_response.status_code < 500):
                 # Include more detail that httpx does by default.
                 message = (
@@ -309,9 +365,9 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
                     f"{exc.response.json()['detail'] if client_response.content else ''} "
                     f"{exc.request.url}"
                 )
-                raise self.ClientError(message, request=exc.request, response=exc.response) from exc
+                raise self.HTTPClientError(message, **common_params) from exc
             else:
-                raise self.ClientError(exc) from exc
+                raise self.HTTPServerError(exc, **common_params) from exc
 
     @property
     def auth_method(self):
@@ -362,14 +418,20 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             Refresh token used to request authorization token from the server. Default: ``None``.
         """
         if api_key and (token or refresh_token):
-            raise ValueError("API key and a token are mutually exclusive and can not be specified simultaneously.")
+            raise self.RequestParameterError(
+                "API key and a token are mutually exclusive and can not be specified simultaneously."
+            )
 
         if not isinstance(api_key, (str, type(None))):
-            raise TypeError(f"API key must be a string or None: api_key={api_key} type(api_key)={type(api_key)}")
+            raise self.RequestParameterError(
+                f"API key must be a string or None: api_key={api_key} type(api_key)={type(api_key)}"
+            )
         if not isinstance(token, (str, type(None))):
-            raise TypeError(f"Token must be a string or None: token={token} type(token)={type(token)}")
+            raise self.RequestParameterError(
+                f"Token must be a string or None: token={token} type(token)={type(token)}"
+            )
         if not isinstance(refresh_token, (str, type(None))):
-            raise TypeError(
+            raise self.RequestParameterError(
                 f"Refresh token must be a string or None: refresh_token={refresh_token} "
                 f"type(refresh_token)={type(refresh_token)}"
             )
@@ -383,3 +445,64 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         else:
             self._auth_method = self.AuthorizationMethods.NONE
             self._auth_key = None
+
+    def _prepare_login(self, *, username, password, provider):
+        # Interactively ask for username and password if they were not passed as parameters
+        if username is None:
+            username = input("Username: ")
+        if password is None:
+            password = getpass.getpass()
+
+        if not isinstance(username, str):
+            raise self.RequestParameterError(f"'username' is not string: type(username)={type(username)}")
+        username = username.strip()
+        if not username:
+            raise self.RequestParameterError("'username' is an empty string")
+        if not isinstance(password, str):
+            raise self.RequestParameterError(f"'password' is not string: type(password)={type(password)}")
+        password = password.strip()
+        if not password:
+            raise self.RequestParameterError("'password' is an empty string")
+
+        provider = self._preprocess_endpoint_name(provider, msg="Authentication provider path")
+
+        selected_provider = provider or self._http_auth_provider
+        if not selected_provider:
+            raise self.RequestParameterError(
+                "Authentication provider is not specified: set default authentication provider "
+                "or pass the provider endpoint as a parameter"
+            )
+
+        data = {"username": username, "password": password}
+
+        endpoint = f"/api/auth/provider{selected_provider}"
+        return endpoint, data
+
+    def _process_login_response(self, response):
+        """
+        Process response to 'login' or 'session_refresh' request. The responses are structured
+        identically and contain a new access token and a new refresh token.
+        """
+        access_token = response.get("access_token", None)
+        refresh_token = response.get("refresh_token", None)
+        self.set_authorization_key(token=access_token, refresh_token=refresh_token)
+        return response
+
+    def _prepare_refresh_session(self, *, refresh_token):
+        """
+        If no refresh token is passed to API, then use the refresh token from 'auth_key'
+        """
+        if refresh_token is None:
+            if self.auth_method == self.auth_method.TOKEN:
+                _, refresh_token = self.auth_key
+        elif isinstance(refresh_token, str):
+            refresh_token = refresh_token.strip()
+            if not refresh_token:
+                raise self.RequestParameterError("'refresh_token' is an empty string")
+        else:
+            raise self.RequestParameterError("'refresh_token' must be a string or None")
+
+        if refresh_token is None:
+            raise self.RequestParameterError("'refresh_token' is not set")
+
+        return refresh_token

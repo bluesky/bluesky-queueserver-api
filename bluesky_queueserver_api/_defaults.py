@@ -12,6 +12,7 @@ default_zmq_request_timeout_recv = 2.0  # s
 default_zmq_request_timeout_send = 0.5  # s
 
 default_http_request_timeout = 5.0  # s
+default_http_login_timeout = 60.0  # s
 default_http_server_uri = "http://localhost:60610"  # Default URI (for testing and evaluation)
 
 default_wait_timeout = 600  # Timeout for wait operations in seconds

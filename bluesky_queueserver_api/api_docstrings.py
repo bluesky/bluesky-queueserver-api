@@ -197,14 +197,20 @@ _doc_REManagerAPI_HTTP = """
     http_server_uri: str or None
         URI of Bluesky HTTP Server. If ``None``, then the default URI
         `"http://localhost:60610"`` is used.
-    api_prefix: str or None
-        Prefix added to REST API. For example if ``api_prefix='/srx'``,
-        then **status** API calls ``https://<server_uri>/srx/api/status``.
-        The leading ``'/'`` may be skipped: ``'/srx'`` and ``'srx'``
-        result in the same API call. If the prefix is ``None`` (default),
-        then no prefix is added.
-    timeout: float
-        Request timeout. Default value is 5.0 seconds.
+    http_auth_provider: str or None, optional
+        Name of the endpoint of authentication provider (such as ``'/toy/token'``)
+        or ``None`` if authentication provider is not needed (e.g. if authorization
+        using API keys is used). The provider may also be passed as a parameter
+        of ``login`` API if needed. Default: None.
+    timeout: float, optional
+        Request timeout. Positive value sets timeout in seconds, 0 (zero) disables
+        timeouts, ``None`` sets timeout to the default value. Default value
+        is 5.0 seconds.
+    timeout_login: float, optional
+        Request timeout used for login requests. Login requests may take substantial
+        time to process at the server, especially in case of 2FA. See the description
+        for the parameter ``timeout`` for more information. Default value
+        is 60.0 seconds.
     console_monitor_poll_period: float
         Polling period defines interval between consecutive HTTP requests
         to the server. Default: 0.5 s.
@@ -266,10 +272,27 @@ _doc_send_request = """
 
     Parameters
     ----------
-    method: str
-        Name of the API method
+    method: str, list or tuple
+        Name of the API method (e.g. ``'status'`, 0MQ and HTTP requests) or
+        a tuple (e.g. ``('GET', '/api/status')``, only HTTP requests).
+        Tuple should be used to call custom REST API that are not supported by
+        the library.
     params: dict or None, optional
         Dictionary of API parameters or ``None`` if no parameters are passed.
+    headers: dict or None, optional
+        Header data (supported only for HTTP requests). Default: None.
+    data: dict or None, optional
+        Form data (supported only for HTTP requests). Default: None.
+    timeout: float or None, optional
+        Timeout in seconds (supported only for HTTP requests). If the value
+        is zero or negative, then timeout is diabled. The default timeout
+        is used if the value is ``None``. Default: None.
+    auto_refresh_session: boolean, optional
+        Indicates if the session should be automatically refreshed if the token
+        expired (supported only for HTTP requests). The session could be refreshed
+        only if an expired access token and valid refresh token are available.
+        The option to refresh session should be enabled for most API that require
+        authentication. Default: True.
 
     Returns
     -------
@@ -283,7 +306,7 @@ _doc_send_request = """
     RequestFailedError
         Request failed or rejected by the Queue Server (the response contains
         ``"success": False``).
-    RequestError, ClientError
+    HTTPRequestError, HTTPClientError, HTTPServerError
         Error while processing the request or communicating with the server.
         Raised only by HTTP requests.
 
@@ -352,7 +375,7 @@ _doc_api_status = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -490,7 +513,7 @@ _doc_api_item_add = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -592,7 +615,7 @@ _doc_api_item_add_batch = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -664,7 +687,7 @@ _doc_api_item_update = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -717,7 +740,7 @@ _doc_api_item_get = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -775,7 +798,7 @@ _doc_api_item_remove = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -834,7 +857,7 @@ _doc_api_item_remove_batch = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -894,7 +917,7 @@ _doc_api_item_move = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -963,7 +986,7 @@ _doc_api_item_move_batch = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1025,7 +1048,7 @@ _doc_api_item_execute = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1068,7 +1091,7 @@ _doc_api_queue_start = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1111,7 +1134,7 @@ _doc_api_queue_stop = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1152,7 +1175,7 @@ _doc_api_queue_stop_cancel = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1194,7 +1217,7 @@ _doc_api_queue_clear = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1245,7 +1268,7 @@ _doc_api_queue_mode_set = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1297,7 +1320,7 @@ _doc_api_queue_get = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1346,7 +1369,7 @@ _doc_api_history_get = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1390,7 +1413,7 @@ _doc_api_history_clear = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1439,7 +1462,7 @@ _doc_api_plans_allowed = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1490,7 +1513,7 @@ _doc_api_devices_allowed = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1535,7 +1558,7 @@ _doc_api_plans_existing = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1580,7 +1603,7 @@ _doc_api_devices_existing = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1633,7 +1656,7 @@ _doc_api_permissions_reload = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1667,7 +1690,7 @@ _doc_api_permissions_get = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1716,7 +1739,7 @@ _doc_api_permissions_set = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1766,7 +1789,7 @@ _doc_api_environment_open = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1810,7 +1833,7 @@ _doc_api_environment_close = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1857,7 +1880,7 @@ _doc_api_environment_destroy = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -1929,7 +1952,7 @@ _doc_api_script_upload = r"""
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -2010,7 +2033,7 @@ _doc_api_function_execute = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -2065,7 +2088,7 @@ _doc_api_task_status = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
     RequestParameterError
         Invalid parameter value or type
@@ -2135,7 +2158,7 @@ _doc_api_task_result = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
     RequestParameterError
         Invalid parameter value or type
@@ -2198,7 +2221,7 @@ _doc_api_wait_for_completed_task = """
     REManagerAPI.WaitTimeoutError, REManagerAPI.WaitCancelError
         The manager did not switch to *'idle'* state during the timeout period or
         wait was cancelled using ``monitor.cancel()``.
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
     RequestParameterError
         Invalid parameter value or type
@@ -2281,7 +2304,7 @@ _doc_api_re_runs = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -2346,7 +2369,7 @@ _doc_api_re_pause = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 
     Examples
@@ -2402,7 +2425,7 @@ _doc_api_re_resume = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 """
 
@@ -2429,7 +2452,7 @@ _doc_api_re_stop = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 """
 
@@ -2456,7 +2479,7 @@ _doc_api_re_abort = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 """
 
@@ -2483,7 +2506,7 @@ _doc_api_re_halt = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 """
 
@@ -2710,7 +2733,7 @@ _doc_api_lock = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
     RuntimeError
         The lock key (``lock_key`` parameter) is not passed and the current lock key
@@ -2774,7 +2797,7 @@ _doc_api_lock_info = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
     ValueError
         The lock key is not a non-empty string.
@@ -2813,11 +2836,106 @@ _doc_api_unlock = """
 
     Raises
     ------
-    RequestTimeoutError, RequestFailedError, RequestError, ClientError
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
     ValueError
         The lock key is not a non-empty string.
     RuntimeError
         The lock key (``lock_key`` parameter) is not passed and the current lock key
         (``REManagerAPI.lock_key``) is not set.
+"""
+
+_doc_api_login = """
+    Parameters
+    ----------
+    username: str, optional
+        Login username. If the parameter is omitted or ``None``, then the function asks
+        for the username interactively.
+    password: str, optional
+        Login password. If the parameter is omitted or ``None``, the the function asks
+        of the password interactively.
+
+        .. note::
+
+            Passwords should never be explicitly included in Python scripts or typed
+            as API parameters in IPython environment. Use interactive input (manual entry,
+            preferable) or environment variables to pass passwords. For example,
+            the following script is using password contained in the environment variable
+            ``MY_PASSWORD``. If the environment variable is not set, then the script
+            is interactively asking for the password::
+
+                ...
+                username = "bob"
+                RM.login(username, password=os.environ.get("MY_PASSWORD", None))
+                ...
+
+            Starting the script from command line::
+
+                $ MY_PASSWORD=bob_password python experiment.py
+
+    provider: str or None
+        The endpoint of the authentication provider (e.g. '/toy/token'). The passed
+        value overrides the default provider (set by passing ``http_auth_provider`` to
+        the constructor of ``REManagerAPI``). Setting the default provider is preferable
+        for interactive IPython-based workflows. Default: None.
+
+    Returns
+    -------
+    dict
+        Dictionary with the following keys:
+
+        - **access_token** *(str)* - access token.
+
+        - **expires_in** *(float)* - life time of the token in seconds.
+
+        - **refresh_token** *(str)* - refresh token.
+
+        - **refresh_token_expires_in** *(str)* - life time of the refresh token in seconds.
+
+        - **token_type** *(str)* - ``'bearer'``.
+
+    Raises
+    ------
+    RequestParameterError
+        Incorrect or insufficient parameters in the API call.
+    HTTPRequestError, HTTPClientError, HTTPServerError
+        Error while sending and processing HTTP request.
+"""
+
+_doc_api_session_refresh = """
+    Refresh session using valid refresh token. If the client is successfully authenticated or
+    configured to use tokens, then the API will use the existing refresh token stored in
+    ``REManagerAPI.auth_key``. The refresh token may also be set using
+    `REManagerAPI.set_authorization_key()``. The API is not using the access token, which
+    could be expired, invalid or missing. Alternatively, the refresh token may be passed
+    with the API parameter. In this case the internally stored refresh token is ignored.
+    If successful, the API call automatically updates access and refresh tokens in
+    ``REManagerAPI.auth_key``.
+
+    .. note::
+
+        It is not necessary to refresh the session during normal operation. If the access token
+        is valid, but expired, and the refresh token is valid, the client will refresh
+        the expired session automatically. Auto refresh will not work if the access
+        token is invalid or missing. If only refresh token is available, then explicitly
+        call ``REManagerAPI.session_refresh()`` API to obtain valid access token.
+
+    Parameters
+    ----------
+    refresh_token: str or None
+        Valid refresh token or *None*. If the parameter is omitted or *None*, then
+        the token stored in ``REManagerAPI.auth_key`` is used. If no refresh token
+        passed or stored by the class, the ``RequestParameterError`` is raised.
+
+    Returns
+    -------
+    dict
+        See the description of ``REManagerAPI.login()`` API for the list of keys.
+
+    Raises
+    ------
+    RequestParameterError
+        Invalid parameter type or value.
+    HTTPRequestError, HTTPClientError, HTTPServerError
+        Error while sending and processing HTTP request.
 """
