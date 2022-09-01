@@ -759,7 +759,7 @@ def test_session_refresh_3(
         n_expirations = 0
         for _ in range(10):
             try:
-                RM._simple_request(method="status")
+                RM.send_request(method="status", auto_refresh_session=False)
             except Exception:
                 n_expirations += 1
 
@@ -779,7 +779,7 @@ def test_session_refresh_3(
             n_expirations = 0
             for _ in range(10):
                 try:
-                    await RM._simple_request(method="status")
+                    await RM.send_request(method="status", auto_refresh_session=False)
                 except Exception:
                     n_expirations += 1
 

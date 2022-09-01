@@ -287,7 +287,7 @@ _doc_send_request = """
         Timeout in seconds (supported only for HTTP requests). If the value
         is zero or negative, then timeout is diabled. The default timeout
         is used if the value is ``None``. Default: None.
-    refresh_session: boolean, optional
+    auto_refresh_session: boolean, optional
         Indicates if the session should be automatically refreshed if the token
         expired (supported only for HTTP requests). The session could be refreshed
         only if an expired access token and valid refresh token are available.

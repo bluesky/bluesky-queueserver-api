@@ -480,7 +480,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
     def _process_login_response(self, response):
         """
-        Process response to 'login' or 'refresh_session' request. The responses are structured
+        Process response to 'login' or 'session_refresh' request. The responses are structured
         identically and contain a new access token and a new refresh token.
         """
         access_token = response.get("access_token", None)

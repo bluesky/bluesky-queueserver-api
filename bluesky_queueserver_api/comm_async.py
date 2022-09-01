@@ -85,7 +85,7 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         return response
 
     async def send_request(
-        self, *, method, params=None, headers=None, data=None, timeout=None, refresh_session=True
+        self, *, method, params=None, headers=None, data=None, timeout=None, auto_refresh_session=True
     ):
         # Docstring is maintained separately
         refresh = False
@@ -96,7 +96,7 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
             # The session is supposed to be automatically refreshed only if the expired token is passed
             #   to the server. Otherwise the request is expected to fail.
             if (
-                refresh_session
+                auto_refresh_session
                 and ("401: Access token has expired" in str(ex))
                 and (self.auth_method == self.AuthorizationMethods.TOKEN)
                 and (self.auth_key[1] is not None)

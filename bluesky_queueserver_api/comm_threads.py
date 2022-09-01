@@ -84,7 +84,9 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
 
         return response
 
-    def send_request(self, *, method, params=None, headers=None, data=None, timeout=None, refresh_session=True):
+    def send_request(
+        self, *, method, params=None, headers=None, data=None, timeout=None, auto_refresh_session=True
+    ):
         # Docstring is maintained separately
         refresh = False
         request_params = {"method": method, "params": params, "headers": headers, "data": data, "timeout": timeout}
@@ -94,7 +96,7 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
             # The session is supposed to be automatically refreshed only if the expired token is passed
             #   to the server. Otherwise the request is expected to fail.
             if (
-                refresh_session
+                auto_refresh_session
                 and ("401: Access token has expired" in str(ex))
                 and (self.auth_method == self.AuthorizationMethods.TOKEN)
                 and (self.auth_key[1] is not None)
@@ -122,7 +124,7 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         # Docstring is maintained separately
         endpoint, data = self._prepare_login(username=username, password=password, provider=provider)
         response = self.send_request(
-            method=("POST", endpoint), data=data, timeout=self._timeout_login, refresh_session=False
+            method=("POST", endpoint), data=data, timeout=self._timeout_login, auto_refresh_session=False
         )
         response = self._process_login_response(response=response)
         return response
@@ -131,7 +133,7 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         # Docstring is maintained separately
         refresh_token = self._prepare_refresh_session(refresh_token=refresh_token)
         response = self.send_request(
-            method="session_refresh", params={"refresh_token": refresh_token}, refresh_session=False
+            method="session_refresh", params={"refresh_token": refresh_token}, auto_refresh_session=False
         )
         response = self._process_login_response(response=response)
         return response
