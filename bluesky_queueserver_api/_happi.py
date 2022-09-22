@@ -3,7 +3,6 @@ pcdshub.github.io/happi
 """
 
 
-import re
 import copy
 
 from happi.item import HappiItem, EntryInfo  # type: ignore
