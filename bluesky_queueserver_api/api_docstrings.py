@@ -2620,7 +2620,7 @@ _doc_api_lock = """
             print(f"API call failed: {ex}")
 
         # If locked API are enabled, then the current lock key is sent with each API request.
-        RM.enable_locked_api()
+        RM.enable_locked_api = True
 
         RM.environment_open()  # API call is expected to succeed.
         # await RM.environment_open()
