@@ -8,6 +8,7 @@ import time as ttime
 
 from .item import BItem
 from .comm_base import RequestParameterError
+from ._defaults import default_user_name, default_user_group
 
 
 class WaitTimeoutError(TimeoutError):
@@ -174,8 +175,8 @@ class API_Base:
         self._status_current = None
         self._status_exception = None
 
-        self._user = "Queue Server API User"  # Meaningful user name should be set in application code.
-        self._user_group = "admin"
+        self._user = default_user_name  # Meaningful user name should be set in application code.
+        self._user_group = default_user_group
 
         self._current_plan_queue = []
         self._current_running_item = {}

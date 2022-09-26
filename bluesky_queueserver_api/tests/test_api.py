@@ -13,6 +13,9 @@ from .common import fastapi_server, fastapi_server_fs  # noqa: F401
 from .common import _is_async, _select_re_manager_api, instantiate_re_api_class
 
 from bluesky_queueserver_api import BPlan, BFunc, WaitMonitor
+from bluesky_queueserver_api._defaults import default_user_group
+
+_user, _user_group = "Test User", default_user_group
 
 _plan1 = {"name": "count", "args": [["det1", "det2"]], "item_type": "plan"}
 
@@ -33,7 +36,7 @@ def test_instantiation_01(re_manager, fastapi_server, protocol, library):  # noq
         RM = instantiate_re_api_class(rm_api_class)
         assert RM.protocol == RM.Protocols(protocol)
         assert RM.user == user_name
-        assert RM.user_group == "admin"
+        assert RM.user_group == default_user_group
 
         RM.set_user_name_to_login_name()
         assert RM.user == user_name_2
@@ -50,7 +53,7 @@ def test_instantiation_01(re_manager, fastapi_server, protocol, library):  # noq
             RM = instantiate_re_api_class(rm_api_class)
             assert RM.protocol == RM.Protocols(protocol)
             assert RM.user == user_name
-            assert RM.user_group == "admin"
+            assert RM.user_group == default_user_group
 
             RM.set_user_name_to_login_name()
             assert RM.user == user_name_2
@@ -115,8 +118,6 @@ def test_status_02(re_manager, fastapi_server, protocol, library, reload):  # no
     In a rapid sequence: read status, add item to queue (using low-level API), read status again.
     Verify if the status was reloaded if ``reload`` is ``True``.
     """
-
-    _user, _user_group = "Test User", "admin"
 
     rm_api_class = _select_re_manager_api(protocol, library)
     status_params = {"reload": reload} if (reload is not None) else {}
@@ -1835,7 +1836,7 @@ def test_permissions_get_set_01(re_manager, fastapi_server, protocol, library): 
         permissions = resp1["user_group_permissions"]
 
         # Remove allowed plans (list of allowed plans should be empty)
-        del permissions["user_groups"]["admin"]["allowed_plans"]
+        del permissions["user_groups"][_user_group]["allowed_plans"]
 
         resp2 = RM.plans_allowed()
         assert resp2["success"] is True
@@ -1883,7 +1884,7 @@ def test_permissions_get_set_01(re_manager, fastapi_server, protocol, library): 
             permissions = resp1["user_group_permissions"]
 
             # Remove allowed plans (list of allowed plans should be empty)
-            del permissions["user_groups"]["admin"]["allowed_plans"]
+            del permissions["user_groups"][_user_group]["allowed_plans"]
 
             resp2 = await RM.plans_allowed()
             assert resp2["success"] is True
