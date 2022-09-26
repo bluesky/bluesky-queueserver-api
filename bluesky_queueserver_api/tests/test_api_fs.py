@@ -310,7 +310,7 @@ api_access:
     args:
         users:
             bob:
-                roles: 
+                roles:
                     - admin
                     - expert
 """
@@ -338,7 +338,7 @@ api_access:
     args:
         users:
             bob:
-                roles: 
+                roles:
                     - admin
                     - expert
 """
