@@ -305,9 +305,14 @@ authentication:
                   alice: alice_password
                   bob: bob_password
                   cara: cara_password
-    qserver_admins:
-        - provider: toy
-          id: alice
+api_access:
+    policy: bluesky_httpserver.authorization:DictionaryAPIAccessControl
+    args:
+        users:
+            bob:
+                roles: 
+                    - admin
+                    - expert
 """
 
 
@@ -325,12 +330,17 @@ authentication:
                   alice: alice_password
                   bob: bob_password
                   cara: cara_password
-    qserver_admins:
-        - provider: toy
-          id: alice
     access_token_max_age: 2
     refresh_token_max_age: 600
     session_max_age: 1000
+api_access:
+    policy: bluesky_httpserver.authorization:DictionaryAPIAccessControl
+    args:
+        users:
+            bob:
+                roles: 
+                    - admin
+                    - expert
 """
 
 
