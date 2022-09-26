@@ -7,7 +7,7 @@ from bluesky_queueserver import generate_zmq_keys
 from bluesky_queueserver_api.comm_base import ReManagerAPI_Base
 from bluesky_queueserver_api.comm_threads import ReManagerComm_ZMQ_Threads, ReManagerComm_HTTP_Threads
 from bluesky_queueserver_api.comm_async import ReManagerComm_ZMQ_Async, ReManagerComm_HTTP_Async
-from bluesky_queueserver_api._defaults import default_http_server_uri
+from bluesky_queueserver_api._defaults import default_http_server_uri, default_user_group
 
 from .common import re_manager, re_manager_cmd  # noqa: F401
 from .common import fastapi_server  # noqa: F401
@@ -15,7 +15,7 @@ from .common import set_qserver_zmq_address, set_qserver_zmq_public_key, API_KEY
 
 _plan1 = {"name": "count", "args": [["det1", "det2"]], "item_type": "plan"}
 _user = "Test User"
-_user_group = "admin"
+_user_group = default_user_group
 
 
 def test_ReManagerAPI_Base_01():
