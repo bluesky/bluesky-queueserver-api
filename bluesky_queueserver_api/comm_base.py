@@ -133,6 +133,8 @@ class ReManagerAPI_Base:
         self._protocol = None
         self._pass_user_info = True
 
+        self._is_closing = False  # Set True to exit all background tasks.
+
     @property
     def request_fail_exceptions_enabled(self):
         """

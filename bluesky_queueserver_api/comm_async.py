@@ -42,8 +42,12 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
         return response
 
     async def close(self):
+        self._is_closing = True
         await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_timeout * 10)
         self._client.close()
+
+    def __del__(self):
+        self._is_closing = True
 
 
 class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
@@ -116,10 +120,6 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
 
         return response
 
-    async def close(self):
-        await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_period * 10)
-        await self._client.aclose()
-
     async def login(self, username=None, *, password=None, provider=None):
         # Docstring is maintained separately
         endpoint, data = self._prepare_login(username=username, password=password, provider=provider)
@@ -133,6 +133,14 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         response = await self.send_request(method="session_refresh", params={"refresh_token": refresh_token})
         response = self._process_login_response(response=response)
         return response
+
+    async def close(self):
+        self._is_closing = True
+        await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_period * 10)
+        await self._client.aclose()
+
+    def __del__(self):
+        self._is_closing = True
 
 
 ReManagerComm_ZMQ_Async.send_request.__doc__ = _doc_send_request

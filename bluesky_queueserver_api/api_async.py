@@ -63,8 +63,6 @@ class API_Async_Mixin(API_Base):
             status_expiration_period=status_expiration_period, status_polling_period=status_polling_period
         )
 
-        self._is_closing = False
-
         self._event_status_get = asyncio.Event()
         self._status_get_cb = []  # A list of callbacks
         self._status_get_cb_lock = asyncio.Lock()
@@ -276,12 +274,6 @@ class API_Async_Mixin(API_Base):
             raise _ex
         else:
             return _status
-
-    def _close_api(self):
-        self._is_closing = True  # Exit all tasks
-
-    def __del__(self):
-        self._close_api()
 
     # =====================================================================================
     #                 API for monitoring and control of RE Manager

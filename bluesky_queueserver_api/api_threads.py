@@ -63,8 +63,6 @@ class API_Threads_Mixin(API_Base):
             status_expiration_period=status_expiration_period, status_polling_period=status_polling_period
         )
 
-        self._is_closing = False
-
         self._event_status_get = threading.Event()
         self._status_get_cb = []  # A list of callbacks for requests to get status
         self._wait_cb = []  # A list of callbacks for 'wait' API
@@ -271,12 +269,6 @@ class API_Threads_Mixin(API_Base):
             raise _ex
         else:
             return _status
-
-    def _close_api(self):
-        self._is_closing = True  # Exit all daemon threads
-
-    def __del__(self):
-        self._close_api()
 
     # =====================================================================================
     #                 API for monitoring and control of RE Manager
