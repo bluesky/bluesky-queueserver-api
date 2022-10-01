@@ -293,54 +293,58 @@ def test_send_request_2(fastapi_server_fs, protocol, library):  # noqa: F811
 
 # Configuration file for 'toy' authentication provider. The passwords are explicitly listed.
 config_toy_yml = """
-uvicorn:
-    host: localhost
-    port: 60610
 authentication:
-    providers:
-        - provider: toy
-          authenticator: bluesky_httpserver.authenticators:DictionaryAuthenticator
-          args:
-              users_to_passwords:
-                  alice: alice_password
-                  bob: bob_password
-                  cara: cara_password
+  providers:
+    - provider: toy
+      authenticator: bluesky_httpserver.authenticators:DictionaryAuthenticator
+      args:
+        users_to_passwords:
+          bob: bob_password
+          alice: alice_password
+          tom: tom_password
+          cara: cara_password
 api_access:
-    policy: bluesky_httpserver.authorization:DictionaryAPIAccessControl
-    args:
-        users:
-            bob:
-                roles:
-                    - admin
-                    - expert
+  policy: bluesky_httpserver.authorization:DictionaryAPIAccessControl
+  args:
+    users:
+      bob:
+        roles:
+          - admin
+          - expert
+      alice:
+        roles: advanced
+      tom:
+        roles: user
 """
 
 
 # Configuration file for 'toy' authentication provider. The passwords are explicitly listed.
 config_toy_yml_short_token_expiration = """
-uvicorn:
-    host: localhost
-    port: 60610
 authentication:
-    providers:
-        - provider: toy
-          authenticator: bluesky_httpserver.authenticators:DictionaryAuthenticator
-          args:
-              users_to_passwords:
-                  alice: alice_password
-                  bob: bob_password
-                  cara: cara_password
-    access_token_max_age: 2
-    refresh_token_max_age: 600
-    session_max_age: 1000
+  providers:
+    - provider: toy
+      authenticator: bluesky_httpserver.authenticators:DictionaryAuthenticator
+      args:
+        users_to_passwords:
+          bob: bob_password
+          alice: alice_password
+          tom: tom_password
+          cara: cara_password
+  access_token_max_age: 2
+  refresh_token_max_age: 600
+  session_max_age: 1000
 api_access:
-    policy: bluesky_httpserver.authorization:DictionaryAPIAccessControl
-    args:
-        users:
-            bob:
-                roles:
-                    - admin
-                    - expert
+  policy: bluesky_httpserver.authorization:DictionaryAPIAccessControl
+  args:
+    users:
+      bob:
+        roles:
+          - admin
+          - expert
+      alice:
+        roles: advanced
+      tom:
+        roles: user
 """
 
 
