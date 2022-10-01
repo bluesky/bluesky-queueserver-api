@@ -1,7 +1,6 @@
 import asyncio
 import getpass
 from io import StringIO
-import os
 import pytest
 import time as ttime
 
@@ -15,6 +14,7 @@ from .common import (
     _is_async,
     _select_re_manager_api,
     instantiate_re_api_class,
+    setup_server_with_config_file,
 )
 
 from ..comm_base import RequestParameterError
@@ -344,24 +344,6 @@ api_access:
 """
 
 
-def _setup_server_with_config_file(*, config_file_str, tmpdir, monkeypatch):
-    """
-    Creates config file for the server in ``tmpdir/config/`` directory and
-    sets up the respective environment variable. Sets ``tmpdir`` as a current directory.
-    """
-    config_fln = "config_httpserver.yml"
-    config_dir = os.path.join(tmpdir, "config")
-    config_path = os.path.join(config_dir, config_fln)
-    os.makedirs(config_dir)
-    with open(config_path, "wt") as f:
-        f.writelines(config_file_str)
-
-    monkeypatch.setenv("QSERVER_HTTP_SERVER_CONFIG", config_path)
-    monkeypatch.chdir(tmpdir)
-
-    return config_path
-
-
 # fmt: off
 @pytest.mark.parametrize("default_provider", [True, False])
 @pytest.mark.parametrize("use_kwargs", [True, False])
@@ -382,7 +364,7 @@ def test_login_1(
     ``login`` API (for HTTP requests). Basic functionality.
     """
     re_manager_cmd()
-    _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)
 
@@ -462,7 +444,7 @@ def test_login_2(
     ``login`` API (for HTTP requests). Interactive input of username and password.
     """
     re_manager_cmd()
-    _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     monkeypatch.setattr(getpass, "getpass", lambda: "bob_password")
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)
@@ -523,7 +505,7 @@ def test_login_3_fail(
     ``login`` API (for HTTP requests). Failing cases due to invalid parameters.
     """
     re_manager_cmd()
-    _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)
 
@@ -621,7 +603,7 @@ def test_session_refresh_1(
     ``session_refresh`` API (for HTTP requests). Interactive input of username and password.
     """
     re_manager_cmd()
-    _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     monkeypatch.setattr(getpass, "getpass", lambda: "bob_password")
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)
@@ -753,10 +735,9 @@ def test_session_refresh_3(
     then repeatedly try to load status from the server.
     """
     re_manager_cmd()
-    _setup_server_with_config_file(
+    setup_server_with_config_file(
         config_file_str=config_toy_yml_short_token_expiration, tmpdir=tmpdir, monkeypatch=monkeypatch
     )
-    # _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     monkeypatch.setattr(getpass, "getpass", lambda: "bob_password")
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)

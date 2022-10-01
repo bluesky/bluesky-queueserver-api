@@ -4,7 +4,11 @@ from bluesky_queueserver.manager.tests.common import (  # noqa: F401
     set_qserver_zmq_address,
     set_qserver_zmq_public_key,
 )
-from bluesky_httpserver.tests.conftest import fastapi_server, fastapi_server_fs  # noqa: F401
+from bluesky_httpserver.tests.conftest import (  # noqa: F401
+    fastapi_server,
+    fastapi_server_fs,
+    setup_server_with_config_file,
+)
 from bluesky_httpserver.tests.conftest import API_KEY_FOR_TESTS
 
 # from .common import re_manager, re_manager_pc_copy, re_manager_cmd, db_catalog  # noqa: F401
