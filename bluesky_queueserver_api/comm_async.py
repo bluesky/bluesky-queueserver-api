@@ -134,6 +134,37 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         response = self._process_login_response(response=response)
         return response
 
+    async def session_revoke(self, *, session_uid):
+        # Docstring is maintained separately
+        raise NotImplementedError()
+
+    async def apikey_new(self, *, expires_in, scopes=None, note=None, principal_uid=None):
+        # Docstring is maintained separately
+        raise NotImplementedError()
+
+    async def apikey_info(self, *, api_key=None):
+        # Docstring is maintained separately
+        raise NotImplementedError()
+
+    async def whoami(self, *, token=None, api_key=None):
+        # Docstring is maintained separately
+        raise NotImplementedError()
+
+    async def principal_info(self, *, principal_uid=None):
+        # Docstring is maintained separately
+        raise NotImplementedError()
+
+    async def api_scopes(self, *, token=None, api_key=None):
+        # Docstring is maintained separately
+        raise NotImplementedError()
+
+    async def apikey_delete(self, *, first_eight):
+        # Docstring is maintained separately
+        raise NotImplementedError()
+
+    async def logout(self):
+        raise NotImplementedError()
+
     async def close(self):
         self._is_closing = True
         await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_period * 10)
