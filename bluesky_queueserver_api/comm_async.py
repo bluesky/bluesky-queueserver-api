@@ -134,36 +134,59 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         response = self._process_login_response(response=response)
         return response
 
-    async def session_revoke(self, *, session_uid):
+    async def session_revoke(self, *, session_uid, token=None, api_key=None):
         # Docstring is maintained separately
-        raise NotImplementedError()
+        method, headers = self._prepare_session_revoke(session_uid=session_uid, token=token, api_key=api_key)
+        kwargs = {"headers": headers, "auto_refresh_session": False} if headers else {}
+        response = await self.send_request(method=method, **kwargs)
+        return response
 
     async def apikey_new(self, *, expires_in, scopes=None, note=None, principal_uid=None):
         # Docstring is maintained separately
-        raise NotImplementedError()
+        method, request_params = self._prepare_apikey_new(
+            expires_in=expires_in, scopes=scopes, note=note, principal_uid=principal_uid
+        )
+        response = await self.send_request(method=method, params=request_params)
+        return response
 
     async def apikey_info(self, *, api_key=None):
         # Docstring is maintained separately
-        raise NotImplementedError()
+        headers = self._prepare_apikey_info(api_key=api_key)
+        kwargs = {"headers": headers, "auto_refresh_session": False} if headers else {}
+        response = await self.send_request(method="apikey_info", **kwargs)
+        return response
+
+    async def apikey_delete(self, *, first_eight, token=None, api_key=None):
+        # Docstring is maintained separately
+        url_params, headers = self._prepare_apikey_delete(first_eight=first_eight, token=token, api_key=api_key)
+        kwargs = {"headers": headers, "auto_refresh_session": False} if headers else {}
+        response = await self.send_request(method="apikey_delete", url_params=url_params, **kwargs)
+        return response
 
     async def whoami(self, *, token=None, api_key=None):
         # Docstring is maintained separately
-        raise NotImplementedError()
+        headers = self._prepare_whoami(token=token, api_key=api_key)
+        kwargs = {"headers": headers, "auto_refresh_session": False} if headers else {}
+        response = await self.send_request(method="whoami", **kwargs)
+        return response
 
     async def principal_info(self, *, principal_uid=None):
         # Docstring is maintained separately
-        raise NotImplementedError()
+        method = self._prepare_principal_info(principal_uid=principal_uid)
+        response = await self.send_request(method=method)
+        return response
 
     async def api_scopes(self, *, token=None, api_key=None):
         # Docstring is maintained separately
-        raise NotImplementedError()
-
-    async def apikey_delete(self, *, first_eight):
-        # Docstring is maintained separately
-        raise NotImplementedError()
+        headers = self._prepare_whoami(token=token, api_key=api_key)
+        kwargs = {"headers": headers, "auto_refresh_session": False} if headers else {}
+        response = await self.send_request(method="api_scopes", **kwargs)
+        return response
 
     async def logout(self):
-        raise NotImplementedError()
+        response = await self.send_request(method="logout")
+        self.set_authorization_key()  # Clear authorization keys
+        return response
 
     async def close(self):
         self._is_closing = True

@@ -63,15 +63,17 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         timeout = self._adjust_timeout(timeout)
         return httpx.Client(base_url=http_server_uri, timeout=timeout)
 
-    def _simple_request(self, *, method, params=None, headers=None, data=None, timeout=None):
+    def _simple_request(self, *, method, params=None, url_params=None, headers=None, data=None, timeout=None):
         """
         The code that formats and sends a simple request.
         """
         try:
             client_response = None
-            request_method, endpoint, payload = self._prepare_request(method=method, params=params)
+            request_method, endpoint, params = self._prepare_request(method=method, params=params)
             headers = headers or self._prepare_headers()
-            kwargs = {"json": payload}
+            kwargs = {"json": params}
+            if url_params:
+                kwargs.update({"params": url_params})
             if headers:
                 kwargs.update({"headers": headers})
             if data:
@@ -89,11 +91,26 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         return response
 
     def send_request(
-        self, *, method, params=None, headers=None, data=None, timeout=None, auto_refresh_session=True
+        self,
+        *,
+        method,
+        params=None,
+        url_params=None,
+        headers=None,
+        data=None,
+        timeout=None,
+        auto_refresh_session=True,
     ):
         # Docstring is maintained separately
         refresh = False
-        request_params = {"method": method, "params": params, "headers": headers, "data": data, "timeout": timeout}
+        request_params = {
+            "method": method,
+            "params": params,
+            "url_params": url_params,
+            "headers": headers,
+            "data": data,
+            "timeout": timeout,
+        }
         try:
             response = self._simple_request(**request_params)
         except self.HTTPClientError as ex:
@@ -138,36 +155,87 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         response = self._process_login_response(response=response)
         return response
 
-    def session_revoke(self, *, session_uid):
+    def session_revoke(self, *, session_uid, token=None, api_key=None):
+        """
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        """
         # Docstring is maintained separately
-        raise NotImplementedError()
+        method, headers = self._prepare_session_revoke(session_uid=session_uid, token=token, api_key=api_key)
+        kwargs = {"headers": headers, "auto_refresh_session": False} if headers else {}
+        response = self.send_request(method=method, **kwargs)
+        return response
 
     def apikey_new(self, *, expires_in, scopes=None, note=None, principal_uid=None):
+        """
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        """
         # Docstring is maintained separately
-        raise NotImplementedError()
+        method, request_params = self._prepare_apikey_new(
+            expires_in=expires_in, scopes=scopes, note=note, principal_uid=principal_uid
+        )
+        response = self.send_request(method=method, params=request_params)
+        return response
 
     def apikey_info(self, *, api_key=None):
+        """
+        Returns information about API key used for authorization. The request fails if
+        authorization is performed using token.
+
+        Parameters
+        ----------
+        api_key: str or None
+            API key of interest if different from the security key set by default.
+            The default API key is used if the value is ``None``.
+        """
         # Docstring is maintained separately
-        raise NotImplementedError()
+        headers = self._prepare_apikey_info(api_key=api_key)
+        kwargs = {"headers": headers, "auto_refresh_session": False} if headers else {}
+        response = self.send_request(method="apikey_info", **kwargs)
+        return response
+
+    def apikey_delete(self, *, first_eight, token=None, api_key=None):
+        # Docstring is maintained separately
+        url_params, headers = self._prepare_apikey_delete(first_eight=first_eight, token=token, api_key=api_key)
+        kwargs = {"headers": headers, "auto_refresh_session": False} if headers else {}
+        response = self.send_request(method="apikey_delete", url_params=url_params, **kwargs)
+        return response
 
     def whoami(self, *, token=None, api_key=None):
+        """
+        Returns information about the authorized principal. Works for tokens and API keys.
+        The returned information includes the list of identities, a list of API keys and
+        a list of sessions.
+        """
         # Docstring is maintained separately
-        raise NotImplementedError()
+        headers = self._prepare_whoami(token=token, api_key=api_key)
+        kwargs = {"headers": headers, "auto_refresh_session": False} if headers else {}
+        response = self.send_request(method="whoami", **kwargs)
+        return response
 
     def principal_info(self, *, principal_uid=None):
         # Docstring is maintained separately
-        raise NotImplementedError()
+        method = self._prepare_principal_info(principal_uid=principal_uid)
+        response = self.send_request(method=method)
+        return response
 
     def api_scopes(self, *, token=None, api_key=None):
+        """
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        """
         # Docstring is maintained separately
-        raise NotImplementedError()
-
-    def apikey_delete(self, *, first_eight):
-        # Docstring is maintained separately
-        raise NotImplementedError()
+        headers = self._prepare_whoami(token=token, api_key=api_key)
+        kwargs = {"headers": headers, "auto_refresh_session": False} if headers else {}
+        response = self.send_request(method="api_scopes", **kwargs)
+        return response
 
     def logout(self):
-        raise NotImplementedError()
+        """
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        """
+        # Docstring is maintained separately
+        response = self.send_request(method="logout")
+        self.set_authorization_key()  # Clear authorization keys
+        return response
 
     def close(self):
         self._is_closing = True

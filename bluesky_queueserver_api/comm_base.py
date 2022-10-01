@@ -66,6 +66,12 @@ rest_api_method_map = {
     "manager_kill": ("POST", "/api/test/manager/kill"),
     # API available only in HTTP version
     "session_refresh": ("POST", "/api/auth/session/refresh"),
+    "apikey_new": ("POST", "/api/auth/apikey"),
+    "apikey_info": ("GET", "/api/auth/apikey"),
+    "apikey_delete": ("DELETE", "/api/auth/apikey"),
+    "whoami": ("GET", "/api/auth/whoami"),
+    "api_scopes": ("GET", "/api/auth/scopes"),
+    "logout": ("POST", "/api/auth/logout"),
 }
 
 
@@ -155,9 +161,9 @@ class ReManagerAPI_Base:
         a dictionary and contains no ``"success"``, then it is considered successful.
         """
         if self._request_fail_exceptions:
-            # If the response is mapping, but it does not have 'success' field,
-            #   then consider the request successful (this only happens for 'status' requests).
-            if not isinstance(response, Mapping) or not response.get("success", True):
+            # If the response is mapping, and it has 'success': False, then consider the
+            #   request failed. Let's allow API to return types other than dictionaries.
+            if isinstance(response, Mapping) and not response.get("success", True):
                 raise self.RequestFailedError(request, response)
 
     @property
@@ -310,14 +316,35 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             raise self.RequestParameterError(f"{msg.capitalize()} must be a string or None: {endpoint_name!r}")
         return endpoint_name
 
-    def _prepare_headers(self):
+    def _prepare_headers(self, *, token=None, api_key=None):
+        """
+        ``token`` or ``api_key`` passed as parameters override the default security keys set in the class.
+        """
+        if (token is not None) and (api_key is not None):
+            raise self._RequestParameterError("The request contains both token and API key.")
+
+        auth_method = self.AuthorizationMethods.NONE
+        key_in_params = False
+        if token is not None:
+            auth_method, key_in_params = self.AuthorizationMethods.TOKEN, True
+        elif api_key is not None:
+            auth_method, key_in_params = self.AuthorizationMethods.API_KEY, True
+        else:
+            auth_method = self.auth_method
+
         headers = None
-        if self.auth_method == self.AuthorizationMethods.API_KEY:
-            headers = {"Authorization": f"ApiKey {self.auth_key}"}
-        elif self.auth_method == self.AuthorizationMethods.TOKEN:
-            access_token, _ = self.auth_key
+        if auth_method == self.AuthorizationMethods.API_KEY:
+            key = api_key if key_in_params else self.auth_key
+            if key:
+                headers = {"Authorization": f"ApiKey {key}"}
+        elif auth_method == self.AuthorizationMethods.TOKEN:
+            if key_in_params:
+                access_token = token
+            else:
+                access_token, _ = self.auth_key
             if access_token:
                 headers = {"Authorization": f"Bearer {access_token}"}
+
         return headers
 
     def _prepare_request(self, *, method, params=None):
@@ -508,3 +535,72 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             raise self.RequestParameterError("'refresh_token' is not set")
 
         return refresh_token
+
+    def _prepare_session_revoke(self, *, session_uid, token, api_key):
+        method = ("DELETE", f"/api/auth/session/revoke/{session_uid}")
+
+        if (token is not None) or (api_key is not None):
+            headers = self._prepare_headers(token=token, api_key=api_key)
+        else:
+            headers = None
+
+        return method, headers
+
+    def _prepare_apikey_new(self, *, expires_in, scopes, note, principal_uid):
+        if not isinstance(expires_in, (int, float)):
+            raise self.RequestParameterError(f"Parameter 'expires_in' is not integer: expires_in={expires_in!r}")
+        if isinstance(scopes, str) or not isinstance(scopes, (Iterable, type(None))):
+            raise self.RequestParameterError(f"Parameter 'scopes' must be a list of strings: scopes={scopes!r}")
+        if isinstance(scopes, Iterable) and not all([isinstance(_, str) for _ in scopes]):
+            raise self.RequestParameterError(f"Parameter 'scopes' must be a list of strings: scopes={scopes!r}")
+        if not isinstance(note, (str, type(None))):
+            raise self.RequestParameterError(f"Parameter 'note' must be a strings: note={note!r}")
+        if not isinstance(principal_uid, (str, type(None))):
+            raise self.RequestParameterError(
+                f"Parameter 'principal_uid' must be a strings: principal_uid={principal_uid!r}"
+            )
+
+        request_params = {"expires_in": int(expires_in)}
+        if scopes:
+            request_params.update({"scopes": list(scopes)})
+        if note:
+            request_params.update({"note": note})
+
+        if principal_uid is None:
+            method = "apikey_new"
+        else:
+            method = ("POST", f"/api/auth/principal/{principal_uid}/apikey")
+
+        return method, request_params
+
+    def _prepare_apikey_info(self, *, api_key):
+        """
+        Create and return headers.
+        """
+        if api_key is not None:
+            return self._prepare_headers(api_key=api_key)
+        else:
+            return None
+
+    def _prepare_apikey_delete(self, *, first_eight, token, api_key):
+        url_params = {"first_eight": first_eight}
+        if (token is not None) or (api_key is not None):
+            headers = self._prepare_headers(token=token, api_key=api_key)
+        else:
+            headers = None
+        return url_params, headers
+
+    def _prepare_whoami(self, *, token, api_key):
+        """
+        Create and return headers.
+        """
+        if (token is not None) or (api_key is not None):
+            return self._prepare_headers(token=token, api_key=api_key)
+        else:
+            return None
+
+    def _prepare_principal_info(self, *, principal_uid):
+        method_url = "/api/auth/principal"
+        if principal_uid:
+            method_url += f"/{principal_uid}"
+        return ("GET", method_url)
