@@ -2,6 +2,47 @@
 Release History
 ===============
 
+v0.0.9 (2022-10-02)
+===================
+
+Added
+-----
+
+- New API (HTTP communication): ``login``, ``session_refresh``, ``session_revoke``, ``apikey_new``,
+  ``apikey_info``, ``apikey_delete``, ``whoami``, ``principal_info``, ``api_scopes``,
+  ``logout``.
+
+- Added automatic session refresh functionality to ``send_request`` API.
+
+- New parameters of constructor of HTTP version of ``REManagerAPI``: ``http_auth_provider``
+  and ``timeout_login``.
+
+- New parameter of ``send_request`` API: ``auto_refresh_session``. The parameter controls
+  whether the function attempts to refresh expired sessions (get new access token based on
+  valid refresh token). By default it is *True*, which works for most cases. In some cases
+  (e.g. in implementation of authentication/authorization API) automatic refresh should be disabled.
+
+Changed
+-------
+
+- Renamed the exception ``RequestError`` to ``HTTPRequestError``.
+
+- Renamed the exception ``ClientError`` to ``HTTPClientError``.
+
+- The new exception ``HTTPServerError`` is raised if code 500 is returned by the server
+  (instead of ``ClientError``).
+
+- Default user group is renamed from 'admin' to 'primary'. Rename the user group in
+  'user_group_permissions.yaml' if the workflow depends on the default user group name.
+
+
+Removed
+-------
+
+- Removed the parameter ``api_prefix`` from the constructor of HTTP version of ``REManagerAPI``.
+  The prefix should be added directly to ``http_server_uri``.
+
+
 v0.0.8 (2022-08-11)
 ===================
 
