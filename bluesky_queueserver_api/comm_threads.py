@@ -323,6 +323,29 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         obtain information on any API key without logging out or changing
         the default security key.
 
+        Examples
+        --------
+        Log into the server, generate an API key and get the information on the generated
+        API key::
+
+            RM.login("bob", password="bob_password")
+            result_key = RM.apikey_new(expires_in=900)
+
+            # {'first_eight': '48b27a85',
+            #  'expiration_time': '2022-10-02T14:35:59',
+            #  'note': None,
+            #  'scopes': ['inherit'],
+            #  'latest_activity': None,
+            #  'secret': '48b27a85b71946f7840c6d708dd49a42c8945d8cb36b9bb378a3d93d1e1bd586c5851b84'}
+
+            result = RM.apikey_info(api_key=result_key["secret"]
+
+            # {'first_eight': '48b27a85',
+            #  'expiration_time': '2022-10-02T14:35:59',
+            #  'note': None,
+            #  'scopes': ['inherit'],
+            #  'latest_activity': None}
+
         Parameters
         ----------
         api_key: str or None, optional
@@ -363,6 +386,11 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
             Access token or an API key. The parameters are mutually exclusive: the API fails
             if both parameters are not *None*. A token or an API key overrides the default
             authentication key. Default: *None*.
+
+        Returns
+        -------
+        dict
+            Returns the dictionary ``{'success': True, 'msg': ''}`` if success.
 
         Raises
         ------
@@ -421,6 +449,11 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
             if both parameters are not *None*. A token or an API key overrides the default
             authentication key. Default: *None*.
 
+        Returns
+        -------
+        dict
+            Information on the authorized principal. See the example in the API description.
+
         Raises
         ------
         RequestParameterError
@@ -435,6 +468,32 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         return response
 
     def principal_info(self, *, principal_uid=None):
+        """
+        Returns full information on all principals or one principal. The principal
+        information is a dictionary, which is identical to the dictionary returned by
+        ``REManagerAPI.whoami()``. If the ``principal_uid`` is not specified or ``None``,
+        then the list of dictionaries for all principals is returned.
+
+        The client must have administrative privileges to use this API.
+
+        Parameters
+        ----------
+        principal_uid: str or None, optional
+            Principal UID.
+
+        Returns
+        -------
+        dict or list(dict)
+            A dictionary with information on the selected principal or a list of
+            dictionaries with information on all principals.
+
+        Raises
+        ------
+        RequestParameterError
+            Incorrect or insufficient parameters in the API call.
+        HTTPRequestError, HTTPClientError, HTTPServerError
+            Error while sending and processing HTTP request.
+        """
         # Docstring is maintained separately
         method = self._prepare_principal_info(principal_uid=principal_uid)
         response = self.send_request(method=method)
@@ -489,6 +548,11 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
             if both parameters are not *None*. A token or an API key overrides the default
             authentication key. Default: *None*.
 
+        Returns
+        -------
+        dict
+           Dictionary keys: ``roles``, ``scopes``. See the example in the API description.
+
         Raises
         ------
         RequestParameterError
@@ -510,6 +574,18 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         ``REManagerAPI.logout()`` is implemented for completeness. The same effect may
         be achieved by calling ``REManagerAPI.set_authorization_key()``, which does not call
         ``/auth/logout`` API, but clears the default security key.
+
+        Returns
+        -------
+        dict
+            Empty dictionary: ``{}``.
+
+        Raises
+        ------
+        RequestParameterError
+            Incorrect or insufficient parameters in the API call.
+        HTTPRequestError, HTTPClientError, HTTPServerError
+            Error while sending and processing HTTP request.
         """
         # Docstring is maintained separately
         response = self.send_request(method="logout")
