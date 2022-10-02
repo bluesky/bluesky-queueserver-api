@@ -161,9 +161,12 @@ class ReManagerAPI_Base:
         a dictionary and contains no ``"success"``, then it is considered successful.
         """
         if self._request_fail_exceptions:
-            # If the response is mapping, and it has 'success': False, then consider the
-            #   request failed. Let's allow API to return types other than dictionaries.
-            if isinstance(response, Mapping) and not response.get("success", True):
+            # The response must be a list or a dictionary. If the response is a dictionary
+            #   and the key 'success': False, then consider the request failed. If there
+            #   is not 'success' key, then consider the request successful.
+            is_iterable = isinstance(response, Iterable) and not isinstance(response, str)
+            is_mapping = isinstance(response, Mapping)
+            if not any([is_iterable, is_mapping]) or (is_mapping and not response.get("success", True)):
                 raise self.RequestFailedError(request, response)
 
     @property
