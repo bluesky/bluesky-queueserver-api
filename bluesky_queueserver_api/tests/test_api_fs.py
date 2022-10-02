@@ -1148,7 +1148,7 @@ def test_session_apikey_delete_1(
     pass_as_param,
 ):
     """
-    ``session_revoke`` API (for HTTP requests).
+    ``apikey_delete`` API (for HTTP requests).
     """
     re_manager_cmd()
     setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
@@ -1219,6 +1219,92 @@ def test_session_apikey_delete_1(
             # Check that the API does not exist
             with pytest.raises(RM.HTTPClientError, match="Invalid API key"):
                 await RM.apikey_info(api_key=api_key)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("pass_as_param", [None, "token", "api_key"])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_session_whoami_1(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+    pass_as_param,
+):
+    """
+    ``whoami`` API (for HTTP requests).
+    """
+    re_manager_cmd()
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Log into the server
+        resp = RM.login("bob", password="bob_password")
+        assert "access_token" in resp, pprint.pformat(resp)
+        assert "refresh_token" in resp, pprint.pformat(resp)
+        token = resp["access_token"]
+
+        resp = RM.apikey_new(expires_in=900)
+        assert "secret" in resp, pprint.pformat(resp)
+        api_key = resp["secret"]
+
+        if pass_as_param == "token":
+            params = {"token": token}
+            RM.set_authorization_key()
+        elif pass_as_param == "api_key":
+            params = {"api_key": api_key}
+            RM.set_authorization_key()
+        elif pass_as_param is None:
+            params = {}
+        else:
+            assert False, f"Unexpected option: pass_as_param={pass_as_param!r}"
+
+        resp = RM.whoami(**params)
+        assert len(resp["identities"]) == 1
+        assert resp["identities"][0]["id"] == "bob"
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Log into the server
+            resp = await RM.login("bob", password="bob_password")
+            assert "access_token" in resp, pprint.pformat(resp)
+            assert "refresh_token" in resp, pprint.pformat(resp)
+            token = resp["access_token"]
+
+            resp = await RM.apikey_new(expires_in=900)
+            assert "secret" in resp, pprint.pformat(resp)
+            api_key = resp["secret"]
+
+            if pass_as_param == "token":
+                params = {"token": token}
+                RM.set_authorization_key()
+            elif pass_as_param == "api_key":
+                params = {"api_key": api_key}
+                RM.set_authorization_key()
+            elif pass_as_param is None:
+                params = {}
+            else:
+                assert False, f"Unexpected option: pass_as_param={pass_as_param!r}"
+
+            resp = await RM.whoami(**params)
+            assert len(resp["identities"]) == 1
+            assert resp["identities"][0]["id"] == "bob"
 
             await RM.close()
 
