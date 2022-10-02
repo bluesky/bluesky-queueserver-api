@@ -1240,7 +1240,7 @@ def test_session_whoami_1(
     pass_as_param,
 ):
     """
-    ``whoami`` API (for HTTP requests).
+    ``whoami``, ``api_scopes`` API (for HTTP requests).
     """
     re_manager_cmd()
     setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
@@ -1275,6 +1275,12 @@ def test_session_whoami_1(
         assert len(resp["identities"]) == 1
         assert resp["identities"][0]["id"] == "bob"
 
+        resp = RM.api_scopes(**params)
+        assert "roles" in resp, pprint.pformat(resp)
+        assert "scopes" in resp, pprint.pformat(resp)
+        assert "admin" in resp["roles"]
+        assert "admin:apikeys" in resp["scopes"]
+
         RM.close()
     else:
 
@@ -1305,6 +1311,12 @@ def test_session_whoami_1(
             resp = await RM.whoami(**params)
             assert len(resp["identities"]) == 1
             assert resp["identities"][0]["id"] == "bob"
+
+            resp = await RM.api_scopes(**params)
+            assert "roles" in resp, pprint.pformat(resp)
+            assert "scopes" in resp, pprint.pformat(resp)
+            assert "admin" in resp["roles"]
+            assert "admin:apikeys" in resp["scopes"]
 
             await RM.close()
 
