@@ -273,6 +273,14 @@ API for authentication and authorization (HTTP)
     http.REManagerAPI.set_authorization_key
     http.REManagerAPI.login
     http.REManagerAPI.session_refresh
+    http.REManagerAPI.session_revoke
+    http.REManagerAPI.apikey_new
+    http.REManagerAPI.apikey_info
+    http.REManagerAPI.apikey_delete
+    http.REManagerAPI.whoami
+    http.REManagerAPI.principal_info
+    http.REManagerAPI.api_scopes
+    http.REManagerAPI.logout
 
 ASynchronous Communication with HTTP Server
 -------------------------------------------

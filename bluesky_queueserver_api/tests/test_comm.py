@@ -31,6 +31,8 @@ def test_ReManagerAPI_Base_01():
 @pytest.mark.parametrize("response, success, msg", [
     (None, False, "Request failed: None"),
     (10, False, "Request failed: 10"),
+    ([], True, ""),
+    ([1, 2, 3], True, ""),
     ({}, True, ""),
     ({"success": True}, True, ""),
     ({"success": False}, False, "Request failed: (no error message)"),

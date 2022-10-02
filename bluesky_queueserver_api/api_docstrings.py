@@ -2939,3 +2939,402 @@ _doc_api_session_refresh = """
     HTTPRequestError, HTTPClientError, HTTPServerError
         Error while sending and processing HTTP request.
 """
+
+_doc_api_session_revoke = """
+    Revoke session for an authorized user. If the session is revoked, the respective refresh
+    token can no longer be used to refresh session. Access tokens and API keys will continue
+    working. By default the API request is authorized using the default authorization key
+    (set using ``set_authorization_key()`` or as a result of login). A token or an API key
+    passed as a parameter override the default authorization key, which allows to revoke
+    sessions for different users without changing the default authorization key (without
+    logging out).
+
+    Examples
+    --------
+
+    Log into the server, find UID of a session and revoke the session::
+
+        RM.login("bob", password="bob_password")
+        result = RM.whoami()
+
+        # {'uuid': '352cae89-7e94-45be-a405-c39099ebe515',
+        #  'type': 'user',
+        #  'identities': [
+        #     {'id': 'bob',
+        #       'provider': 'toy',
+        #       'latest_login': '2022-10-02T02:47:57'}],
+        #   'api_keys': [],
+        #   'sessions': [{'uuid': 'e544d4b6-4750-43c3-8ba0-b7e9aedd2045',
+        #                 'expiration_time': '2023-10-01T19:28:15',
+        #                 'revoked': False},
+        #                {'uuid': '66ee49c1-32b4-4778-8502-205e35151736',
+        #                 'expiration_time': '2023-10-01T19:30:03',
+        #                 'revoked': False},
+        #       .....................................................
+        #                {'uuid': 'c41d2f01-607e-49c0-9b3e-a93c383330c0',
+        #                 'expiration_time': '2023-10-02T02:47:57',
+        #                 'revoked': False}],
+        #   'latest_activity': '2022-10-02T02:47:57',
+        #   'roles': [],
+        #   'scopes': [],
+        #   'api_key_scopes': None}
+
+        # Let's revoke session "e544d4b6-4750-43c3-8ba0-b7e9aedd2045"
+        RM.session_revoke(session_uid="e544d4b6-4750-43c3-8ba0-b7e9aedd2045")
+
+        result = RM.whoami()
+
+        # NOTE: the session is now labeled as revoked ("revoked": True)
+        # {'uuid': '352cae89-7e94-45be-a405-c39099ebe515',
+        #  'type': 'user',
+        #  'identities': [
+        #     {'id': 'bob',
+        #       'provider': 'toy',
+        #       'latest_login': '2022-10-02T02:47:57'}],
+        #   'api_keys': [],
+        #   'sessions': [{'uuid': 'e544d4b6-4750-43c3-8ba0-b7e9aedd2045',
+        #                 'expiration_time': '2023-10-01T19:28:15',
+        #                 'revoked': True},
+        #                {'uuid': '66ee49c1-32b4-4778-8502-205e35151736',
+        #                 'expiration_time': '2023-10-01T19:30:03',
+        #                 'revoked': False},
+        #       .....................................................
+        #                {'uuid': 'c41d2f01-607e-49c0-9b3e-a93c383330c0',
+        #                 'expiration_time': '2023-10-02T02:47:57',
+        #                 'revoked': False}],
+        #   'latest_activity': '2022-10-02T02:47:57',
+        #   'roles': [],
+        #   'scopes': [],
+        #   'api_key_scopes': None}
+
+    Parameters
+    ----------
+    session_uid: str
+        Full session UID. Session UID may be obtained from results returned by
+        ``REManagerAPI.whoami()`` or ``REManagerAPI.principal_info()``.
+    token, api_key: str or None, optional
+        Access token or an API key. The parameters are mutually exclusive: the API fails
+        if both parameters are not *None*. A token or an API key overrides the default
+        authentication key. Default: *None*.
+
+    Returns
+    -------
+    dict
+        Returns the dictionary ``{'success': True, 'msg': ''}`` in case of success.
+
+    Raises
+    ------
+    RequestParameterError
+        Incorrect or insufficient parameters in the API call.
+    HTTPRequestError, HTTPClientError, HTTPServerError
+        Error while sending and processing HTTP request.
+"""
+
+_doc_api_apikey_new = """
+    Generate a new API key for authorized user. The API request is authorized using the
+    default security key (set using ``set_authorization_key()`` or as a result of login).
+
+    Users with administrative privileges can generate API keys for other users based on
+    principal UID. Principal UID may be found using ``REManagerAPI.whoami()`` or
+    ``REManagerAPI.principal_info()``.
+
+    Examples
+    --------
+    Log into the server and create an API key, which inherits the scopes from principal::
+
+        RM.login("bob", password="bob_password")
+        result = RM.apikey_new(expires_in=900)
+
+        # {'first_eight': '66ccb3ca',
+        #  'expiration_time': '2022-10-02T03:29:20',
+        #  'note': None,
+        #  'scopes': ['inherit'],
+        #  'latest_activity': None,
+        #  'secret': '66ccb3ca33ea091ab297331ba2589bdcf7ea9f5f168dbfd90c156652d1cedd9533c1bc59'}
+
+    Parameters
+    ----------
+    expires_in: int
+        Duration of API lifetime in seconds. Lifetime must be positive non-zero integer.
+    scopes: list(str) or None, optional
+        Optional list of scopes, such as ``["read:status", "read:queue", "user:apikeys"]``.
+        If the value is ``None`` (default), then the new API inherits the allowed scopes
+        of the principal (if authorized with token) or the original API key (if authorized
+        with API key). Default: *None*.
+    note: str or None, optional
+        Optional note. Default: *None*.
+    principal_uid: str or None, optional
+        Principal UID of a user. Including principal UID allows to create API keys
+        for any user registered in the database (user who logged into the server at least
+        once). This operation requires administrative privileges. The API fails if
+        ``principal_uid`` is not *None* and authorization is performed with security key
+        that does not have administrative privileges. Default: *None*.
+
+    Returns
+    -------
+    dict
+        The API key is returned as ``'secret'`` key of the dictionary.
+
+    Raises
+    ------
+    RequestParameterError
+        Incorrect or insufficient parameters in the API call.
+    HTTPRequestError, HTTPClientError, HTTPServerError
+        Error while sending and processing HTTP request.
+"""
+
+_doc_api_apikey_info = """
+    Get information about an API key. The API returning information about the API
+    key used to authorize the request. The request fails if a token is used for
+    authorization. If the parameter ``api_key`` is *None*, then the default
+    security key (set by ``REManagerAPI.set_authorization_key()`` and must be
+    an API key, not a token) is used. The API key passed with the parameter ``api_key``
+    override the default security key (the default is ignored). This allows to
+    obtain information on any API key without logging out or changing
+    the default security key.
+
+    Examples
+    --------
+    Log into the server, generate an API key and get the information on the generated
+    API key::
+
+        RM.login("bob", password="bob_password")
+        result_key = RM.apikey_new(expires_in=900)
+
+        # {'first_eight': '48b27a85',
+        #  'expiration_time': '2022-10-02T14:35:59',
+        #  'note': None,
+        #  'scopes': ['inherit'],
+        #  'latest_activity': None,
+        #  'secret': '48b27a85b71946f7840c6d708dd49a42c8945d8cb36b9bb378a3d93d1e1bd586c5851b84'}
+
+        result = RM.apikey_info(api_key=result_key["secret"]
+
+        # {'first_eight': '48b27a85',
+        #  'expiration_time': '2022-10-02T14:35:59',
+        #  'note': None,
+        #  'scopes': ['inherit'],
+        #  'latest_activity': None}
+
+    Parameters
+    ----------
+    api_key: str or None, optional
+        API key of interest. The parameter is used for authorization of the request
+        instead of the default security key, which is ignored. Default: ``None``.
+
+    Raises
+    ------
+    RequestParameterError
+        Incorrect or insufficient parameters in the API call.
+    HTTPRequestError, HTTPClientError, HTTPServerError
+        Error while sending and processing HTTP request.
+"""
+
+_doc_api_apikey_delete = """
+    Delete an API key for the authorized principal. The API key is identified by
+    first eight characters. For example, an API key ::
+
+        66ccb3ca33ea091ab297331ba2589bdcf7ea9f5f168dbfd90c156652d1cedd9533c1bc59
+
+    is identified as ``66ccb3ca``. The request is authorized using the default
+    security key (set by ``REManagerAPI.set_authorization_key()`` or as a result of
+    login). Alternatively, a different authorization key (an access token or an API key)
+    can be passed as a parameter. This allows to delete API keys for other prinicipals
+    without logging out or changing the default authorization key.
+
+    Parameters
+    ----------
+    first_eight: str
+        First eight characters of the API key.
+    token, api_key: str or None, optional
+        Access token or an API key. The parameters are mutually exclusive: the API fails
+        if both parameters are not *None*. A token or an API key overrides the default
+        authentication key. Default: *None*.
+
+    Returns
+    -------
+    dict
+        Returns the dictionary ``{'success': True, 'msg': ''}`` in case of success.
+
+    Raises
+    ------
+    RequestParameterError
+        Incorrect or insufficient parameters in the API call.
+    HTTPRequestError, HTTPClientError, HTTPServerError
+        Error while sending and processing HTTP request.
+"""
+
+_doc_api_whoami = """
+    Returns full information about the principal. The principal is identified based
+    on the default authorization key (set by ``REManagerAPI.set_authorization_key()``
+    or as a result of login) or the token or the API key passed as parameters.
+    The returned information includes the list of identities, API keys and sessions
+    for the principal.
+
+    Examples
+    --------
+    Log into the server and call ``REManagerAPI.whoami()``::
+
+        RM.login("bob", password="bob_password")
+        result = RM.whoami()
+
+        # {'uuid': '352cae89-7e94-45be-a405-c39099ebe515',
+        #  'type': 'user',
+        #  'identities': [
+        #     {'id': 'bob',
+        #       'provider': 'toy',
+        #       'latest_login': '2022-10-02T02:47:57'}],
+        #   'api_keys': [],
+        #   'sessions': [{'uuid': 'e544d4b6-4750-43c3-8ba0-b7e9aedd2045',
+        #                 'expiration_time': '2023-10-01T19:28:15',
+        #                 'revoked': False},
+        #                {'uuid': '66ee49c1-32b4-4778-8502-205e35151736',
+        #                 'expiration_time': '2023-10-01T19:30:03',
+        #                 'revoked': False},
+        #       .....................................................
+        #                {'uuid': 'c41d2f01-607e-49c0-9b3e-a93c383330c0',
+        #                 'expiration_time': '2023-10-02T02:47:57',
+        #                 'revoked': False}],
+        #   'latest_activity': '2022-10-02T02:47:57',
+        #   'roles': [],
+        #   'scopes': [],
+        #   'api_key_scopes': None}
+
+    Parameters
+    ----------
+    token, api_key: str or None, optional
+        Access token or an API key. The parameters are mutually exclusive: the API fails
+        if both parameters are not *None*. A token or an API key overrides the default
+        authentication key. Default: *None*.
+
+    Returns
+    -------
+    dict
+        Information on the authorized principal. See the example in the API description.
+
+    Raises
+    ------
+    RequestParameterError
+        Incorrect or insufficient parameters in the API call.
+    HTTPRequestError, HTTPClientError, HTTPServerError
+        Error while sending and processing HTTP request.
+"""
+
+_doc_api_principal_info = """
+    Returns full information on all principals or one principal. The principal
+    information is a dictionary, which is identical to the dictionary returned by
+    ``REManagerAPI.whoami()``. If the ``principal_uid`` is not specified or ``None``,
+    then the list of dictionaries for all principals is returned.
+
+    The client must have administrative privileges to use this API.
+
+    Parameters
+    ----------
+    principal_uid: str or None, optional
+        Principal UID.
+
+    Returns
+    -------
+    dict or list(dict)
+        A dictionary with information on the selected principal or a list of
+        dictionaries with information on all principals.
+
+    Raises
+    ------
+    RequestParameterError
+        Incorrect or insufficient parameters in the API call.
+    HTTPRequestError, HTTPClientError, HTTPServerError
+        Error while sending and processing HTTP request.
+"""
+
+_doc_api_api_scopes = """
+    Returns API scopes for an authorized user. Authorization is performed using
+    the default authorization key (set using ``REManagerAPI.set_authorization_key()``
+    or as a result of login) or an access token or an API key passed as parameters.
+    The API returns the exact list scopes that is currently used by the server for
+    validating access permissions for the token or the API key used for authorization.
+    In addition, the API returns a list of roles for the authorized user.
+    The returned scopes are always a subset of combined scopes of the roles.
+
+    Examples
+    --------
+    Log into the server and get the scopes::
+
+        RM.login("bob", password="bob_password")
+        result = RM.whoami()
+
+        # {'roles': ['admin', 'expert'],
+        #  'scopes': ['admin:apikeys',
+        #             'admin:metrics',
+        #             'admin:read:principals',
+        #             'read:config',
+        #             'read:console',
+        #             'read:history',
+        #             'read:lock',
+        #             'read:monitor',
+        #             'read:queue',
+        #             'read:resources',
+        #             'read:status',
+        #             'read:testing',
+        #             'user:apikeys',
+        #             'write:config',
+        #             'write:execute',
+        #             'write:history:edit',
+        #             'write:lock',
+        #             'write:manager:control',
+        #             'write:permissions',
+        #             'write:plan:control',
+        #             'write:queue:control',
+        #             'write:queue:edit',
+        #             'write:scripts']}
+
+    Parameters
+    ----------
+    token, api_key: str or None, optional
+        Access token or an API key. The parameters are mutually exclusive: the API fails
+        if both parameters are not *None*. A token or an API key overrides the default
+        authentication key. Default: *None*.
+
+    Returns
+    -------
+    dict
+        Dictionary keys: ``roles``, ``scopes``. See the example in the API description.
+
+    Raises
+    ------
+    RequestParameterError
+        Incorrect or insufficient parameters in the API call.
+    HTTPRequestError, HTTPClientError, HTTPServerError
+        Error while sending and processing HTTP request.
+"""
+
+_doc_api_logout = """
+    Log out. The API sends ``/auth/logout`` API request to the server and then clears
+    local authorization key. Currently the ``/auth/logout`` API is intended for clearing
+    browser cookies and serves no useful purpose for Python scripts and application.
+    ``REManagerAPI.logout()`` is implemented for completeness. The same effect may
+    be achieved by calling ``REManagerAPI.set_authorization_key()``, which does not call
+    ``/auth/logout`` API, but clears the default security key.
+
+    Returns
+    -------
+    dict
+        Empty dictionary: ``{}``.
+
+    Raises
+    ------
+    RequestParameterError
+        Incorrect or insufficient parameters in the API call.
+    HTTPRequestError, HTTPClientError, HTTPServerError
+        Error while sending and processing HTTP request.
+"""
+
+
+_doc_api_session_revoke
+_doc_api_apikey_new
+_doc_api_apikey_info
+_doc_api_apikey_delete
+_doc_api_whoami
+_doc_api_principal_info
+_doc_api_api_scopes
+_doc_api_logout

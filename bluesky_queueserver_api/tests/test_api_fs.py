@@ -1,7 +1,7 @@
 import asyncio
 import getpass
 from io import StringIO
-import os
+import pprint
 import pytest
 import time as ttime
 
@@ -15,6 +15,7 @@ from .common import (
     _is_async,
     _select_re_manager_api,
     instantiate_re_api_class,
+    setup_server_with_config_file,
 )
 
 from ..comm_base import RequestParameterError
@@ -293,73 +294,59 @@ def test_send_request_2(fastapi_server_fs, protocol, library):  # noqa: F811
 
 # Configuration file for 'toy' authentication provider. The passwords are explicitly listed.
 config_toy_yml = """
-uvicorn:
-    host: localhost
-    port: 60610
 authentication:
-    providers:
-        - provider: toy
-          authenticator: bluesky_httpserver.authenticators:DictionaryAuthenticator
-          args:
-              users_to_passwords:
-                  alice: alice_password
-                  bob: bob_password
-                  cara: cara_password
+  providers:
+    - provider: toy
+      authenticator: bluesky_httpserver.authenticators:DictionaryAuthenticator
+      args:
+        users_to_passwords:
+          bob: bob_password
+          alice: alice_password
+          tom: tom_password
+          cara: cara_password
 api_access:
-    policy: bluesky_httpserver.authorization:DictionaryAPIAccessControl
-    args:
-        users:
-            bob:
-                roles:
-                    - admin
-                    - expert
+  policy: bluesky_httpserver.authorization:DictionaryAPIAccessControl
+  args:
+    users:
+      bob:
+        roles:
+          - admin
+          - expert
+      alice:
+        roles: advanced
+      tom:
+        roles: user
 """
 
 
 # Configuration file for 'toy' authentication provider. The passwords are explicitly listed.
 config_toy_yml_short_token_expiration = """
-uvicorn:
-    host: localhost
-    port: 60610
 authentication:
-    providers:
-        - provider: toy
-          authenticator: bluesky_httpserver.authenticators:DictionaryAuthenticator
-          args:
-              users_to_passwords:
-                  alice: alice_password
-                  bob: bob_password
-                  cara: cara_password
-    access_token_max_age: 2
-    refresh_token_max_age: 600
-    session_max_age: 1000
+  providers:
+    - provider: toy
+      authenticator: bluesky_httpserver.authenticators:DictionaryAuthenticator
+      args:
+        users_to_passwords:
+          bob: bob_password
+          alice: alice_password
+          tom: tom_password
+          cara: cara_password
+  access_token_max_age: 2
+  refresh_token_max_age: 600
+  session_max_age: 1000
 api_access:
-    policy: bluesky_httpserver.authorization:DictionaryAPIAccessControl
-    args:
-        users:
-            bob:
-                roles:
-                    - admin
-                    - expert
+  policy: bluesky_httpserver.authorization:DictionaryAPIAccessControl
+  args:
+    users:
+      bob:
+        roles:
+          - admin
+          - expert
+      alice:
+        roles: advanced
+      tom:
+        roles: user
 """
-
-
-def _setup_server_with_config_file(*, config_file_str, tmpdir, monkeypatch):
-    """
-    Creates config file for the server in ``tmpdir/config/`` directory and
-    sets up the respective environment variable. Sets ``tmpdir`` as a current directory.
-    """
-    config_fln = "config_httpserver.yml"
-    config_dir = os.path.join(tmpdir, "config")
-    config_path = os.path.join(config_dir, config_fln)
-    os.makedirs(config_dir)
-    with open(config_path, "wt") as f:
-        f.writelines(config_file_str)
-
-    monkeypatch.setenv("QSERVER_HTTP_SERVER_CONFIG", config_path)
-    monkeypatch.chdir(tmpdir)
-
-    return config_path
 
 
 # fmt: off
@@ -382,7 +369,7 @@ def test_login_1(
     ``login`` API (for HTTP requests). Basic functionality.
     """
     re_manager_cmd()
-    _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)
 
@@ -462,7 +449,7 @@ def test_login_2(
     ``login`` API (for HTTP requests). Interactive input of username and password.
     """
     re_manager_cmd()
-    _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     monkeypatch.setattr(getpass, "getpass", lambda: "bob_password")
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)
@@ -523,7 +510,7 @@ def test_login_3_fail(
     ``login`` API (for HTTP requests). Failing cases due to invalid parameters.
     """
     re_manager_cmd()
-    _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)
 
@@ -621,7 +608,7 @@ def test_session_refresh_1(
     ``session_refresh`` API (for HTTP requests). Interactive input of username and password.
     """
     re_manager_cmd()
-    _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     monkeypatch.setattr(getpass, "getpass", lambda: "bob_password")
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)
@@ -753,10 +740,9 @@ def test_session_refresh_3(
     then repeatedly try to load status from the server.
     """
     re_manager_cmd()
-    _setup_server_with_config_file(
+    setup_server_with_config_file(
         config_file_str=config_toy_yml_short_token_expiration, tmpdir=tmpdir, monkeypatch=monkeypatch
     )
-    # _setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
     monkeypatch.setattr(getpass, "getpass", lambda: "bob_password")
     fastapi_server_fs()
     rm_api_class = _select_re_manager_api(protocol, library)
@@ -799,5 +785,673 @@ def test_session_refresh_3(
             await RM.close()
 
             assert n_expirations > 0
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("pass_as_param", [None, "token", "api_key"])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_session_revoke_1(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+    pass_as_param,
+):
+    """
+    ``session_revoke`` API (for HTTP requests).
+    """
+    re_manager_cmd()
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Log into the server
+        resp = RM.login("bob", password="bob_password")
+        assert "access_token" in resp, pprint.pformat(resp)
+        assert "refresh_token" in resp, pprint.pformat(resp)
+        token = resp["access_token"]
+        refresh_token = resp["refresh_token"]
+
+        resp = RM.apikey_new(expires_in=900)
+        assert "secret" in resp, pprint.pformat(resp)
+        api_key = resp["secret"]
+
+        # Make sure that 'session_refresh' works
+        RM.session_refresh()
+
+        principal_info = RM.whoami()
+        assert "sessions" in principal_info, pprint.pformat(principal_info)
+        sessions = principal_info["sessions"]
+        assert len(sessions) == 1
+
+        if pass_as_param == "token":
+            params = {"token": token}
+            RM.set_authorization_key()
+        elif pass_as_param == "api_key":
+            params = {"api_key": api_key}
+            RM.set_authorization_key()
+        elif pass_as_param is None:
+            params = {}
+        else:
+            assert False, f"Unexpected option: pass_as_param={pass_as_param!r}"
+
+        if params:
+            with pytest.raises(RM.HTTPClientError, match="requester has insufficient permissions"):
+                RM.session_revoke(session_uid=sessions[0]["uuid"])
+
+        resp = RM.session_revoke(session_uid=sessions[0]["uuid"], **params)
+        assert "success" in resp
+        assert resp["success"] is True
+
+        # Session is revoked and cannot be refreshed
+        RM.set_authorization_key(token=token, refresh_token=refresh_token)
+        with pytest.raises(RM.HTTPClientError, match="Session has expired"):
+            RM.session_refresh()
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Log into the server
+            resp = await RM.login("bob", password="bob_password")
+            assert "access_token" in resp, pprint.pformat(resp)
+            assert "refresh_token" in resp, pprint.pformat(resp)
+            token = resp["access_token"]
+            refresh_token = resp["refresh_token"]
+
+            resp = await RM.apikey_new(expires_in=900)
+            assert "secret" in resp, pprint.pformat(resp)
+            api_key = resp["secret"]
+
+            # Make sure that 'session_refresh' works
+            await RM.session_refresh()
+
+            principal_info = await RM.whoami()
+            assert "sessions" in principal_info, pprint.pformat(principal_info)
+            sessions = principal_info["sessions"]
+            assert len(sessions) == 1
+
+            if pass_as_param == "token":
+                params = {"token": token}
+                RM.set_authorization_key()
+            elif pass_as_param == "api_key":
+                params = {"api_key": api_key}
+                RM.set_authorization_key()
+            elif pass_as_param is None:
+                params = {}
+            else:
+                assert False, f"Unexpected option: pass_as_param={pass_as_param!r}"
+
+            if params:
+                with pytest.raises(RM.HTTPClientError, match="requester has insufficient permissions"):
+                    await RM.session_revoke(session_uid=sessions[0]["uuid"])
+
+            resp = await RM.session_revoke(session_uid=sessions[0]["uuid"], **params)
+            assert "success" in resp
+            assert resp["success"] is True
+
+            # Session is revoked and cannot be refreshed
+            RM.set_authorization_key(token=token, refresh_token=refresh_token)
+            with pytest.raises(RM.HTTPClientError, match="Session has expired"):
+                await RM.session_refresh()
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_session_apikey_new_1(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+):
+    """
+    ``apikey_new``, ``apikey_info`` API (for HTTP requests).
+    """
+    re_manager_cmd()
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Log into the server
+        resp = RM.login("bob", password="bob_password")
+        assert "access_token" in resp, pprint.pformat(resp)
+        assert "refresh_token" in resp, pprint.pformat(resp)
+        token = resp["access_token"]
+        refresh_token = resp["refresh_token"]
+
+        resp = RM.apikey_new(expires_in=900)
+        assert "secret" in resp, pprint.pformat(resp)
+        api_key = resp["secret"]
+
+        # Pass 'api_key' as a parameter (default authorization is by token)
+        resp = RM.apikey_info(api_key=api_key)
+        assert resp["note"] is None
+        assert resp["scopes"] == ["inherit"]
+
+        # Try using the default authorization (by token)
+        with pytest.raises(RM.HTTPClientError, match="No API key was provided with this request"):
+            RM.apikey_info()
+
+        # Change the default authorization key and try again (now authorization is by API key)
+        RM.set_authorization_key(api_key=api_key)
+        resp = RM.apikey_info()
+        assert resp["note"] is None
+        assert resp["scopes"] == ["inherit"]
+
+        # Restore authorization
+        RM.set_authorization_key(token=token, refresh_token=refresh_token)
+
+        # Create another key. Specify scopes and a note.
+        resp = RM.apikey_new(expires_in=900, scopes=["read:status", "read:queue"], note="Some message!!!")
+        assert "secret" in resp, pprint.pformat(resp)
+        api_key2 = resp["secret"]
+
+        # Verify if the scopes and the note were set correctly.
+        resp = RM.apikey_info(api_key=api_key2)
+        assert resp["note"] == "Some message!!!"
+        assert resp["scopes"] == ["read:status", "read:queue"]
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Log into the server
+            resp = await RM.login("bob", password="bob_password")
+            assert "access_token" in resp, pprint.pformat(resp)
+            assert "refresh_token" in resp, pprint.pformat(resp)
+            token = resp["access_token"]
+            refresh_token = resp["refresh_token"]
+
+            resp = await RM.apikey_new(expires_in=900)
+            assert "secret" in resp, pprint.pformat(resp)
+            api_key = resp["secret"]
+
+            # Pass 'api_key' as a parameter (default authorization is by token)
+            resp = await RM.apikey_info(api_key=api_key)
+            assert resp["note"] is None
+            assert resp["scopes"] == ["inherit"]
+
+            # Try using the default authorization (by token)
+            with pytest.raises(RM.HTTPClientError, match="No API key was provided with this request"):
+                await RM.apikey_info()
+
+            # Change the default authorization key and try again (now authorization is by API key)
+            RM.set_authorization_key(api_key=api_key)
+            resp = await RM.apikey_info()
+            assert resp["note"] is None
+            assert resp["scopes"] == ["inherit"]
+
+            # Restore authorization
+            RM.set_authorization_key(token=token, refresh_token=refresh_token)
+
+            # Create another key. Specify scopes and a note.
+            resp = await RM.apikey_new(
+                expires_in=900, scopes=["read:status", "read:queue"], note="Some message!!!"
+            )
+            assert "secret" in resp, pprint.pformat(resp)
+            api_key2 = resp["secret"]
+
+            # Verify if the scopes and the note were set correctly.
+            resp = await RM.apikey_info(api_key=api_key2)
+            assert resp["note"] == "Some message!!!"
+            assert resp["scopes"] == ["read:status", "read:queue"]
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_session_apikey_new_2(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+):
+    """
+    ``apikey_new``, ``apikey_info`` API (for HTTP requests). Creating API key for a different user.
+    """
+    re_manager_cmd()
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Log into the server
+        resp = RM.login("bob", password="bob_password")
+        assert "access_token" in resp, pprint.pformat(resp)
+        assert "refresh_token" in resp, pprint.pformat(resp)
+        token = resp["access_token"]
+        refresh_token = resp["refresh_token"]
+
+        # Log in as 'tom' to create a session. Save principal UID.
+        resp = RM.login("tom", password="tom_password")
+        principal_info = RM.whoami()
+        assert "uuid" in principal_info, pprint.pformat(principal_info)
+        principal_uid = principal_info["uuid"]
+
+        # Restore authorization for 'bob'
+        RM.set_authorization_key(token=token, refresh_token=refresh_token)
+
+        # 'bob' (an administrator) generates an API for 'tom'
+        resp = RM.apikey_new(expires_in=900, principal_uid=principal_uid)
+        assert "secret" in resp, pprint.pformat(resp)
+        api_key = resp["secret"]
+
+        # Check that API key exists
+        resp = RM.apikey_info(api_key=api_key)
+        assert resp["note"] is None
+        assert resp["scopes"] == ["inherit"]
+
+        # Check that the API key is actually for 'tom'
+        resp = RM.whoami(api_key=api_key)
+        assert resp["uuid"] == principal_uid
+
+        # Make sure that 'bob' has admin privileges ...
+        resp = RM.api_scopes()
+        assert "admin:apikeys" in resp["scopes"]
+        # ... by the API key generated for 'tom' doesn't.
+        resp = RM.api_scopes(api_key=api_key)
+        assert "admin:apikeys" not in resp["scopes"]
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Log into the server
+            resp = await RM.login("bob", password="bob_password")
+            assert "access_token" in resp, pprint.pformat(resp)
+            assert "refresh_token" in resp, pprint.pformat(resp)
+            token = resp["access_token"]
+            refresh_token = resp["refresh_token"]
+
+            # Log in as 'tom' to create a session. Save principal UID.
+            resp = await RM.login("tom", password="tom_password")
+            principal_info = await RM.whoami()
+            assert "uuid" in principal_info, pprint.pformat(principal_info)
+            principal_uid = principal_info["uuid"]
+
+            # Restore authorization for 'bob'
+            RM.set_authorization_key(token=token, refresh_token=refresh_token)
+
+            # 'bob' (an administrator) generates an API for 'tom'
+            resp = await RM.apikey_new(expires_in=900, principal_uid=principal_uid)
+            assert "secret" in resp, pprint.pformat(resp)
+            api_key = resp["secret"]
+
+            # Check that API key exists
+            resp = await RM.apikey_info(api_key=api_key)
+            assert resp["note"] is None
+            assert resp["scopes"] == ["inherit"]
+
+            # Check that the API key is actually for 'tom'
+            resp = await RM.whoami(api_key=api_key)
+            assert resp["uuid"] == principal_uid
+
+            # Make sure that 'bob' has admin privileges ...
+            resp = await RM.api_scopes()
+            assert "admin:apikeys" in resp["scopes"]
+            # ... by the API key generated for 'tom' doesn't.
+            resp = await RM.api_scopes(api_key=api_key)
+            assert "admin:apikeys" not in resp["scopes"]
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("pass_as_param", [None, "token", "api_key"])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_session_apikey_delete_1(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+    pass_as_param,
+):
+    """
+    ``apikey_delete`` API (for HTTP requests).
+    """
+    re_manager_cmd()
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Log into the server
+        resp = RM.login("bob", password="bob_password")
+        assert "access_token" in resp, pprint.pformat(resp)
+        assert "refresh_token" in resp, pprint.pformat(resp)
+        token = resp["access_token"]
+
+        resp = RM.apikey_new(expires_in=900)
+        assert "secret" in resp, pprint.pformat(resp)
+        api_key = resp["secret"]
+
+        if pass_as_param == "token":
+            params = {"token": token}
+            RM.set_authorization_key()
+        elif pass_as_param == "api_key":
+            params = {"api_key": api_key}
+            RM.set_authorization_key()
+        elif pass_as_param is None:
+            params = {}
+        else:
+            assert False, f"Unexpected option: pass_as_param={pass_as_param!r}"
+
+        resp = RM.apikey_delete(first_eight=api_key[:8], **params)
+        assert resp == {"success": True, "msg": ""}
+
+        # Check that the API does not exist
+        with pytest.raises(RM.HTTPClientError, match="Invalid API key"):
+            RM.apikey_info(api_key=api_key)
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Log into the server
+            resp = await RM.login("bob", password="bob_password")
+            assert "access_token" in resp, pprint.pformat(resp)
+            assert "refresh_token" in resp, pprint.pformat(resp)
+            token = resp["access_token"]
+
+            resp = await RM.apikey_new(expires_in=900)
+            assert "secret" in resp, pprint.pformat(resp)
+            api_key = resp["secret"]
+
+            if pass_as_param == "token":
+                params = {"token": token}
+                RM.set_authorization_key()
+            elif pass_as_param == "api_key":
+                params = {"api_key": api_key}
+                RM.set_authorization_key()
+            elif pass_as_param is None:
+                params = {}
+            else:
+                assert False, f"Unexpected option: pass_as_param={pass_as_param!r}"
+
+            resp = await RM.apikey_delete(first_eight=api_key[:8], **params)
+            assert resp == {"success": True, "msg": ""}
+
+            # Check that the API does not exist
+            with pytest.raises(RM.HTTPClientError, match="Invalid API key"):
+                await RM.apikey_info(api_key=api_key)
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("pass_as_param", [None, "token", "api_key"])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_session_whoami_1(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+    pass_as_param,
+):
+    """
+    ``whoami``, ``api_scopes`` API (for HTTP requests).
+    """
+    re_manager_cmd()
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Log into the server
+        resp = RM.login("bob", password="bob_password")
+        assert "access_token" in resp, pprint.pformat(resp)
+        assert "refresh_token" in resp, pprint.pformat(resp)
+        token = resp["access_token"]
+
+        resp = RM.apikey_new(expires_in=900)
+        assert "secret" in resp, pprint.pformat(resp)
+        api_key = resp["secret"]
+
+        if pass_as_param == "token":
+            params = {"token": token}
+            RM.set_authorization_key()
+        elif pass_as_param == "api_key":
+            params = {"api_key": api_key}
+            RM.set_authorization_key()
+        elif pass_as_param is None:
+            params = {}
+        else:
+            assert False, f"Unexpected option: pass_as_param={pass_as_param!r}"
+
+        resp = RM.whoami(**params)
+        assert len(resp["identities"]) == 1
+        assert resp["identities"][0]["id"] == "bob"
+
+        resp = RM.api_scopes(**params)
+        assert "roles" in resp, pprint.pformat(resp)
+        assert "scopes" in resp, pprint.pformat(resp)
+        assert "admin" in resp["roles"]
+        assert "admin:apikeys" in resp["scopes"]
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Log into the server
+            resp = await RM.login("bob", password="bob_password")
+            assert "access_token" in resp, pprint.pformat(resp)
+            assert "refresh_token" in resp, pprint.pformat(resp)
+            token = resp["access_token"]
+
+            resp = await RM.apikey_new(expires_in=900)
+            assert "secret" in resp, pprint.pformat(resp)
+            api_key = resp["secret"]
+
+            if pass_as_param == "token":
+                params = {"token": token}
+                RM.set_authorization_key()
+            elif pass_as_param == "api_key":
+                params = {"api_key": api_key}
+                RM.set_authorization_key()
+            elif pass_as_param is None:
+                params = {}
+            else:
+                assert False, f"Unexpected option: pass_as_param={pass_as_param!r}"
+
+            resp = await RM.whoami(**params)
+            assert len(resp["identities"]) == 1
+            assert resp["identities"][0]["id"] == "bob"
+
+            resp = await RM.api_scopes(**params)
+            assert "roles" in resp, pprint.pformat(resp)
+            assert "scopes" in resp, pprint.pformat(resp)
+            assert "admin" in resp["roles"]
+            assert "admin:apikeys" in resp["scopes"]
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_session_logout_1(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+):
+    """
+    ``logout`` API (for HTTP requests).
+    """
+    re_manager_cmd()
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Log into the server
+        resp = RM.login("bob", password="bob_password")
+        assert "access_token" in resp, pprint.pformat(resp)
+        assert "refresh_token" in resp, pprint.pformat(resp)
+
+        assert RM.auth_key == (resp["access_token"], resp["refresh_token"])
+        assert RM.auth_method == RM.AuthorizationMethods.TOKEN
+
+        RM.logout()
+
+        assert RM.auth_key is None
+        assert RM.auth_method == RM.AuthorizationMethods.NONE
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Log into the server
+            resp = await RM.login("bob", password="bob_password")
+            assert "access_token" in resp, pprint.pformat(resp)
+            assert "refresh_token" in resp, pprint.pformat(resp)
+
+            assert RM.auth_key == (resp["access_token"], resp["refresh_token"])
+            assert RM.auth_method == RM.AuthorizationMethods.TOKEN
+
+            await RM.logout()
+
+            assert RM.auth_key is None
+            assert RM.auth_method == RM.AuthorizationMethods.NONE
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_principal_info_1(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+):
+    """
+    ``principal_info`` API (for HTTP requests).
+    """
+    re_manager_cmd()
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Log into the server: 'bob' is admin
+        resp = RM.login("bob", password="bob_password")
+        assert "access_token" in resp, pprint.pformat(resp)
+        assert "refresh_token" in resp, pprint.pformat(resp)
+
+        whoami_info = RM.whoami()
+        assert "uuid" in whoami_info
+        assert "identities" in whoami_info
+        assert "sessions" in whoami_info
+
+        principal_uid = whoami_info["uuid"]
+
+        principal_info_all = RM.principal_info()
+        assert isinstance(principal_info_all, list), pprint.pformat(principal_info_all)
+        assert len(principal_info_all) == 1
+        assert principal_info_all[0] == whoami_info
+
+        principal_info = RM.principal_info(principal_uid=principal_uid)
+        assert principal_info == whoami_info
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Log into the server: 'bob' is admin
+            resp = await RM.login("bob", password="bob_password")
+            assert "access_token" in resp, pprint.pformat(resp)
+            assert "refresh_token" in resp, pprint.pformat(resp)
+
+            whoami_info = await RM.whoami()
+            assert "uuid" in whoami_info
+            assert "identities" in whoami_info
+            assert "sessions" in whoami_info
+
+            principal_uid = whoami_info["uuid"]
+
+            principal_info_all = await RM.principal_info()
+            assert isinstance(principal_info_all, list), pprint.pformat(principal_info_all)
+            assert len(principal_info_all) == 1
+            assert principal_info_all[0] == whoami_info
+
+            principal_info = await RM.principal_info(principal_uid=principal_uid)
+            assert principal_info == whoami_info
+
+            await RM.close()
 
         asyncio.run(testing())
