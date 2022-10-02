@@ -1321,3 +1321,63 @@ def test_session_whoami_1(
             await RM.close()
 
         asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_session_logout_1(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+):
+    """
+    ``logout`` API (for HTTP requests).
+    """
+    re_manager_cmd()
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Log into the server
+        resp = RM.login("bob", password="bob_password")
+        assert "access_token" in resp, pprint.pformat(resp)
+        assert "refresh_token" in resp, pprint.pformat(resp)
+
+        assert RM.auth_key == (resp["access_token"], resp["refresh_token"])
+        assert RM.auth_method == RM.AuthorizationMethods.TOKEN
+
+        RM.logout()
+
+        assert RM.auth_key is None
+        assert RM.auth_method == RM.AuthorizationMethods.NONE
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Log into the server
+            resp = await RM.login("bob", password="bob_password")
+            assert "access_token" in resp, pprint.pformat(resp)
+            assert "refresh_token" in resp, pprint.pformat(resp)
+
+            assert RM.auth_key == (resp["access_token"], resp["refresh_token"])
+            assert RM.auth_method == RM.AuthorizationMethods.TOKEN
+
+            await RM.logout()
+
+            assert RM.auth_key is None
+            assert RM.auth_method == RM.AuthorizationMethods.NONE
+
+            await RM.close()
+
+        asyncio.run(testing())
