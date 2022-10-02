@@ -157,7 +157,86 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
 
     def session_revoke(self, *, session_uid, token=None, api_key=None):
         """
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        Revoke session for an authorized user. If the session is revoked, the respective refresh
+        token can no longer be used to refresh session. Access tokens and API keys will continue
+        working. By default the API request is authorized using the default authorization key
+        (set using ``set_authorization_key()`` or as a result of login). A token or an API key
+        passed as a parameter override the default authorization key, which allows to revoke
+        sessions for different users without changing the default authorization key (without
+        logging out).
+
+        Example
+        -------
+
+        Log into the server, find UID of a session and revoke the session.
+
+            RM.login("bob", password="bob_password")
+            RM.whoami()
+
+            # {'uuid': '352cae89-7e94-45be-a405-c39099ebe515',
+            #  'type': 'user',
+            #  'identities': [
+            #     {'id': 'bob',
+            #       'provider': 'toy',
+            #       'latest_login': '2022-10-02T02:47:57'}],
+            #       'api_keys': [],
+            #       'sessions': [{'uuid': 'e544d4b6-4750-43c3-8ba0-b7e9aedd2045',
+            #                     'expiration_time': '2023-10-01T19:28:15',
+            #                     'revoked': False},
+            #                    {'uuid': '66ee49c1-32b4-4778-8502-205e35151736',
+            #                     'expiration_time': '2023-10-01T19:30:03',
+            #                     'revoked': False},
+            #       .....................................................
+            #                    {'uuid': 'c41d2f01-607e-49c0-9b3e-a93c383330c0',
+            #                     'expiration_time': '2023-10-02T02:47:57',
+            #                     'revoked': False}],
+            #       'latest_activity': '2022-10-02T02:47:57',
+            #       'roles': [],
+            #       'scopes': [],
+            #       'api_key_scopes': None}
+
+            # Let's revoke session "e544d4b6-4750-43c3-8ba0-b7e9aedd2045"
+            RM.session_revoke(session_uid="e544d4b6-4750-43c3-8ba0-b7e9aedd2045")
+
+            result = RM.whoami()
+
+            # NOTE: the session is now labeled as revoked ("revoked": True)
+            # {'uuid': '352cae89-7e94-45be-a405-c39099ebe515',
+            #  'type': 'user',
+            #  'identities': [
+            #     {'id': 'bob',
+            #       'provider': 'toy',
+            #       'latest_login': '2022-10-02T02:47:57'}],
+            #       'api_keys': [],
+            #       'sessions': [{'uuid': 'e544d4b6-4750-43c3-8ba0-b7e9aedd2045',
+            #                     'expiration_time': '2023-10-01T19:28:15',
+            #                     'revoked': True},
+            #                    {'uuid': '66ee49c1-32b4-4778-8502-205e35151736',
+            #                     'expiration_time': '2023-10-01T19:30:03',
+            #                     'revoked': False},
+            #       .....................................................
+            #                    {'uuid': 'c41d2f01-607e-49c0-9b3e-a93c383330c0',
+            #                     'expiration_time': '2023-10-02T02:47:57',
+            #                     'revoked': False}],
+            #       'latest_activity': '2022-10-02T02:47:57',
+            #       'roles': [],
+            #       'scopes': [],
+            #       'api_key_scopes': None}
+
+        Parameters
+        ----------
+        session_uid: str
+            Full session UID. Session UID may be obtained from results returned by
+            ``REManagerAPI.whoami()`` or ``REManagerAPI.principal_info()``.
+        token, api_key: str or None, optional
+            Access token or an API key. The parameters are mutually exclusive: the API fails
+            if both parameters are not *None*. A token or an API key overrides the default
+            security key.
+
+        Returns
+        -------
+        dict
+            Returns the dictionary ``{'success': True, 'msg': ''}`` if success.
         """
         # Docstring is maintained separately
         method, headers = self._prepare_session_revoke(session_uid=session_uid, token=token, api_key=api_key)
@@ -167,7 +246,49 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
 
     def apikey_new(self, *, expires_in, scopes=None, note=None, principal_uid=None):
         """
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        Generate a new API key for authorized user. The API request is authorized using the
+        default security key (set using ``set_authorization_key()`` or as a result of login).
+
+        Users with administrative privileges can generate API keys for other users based on
+        principal UID. Principal UID may be found using ``REManagerAPI.whoami()`` or
+        ``REManagerAPI.principal_info()``.
+
+        Parameters
+        ----------
+        expires_in: int
+            Duration of API lifetime in seconds. Lifetime must be positive non-zero integer.
+        scopes: list(str) or None, optional
+            Optional list of scopes, such as ``["read:status", "read:queue", "user:apikeys"]``.
+            If the value is ``None`` (default), then the new API inherits the allowed scopes
+            of the principal (if authorized with token) or the original API key (if authorized
+            with API key).
+        note: str or None, optional
+            Optional note.
+        principal_uid: str or None, optional
+            Principal UID of a user. Including principal UID allows to create API keys
+            for any user registered in the database (user who logged into the server at least
+            once). This operation requires administrative privileges. The API fails if
+            ``principal_uid`` is not *None* and authorization is performed with security key
+            that does not have administrative privileges.
+
+        Returns
+        -------
+        dict
+            The API key is returned as ``'secret'`` key of the dictionary.
+
+        Example
+        -------
+        Log into the server and create an API key, which inherits the scopes from principal::
+
+            RM.login("bob", password="bob_password")
+            result = RM.apikey_new(expires_in=900)
+
+            # {'first_eight': '66ccb3ca',
+            #  'expiration_time': '2022-10-02T03:29:20',
+            #  'note': None,
+            #  'scopes': ['inherit'],
+            #  'latest_activity': None,
+            #  'secret': '66ccb3ca33ea091ab297331ba2589bdcf7ea9f5f168dbfd90c156652d1cedd9533c1bc59'}
         """
         # Docstring is maintained separately
         method, request_params = self._prepare_apikey_new(
