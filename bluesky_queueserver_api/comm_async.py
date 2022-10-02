@@ -3,7 +3,21 @@ import httpx
 from .comm_base import ReManagerAPI_ZMQ_Base, ReManagerAPI_HTTP_Base
 from bluesky_queueserver import ZMQCommSendAsync
 
-from .api_docstrings import _doc_send_request, _doc_close, _doc_api_login, _doc_api_session_refresh
+from .api_docstrings import (
+    _doc_send_request,
+    _doc_close,
+    _doc_api_login,
+    _doc_api_session_refresh,
+    _doc_api_session_revoke,
+    _doc_api_apikey_new,
+    _doc_api_apikey_info,
+    _doc_api_apikey_delete,
+    _doc_api_whoami,
+    _doc_api_principal_info,
+    _doc_api_api_scopes,
+    _doc_api_logout,
+)
+
 from .console_monitor import ConsoleMonitor_ZMQ_Async, ConsoleMonitor_HTTP_Async
 
 
@@ -203,3 +217,11 @@ ReManagerComm_ZMQ_Async.close.__doc__ = _doc_close
 ReManagerComm_HTTP_Async.close.__doc__ = _doc_close
 ReManagerComm_HTTP_Async.login.__doc__ = _doc_api_login
 ReManagerComm_HTTP_Async.session_refresh.__doc__ = _doc_api_session_refresh
+ReManagerComm_HTTP_Async.session_revoke.__doc__ = _doc_api_session_revoke
+ReManagerComm_HTTP_Async.apikey_new.__doc__ = _doc_api_apikey_new
+ReManagerComm_HTTP_Async.apikey_info.__doc__ = _doc_api_apikey_info
+ReManagerComm_HTTP_Async.apikey_delete.__doc__ = _doc_api_apikey_delete
+ReManagerComm_HTTP_Async.whoami.__doc__ = _doc_api_whoami
+ReManagerComm_HTTP_Async.principal_info.__doc__ = _doc_api_principal_info
+ReManagerComm_HTTP_Async.api_scopes.__doc__ = _doc_api_api_scopes
+ReManagerComm_HTTP_Async.logout.__doc__ = _doc_api_logout
