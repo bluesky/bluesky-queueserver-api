@@ -2604,7 +2604,7 @@ def test_script_upload_02(
 # fmt: on
 def test_function_execute_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
     """
-    ``item_function_execute``: test that 'user' and 'user_group' parameters override defaults
+    ``function_execute``: test that 'user' and 'user_group' parameters override defaults
     """
     rm_api_class = _select_re_manager_api(protocol, library)
     func = BFunc("function_sleep", 3)
