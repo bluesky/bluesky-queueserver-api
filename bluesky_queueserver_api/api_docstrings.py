@@ -2952,7 +2952,7 @@ _doc_api_session_revoke = """
     Examples
     --------
 
-    Log into the server, find UID of a session and revoke the session.
+    Log into the server, find UID of a session and revoke the session::
 
         RM.login("bob", password="bob_password")
         result = RM.whoami()
@@ -3020,7 +3020,7 @@ _doc_api_session_revoke = """
     Returns
     -------
     dict
-        Returns the dictionary ``{'success': True, 'msg': ''}`` if success.
+        Returns the dictionary ``{'success': True, 'msg': ''}`` in case of success.
 
     Raises
     ------
@@ -3154,7 +3154,7 @@ _doc_api_apikey_delete = """
     Returns
     -------
     dict
-        Returns the dictionary ``{'success': True, 'msg': ''}`` if success.
+        Returns the dictionary ``{'success': True, 'msg': ''}`` in case of success.
 
     Raises
     ------
