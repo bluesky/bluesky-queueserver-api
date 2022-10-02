@@ -1381,3 +1381,77 @@ def test_session_logout_1(
             await RM.close()
 
         asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_principal_info_1(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+):
+    """
+    ``principal_info`` API (for HTTP requests).
+    """
+    re_manager_cmd()
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Log into the server: 'bob' is admin
+        resp = RM.login("bob", password="bob_password")
+        assert "access_token" in resp, pprint.pformat(resp)
+        assert "refresh_token" in resp, pprint.pformat(resp)
+
+        whoami_info = RM.whoami()
+        assert "uuid" in whoami_info
+        assert "identities" in whoami_info
+        assert "sessions" in whoami_info
+
+        principal_uid = whoami_info["uuid"]
+
+        principal_info_all = RM.principal_info()
+        assert isinstance(principal_info_all, list), pprint.pformat(principal_info_all)
+        assert len(principal_info_all) == 1
+        assert principal_info_all[0] == whoami_info
+
+        principal_info = RM.principal_info(principal_uid=principal_uid)
+        assert principal_info == whoami_info
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Log into the server: 'bob' is admin
+            resp = await RM.login("bob", password="bob_password")
+            assert "access_token" in resp, pprint.pformat(resp)
+            assert "refresh_token" in resp, pprint.pformat(resp)
+
+            whoami_info = await RM.whoami()
+            assert "uuid" in whoami_info
+            assert "identities" in whoami_info
+            assert "sessions" in whoami_info
+
+            principal_uid = whoami_info["uuid"]
+
+            principal_info_all = await RM.principal_info()
+            assert isinstance(principal_info_all, list), pprint.pformat(principal_info_all)
+            assert len(principal_info_all) == 1
+            assert principal_info_all[0] == whoami_info
+
+            principal_info = await RM.principal_info(principal_uid=principal_uid)
+            assert principal_info == whoami_info
+
+            await RM.close()
+
+        asyncio.run(testing())
