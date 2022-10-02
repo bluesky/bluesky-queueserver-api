@@ -77,15 +77,19 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         timeout = self._adjust_timeout(timeout)
         return httpx.AsyncClient(base_url=http_server_uri, timeout=timeout)
 
-    async def _simple_request(self, *, method, params=None, headers=None, data=None, timeout=None):
+    async def _simple_request(
+        self, *, method, params=None, url_params=None, headers=None, data=None, timeout=None
+    ):
         """
         The code that formats and sends a simple request.
         """
         try:
             client_response = None
             request_method, endpoint, payload = self._prepare_request(method=method, params=params)
-            headers = self._prepare_headers()
+            headers = headers or self._prepare_headers()
             kwargs = {"json": payload}
+            if url_params:
+                kwargs.update({"params": url_params})
             if headers:
                 kwargs.update({"headers": headers})
             if data:
@@ -103,11 +107,26 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
         return response
 
     async def send_request(
-        self, *, method, params=None, headers=None, data=None, timeout=None, auto_refresh_session=True
+        self,
+        *,
+        method,
+        params=None,
+        url_params=None,
+        headers=None,
+        data=None,
+        timeout=None,
+        auto_refresh_session=True,
     ):
         # Docstring is maintained separately
         refresh = False
-        request_params = {"method": method, "params": params, "headers": headers, "data": data, "timeout": timeout}
+        request_params = {
+            "method": method,
+            "params": params,
+            "url_params": url_params,
+            "headers": headers,
+            "data": data,
+            "timeout": timeout,
+        }
         try:
             response = await self._simple_request(**request_params)
         except self.HTTPClientError as ex:

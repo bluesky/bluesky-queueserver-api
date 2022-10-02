@@ -1,6 +1,7 @@
 import asyncio
 import getpass
 from io import StringIO
+import pprint
 import pytest
 import time as ttime
 
@@ -784,5 +785,127 @@ def test_session_refresh_3(
             await RM.close()
 
             assert n_expirations > 0
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("pass_as_param", [None, "token", "api_key"])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["HTTP"])
+# fmt: on
+def test_session_revoke_1(
+    tmpdir,
+    monkeypatch,
+    re_manager_cmd,  # noqa: F811
+    fastapi_server_fs,  # noqa: F811
+    protocol,
+    library,
+    pass_as_param,
+):
+    """
+    ``session_revoke`` API (for HTTP requests).
+    """
+    re_manager_cmd()
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    fastapi_server_fs()
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        # Log into the server
+        resp = RM.login("bob", password="bob_password")
+        assert "access_token" in resp, pprint.pformat(resp)
+        assert "refresh_token" in resp, pprint.pformat(resp)
+        token = resp["access_token"]
+        refresh_token = resp["refresh_token"]
+
+        resp = RM.apikey_new(expires_in=900)
+        assert "secret" in resp, pprint.pformat(resp)
+        api_key = resp["secret"]
+
+        # Make sure that 'session_refresh' works
+        RM.session_refresh()
+
+        principal_info = RM.whoami()
+        assert "sessions" in principal_info, pprint.pformat(principal_info)
+        sessions = principal_info["sessions"]
+        assert len(sessions) == 1
+
+        if pass_as_param == "token":
+            params = {"token": token}
+            RM.set_authorization_key()
+        elif pass_as_param == "api_key":
+            params = {"api_key": api_key}
+            RM.set_authorization_key()
+        elif pass_as_param is None:
+            params = {}
+        else:
+            assert False, f"Unexpected option: pass_as_param={pass_as_param!r}"
+
+        if params:
+            with pytest.raises(RM.HTTPClientError, match="requester has insufficient permissions"):
+                RM.session_revoke(session_uid=sessions[0]["uuid"])
+
+        resp = RM.session_revoke(session_uid=sessions[0]["uuid"], **params)
+        assert "success" in resp
+        assert resp["success"] is True
+
+        # Session is revoked and cannot be refreshed
+        RM.set_authorization_key(token=token, refresh_token=refresh_token)
+        with pytest.raises(RM.HTTPClientError, match="Session has expired"):
+            RM.session_refresh()
+
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            # Log into the server
+            resp = await RM.login("bob", password="bob_password")
+            assert "access_token" in resp, pprint.pformat(resp)
+            assert "refresh_token" in resp, pprint.pformat(resp)
+            token = resp["access_token"]
+            refresh_token = resp["refresh_token"]
+
+            resp = await RM.apikey_new(expires_in=900)
+            assert "secret" in resp, pprint.pformat(resp)
+            api_key = resp["secret"]
+
+            # Make sure that 'session_refresh' works
+            await RM.session_refresh()
+
+            principal_info = await RM.whoami()
+            assert "sessions" in principal_info, pprint.pformat(principal_info)
+            sessions = principal_info["sessions"]
+            assert len(sessions) == 1
+
+            if pass_as_param == "token":
+                params = {"token": token}
+                RM.set_authorization_key()
+            elif pass_as_param == "api_key":
+                params = {"api_key": api_key}
+                RM.set_authorization_key()
+            elif pass_as_param is None:
+                params = {}
+            else:
+                assert False, f"Unexpected option: pass_as_param={pass_as_param!r}"
+
+            if params:
+                with pytest.raises(RM.HTTPClientError, match="requester has insufficient permissions"):
+                    await RM.session_revoke(session_uid=sessions[0]["uuid"])
+
+            resp = await RM.session_revoke(session_uid=sessions[0]["uuid"], **params)
+            assert "success" in resp
+            assert resp["success"] is True
+
+            # Session is revoked and cannot be refreshed
+            RM.set_authorization_key(token=token, refresh_token=refresh_token)
+            with pytest.raises(RM.HTTPClientError, match="Session has expired"):
+                await RM.session_refresh()
+
+            await RM.close()
 
         asyncio.run(testing())
