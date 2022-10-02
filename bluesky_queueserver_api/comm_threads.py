@@ -165,13 +165,13 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         sessions for different users without changing the default authorization key (without
         logging out).
 
-        Example
-        -------
+        Examples
+        --------
 
         Log into the server, find UID of a session and revoke the session.
 
             RM.login("bob", password="bob_password")
-            RM.whoami()
+            result = RM.whoami()
 
             # {'uuid': '352cae89-7e94-45be-a405-c39099ebe515',
             #  'type': 'user',
@@ -179,21 +179,21 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
             #     {'id': 'bob',
             #       'provider': 'toy',
             #       'latest_login': '2022-10-02T02:47:57'}],
-            #       'api_keys': [],
-            #       'sessions': [{'uuid': 'e544d4b6-4750-43c3-8ba0-b7e9aedd2045',
-            #                     'expiration_time': '2023-10-01T19:28:15',
-            #                     'revoked': False},
-            #                    {'uuid': '66ee49c1-32b4-4778-8502-205e35151736',
-            #                     'expiration_time': '2023-10-01T19:30:03',
-            #                     'revoked': False},
+            #   'api_keys': [],
+            #   'sessions': [{'uuid': 'e544d4b6-4750-43c3-8ba0-b7e9aedd2045',
+            #                 'expiration_time': '2023-10-01T19:28:15',
+            #                 'revoked': False},
+            #                {'uuid': '66ee49c1-32b4-4778-8502-205e35151736',
+            #                 'expiration_time': '2023-10-01T19:30:03',
+            #                 'revoked': False},
             #       .....................................................
-            #                    {'uuid': 'c41d2f01-607e-49c0-9b3e-a93c383330c0',
-            #                     'expiration_time': '2023-10-02T02:47:57',
-            #                     'revoked': False}],
-            #       'latest_activity': '2022-10-02T02:47:57',
-            #       'roles': [],
-            #       'scopes': [],
-            #       'api_key_scopes': None}
+            #                {'uuid': 'c41d2f01-607e-49c0-9b3e-a93c383330c0',
+            #                 'expiration_time': '2023-10-02T02:47:57',
+            #                 'revoked': False}],
+            #   'latest_activity': '2022-10-02T02:47:57',
+            #   'roles': [],
+            #   'scopes': [],
+            #   'api_key_scopes': None}
 
             # Let's revoke session "e544d4b6-4750-43c3-8ba0-b7e9aedd2045"
             RM.session_revoke(session_uid="e544d4b6-4750-43c3-8ba0-b7e9aedd2045")
@@ -207,21 +207,21 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
             #     {'id': 'bob',
             #       'provider': 'toy',
             #       'latest_login': '2022-10-02T02:47:57'}],
-            #       'api_keys': [],
-            #       'sessions': [{'uuid': 'e544d4b6-4750-43c3-8ba0-b7e9aedd2045',
-            #                     'expiration_time': '2023-10-01T19:28:15',
-            #                     'revoked': True},
-            #                    {'uuid': '66ee49c1-32b4-4778-8502-205e35151736',
-            #                     'expiration_time': '2023-10-01T19:30:03',
-            #                     'revoked': False},
+            #   'api_keys': [],
+            #   'sessions': [{'uuid': 'e544d4b6-4750-43c3-8ba0-b7e9aedd2045',
+            #                 'expiration_time': '2023-10-01T19:28:15',
+            #                 'revoked': True},
+            #                {'uuid': '66ee49c1-32b4-4778-8502-205e35151736',
+            #                 'expiration_time': '2023-10-01T19:30:03',
+            #                 'revoked': False},
             #       .....................................................
-            #                    {'uuid': 'c41d2f01-607e-49c0-9b3e-a93c383330c0',
-            #                     'expiration_time': '2023-10-02T02:47:57',
-            #                     'revoked': False}],
-            #       'latest_activity': '2022-10-02T02:47:57',
-            #       'roles': [],
-            #       'scopes': [],
-            #       'api_key_scopes': None}
+            #                {'uuid': 'c41d2f01-607e-49c0-9b3e-a93c383330c0',
+            #                 'expiration_time': '2023-10-02T02:47:57',
+            #                 'revoked': False}],
+            #   'latest_activity': '2022-10-02T02:47:57',
+            #   'roles': [],
+            #   'scopes': [],
+            #   'api_key_scopes': None}
 
         Parameters
         ----------
@@ -231,7 +231,7 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         token, api_key: str or None, optional
             Access token or an API key. The parameters are mutually exclusive: the API fails
             if both parameters are not *None*. A token or an API key overrides the default
-            security key. Default: *None*.
+            authentication key. Default: *None*.
 
         Returns
         -------
@@ -261,8 +261,8 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         principal UID. Principal UID may be found using ``REManagerAPI.whoami()`` or
         ``REManagerAPI.principal_info()``.
 
-        Example
-        -------
+        Examples
+        --------
         Log into the server and create an API key, which inherits the scopes from principal::
 
             RM.login("bob", password="bob_password")
@@ -343,6 +343,34 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         return response
 
     def apikey_delete(self, *, first_eight, token=None, api_key=None):
+        """
+        Delete an API key for the authorized principal. The API key is identified by
+        first eight characters. For example, an API key ::
+
+          66ccb3ca33ea091ab297331ba2589bdcf7ea9f5f168dbfd90c156652d1cedd9533c1bc59
+
+        is identified as ``66ccb3ca``. The request is authorized using the default
+        security key (set by ``REManagerAPI.set_authorization_key()`` or as a result of
+        login). Alternatively, a different authorization key (an access token or an API key)
+        can be passed as a parameter. This allows to delete API keys for other prinicipals
+        without logging out or changing the default authorization key.
+
+        Parameters
+        ----------
+        first_eight: str
+            First eight characters of the API key.
+        token, api_key: str or None, optional
+            Access token or an API key. The parameters are mutually exclusive: the API fails
+            if both parameters are not *None*. A token or an API key overrides the default
+            authentication key. Default: *None*.
+
+        Raises
+        ------
+        RequestParameterError
+            Incorrect or insufficient parameters in the API call.
+        HTTPRequestError, HTTPClientError, HTTPServerError
+            Error while sending and processing HTTP request.
+        """
         # Docstring is maintained separately
         url_params, headers = self._prepare_apikey_delete(first_eight=first_eight, token=token, api_key=api_key)
         kwargs = {"headers": headers, "auto_refresh_session": False} if headers else {}
@@ -351,9 +379,54 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
 
     def whoami(self, *, token=None, api_key=None):
         """
-        Returns information about the authorized principal. Works for tokens and API keys.
-        The returned information includes the list of identities, a list of API keys and
-        a list of sessions.
+        Returns full information about the principal. The principal is identified based
+        on the default authorization key (set by ``REManagerAPI.set_authorization_key()``
+        or as a result of login) or the token or the API key passed as parameters.
+        The returned information includes the list of identities, API keys and sessions
+        for the principal.
+
+        Examples
+        --------
+        Log into the server and call ``REManagerAPI.whoami()``::
+
+            RM.login("bob", password="bob_password")
+            result = RM.whoami()
+
+            # {'uuid': '352cae89-7e94-45be-a405-c39099ebe515',
+            #  'type': 'user',
+            #  'identities': [
+            #     {'id': 'bob',
+            #       'provider': 'toy',
+            #       'latest_login': '2022-10-02T02:47:57'}],
+            #   'api_keys': [],
+            #   'sessions': [{'uuid': 'e544d4b6-4750-43c3-8ba0-b7e9aedd2045',
+            #                 'expiration_time': '2023-10-01T19:28:15',
+            #                 'revoked': False},
+            #                {'uuid': '66ee49c1-32b4-4778-8502-205e35151736',
+            #                 'expiration_time': '2023-10-01T19:30:03',
+            #                 'revoked': False},
+            #       .....................................................
+            #                {'uuid': 'c41d2f01-607e-49c0-9b3e-a93c383330c0',
+            #                 'expiration_time': '2023-10-02T02:47:57',
+            #                 'revoked': False}],
+            #   'latest_activity': '2022-10-02T02:47:57',
+            #   'roles': [],
+            #   'scopes': [],
+            #   'api_key_scopes': None}
+
+        Parameters
+        ----------
+        token, api_key: str or None, optional
+            Access token or an API key. The parameters are mutually exclusive: the API fails
+            if both parameters are not *None*. A token or an API key overrides the default
+            authentication key. Default: *None*.
+
+        Raises
+        ------
+        RequestParameterError
+            Incorrect or insufficient parameters in the API call.
+        HTTPRequestError, HTTPClientError, HTTPServerError
+            Error while sending and processing HTTP request.
         """
         # Docstring is maintained separately
         headers = self._prepare_whoami(token=token, api_key=api_key)
@@ -369,7 +442,59 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
 
     def api_scopes(self, *, token=None, api_key=None):
         """
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        Returns API scopes for an authorized user. Authorization is performed using
+        the default authorization key (set using ``REManagerAPI.set_authorization_key()``
+        or as a result of login) or an access token or an API key passed as parameters.
+        The API returns the exact list scopes that is currently used by the server for
+        validating access permissions for the token or the API key used for authorization.
+        In addition, the API returns a list of roles for the authorized user.
+        The returned scopes are always a subset of combined scopes of the roles.
+
+        Examples
+        --------
+        Log into the server and get the scopes::
+
+            RM.login("bob", password="bob_password")
+            result = RM.whoami()
+
+            # {'roles': ['admin', 'expert'],
+            #  'scopes': ['admin:apikeys',
+            #             'admin:metrics',
+            #             'admin:read:principals',
+            #             'read:config',
+            #             'read:console',
+            #             'read:history',
+            #             'read:lock',
+            #             'read:monitor',
+            #             'read:queue',
+            #             'read:resources',
+            #             'read:status',
+            #             'read:testing',
+            #             'user:apikeys',
+            #             'write:config',
+            #             'write:execute',
+            #             'write:history:edit',
+            #             'write:lock',
+            #             'write:manager:control',
+            #             'write:permissions',
+            #             'write:plan:control',
+            #             'write:queue:control',
+            #             'write:queue:edit',
+            #             'write:scripts']}
+
+        Parameters
+        ----------
+        token, api_key: str or None, optional
+            Access token or an API key. The parameters are mutually exclusive: the API fails
+            if both parameters are not *None*. A token or an API key overrides the default
+            authentication key. Default: *None*.
+
+        Raises
+        ------
+        RequestParameterError
+            Incorrect or insufficient parameters in the API call.
+        HTTPRequestError, HTTPClientError, HTTPServerError
+            Error while sending and processing HTTP request.
         """
         # Docstring is maintained separately
         headers = self._prepare_whoami(token=token, api_key=api_key)
