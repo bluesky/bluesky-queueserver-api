@@ -351,7 +351,12 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
 
     def logout(self):
         """
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        Log out. The API sends ``/auth/logout`` API request to the server and then clears
+        local authorization key. Currently the ``/auth/logout`` API is intended for clearing
+        browser cookies and serves no useful purpose for Python scripts and application.
+        ``REManagerAPI.logout()`` is implemented for completeness. The same effect may
+        be achieved by calling ``REManagerAPI.set_authorization_key()``, which does not call
+        ``/auth/logout`` API, but clears the default security key.
         """
         # Docstring is maintained separately
         response = self.send_request(method="logout")
