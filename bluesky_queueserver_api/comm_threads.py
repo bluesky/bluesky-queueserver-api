@@ -231,12 +231,20 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         token, api_key: str or None, optional
             Access token or an API key. The parameters are mutually exclusive: the API fails
             if both parameters are not *None*. A token or an API key overrides the default
-            security key.
+            security key. Default: *None*.
 
         Returns
         -------
         dict
             Returns the dictionary ``{'success': True, 'msg': ''}`` if success.
+
+        Raises
+        ------
+        RequestParameterError
+            Incorrect or insufficient parameters in the API call.
+        HTTPRequestError, HTTPClientError, HTTPServerError
+            Error while sending and processing HTTP request.
+
         """
         # Docstring is maintained separately
         method, headers = self._prepare_session_revoke(session_uid=session_uid, token=token, api_key=api_key)
@@ -253,29 +261,6 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
         principal UID. Principal UID may be found using ``REManagerAPI.whoami()`` or
         ``REManagerAPI.principal_info()``.
 
-        Parameters
-        ----------
-        expires_in: int
-            Duration of API lifetime in seconds. Lifetime must be positive non-zero integer.
-        scopes: list(str) or None, optional
-            Optional list of scopes, such as ``["read:status", "read:queue", "user:apikeys"]``.
-            If the value is ``None`` (default), then the new API inherits the allowed scopes
-            of the principal (if authorized with token) or the original API key (if authorized
-            with API key).
-        note: str or None, optional
-            Optional note.
-        principal_uid: str or None, optional
-            Principal UID of a user. Including principal UID allows to create API keys
-            for any user registered in the database (user who logged into the server at least
-            once). This operation requires administrative privileges. The API fails if
-            ``principal_uid`` is not *None* and authorization is performed with security key
-            that does not have administrative privileges.
-
-        Returns
-        -------
-        dict
-            The API key is returned as ``'secret'`` key of the dictionary.
-
         Example
         -------
         Log into the server and create an API key, which inherits the scopes from principal::
@@ -289,6 +274,36 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
             #  'scopes': ['inherit'],
             #  'latest_activity': None,
             #  'secret': '66ccb3ca33ea091ab297331ba2589bdcf7ea9f5f168dbfd90c156652d1cedd9533c1bc59'}
+
+        Parameters
+        ----------
+        expires_in: int
+            Duration of API lifetime in seconds. Lifetime must be positive non-zero integer.
+        scopes: list(str) or None, optional
+            Optional list of scopes, such as ``["read:status", "read:queue", "user:apikeys"]``.
+            If the value is ``None`` (default), then the new API inherits the allowed scopes
+            of the principal (if authorized with token) or the original API key (if authorized
+            with API key). Default: *None*.
+        note: str or None, optional
+            Optional note. Default: *None*.
+        principal_uid: str or None, optional
+            Principal UID of a user. Including principal UID allows to create API keys
+            for any user registered in the database (user who logged into the server at least
+            once). This operation requires administrative privileges. The API fails if
+            ``principal_uid`` is not *None* and authorization is performed with security key
+            that does not have administrative privileges. Default: *None*.
+
+        Returns
+        -------
+        dict
+            The API key is returned as ``'secret'`` key of the dictionary.
+
+        Raises
+        ------
+        RequestParameterError
+            Incorrect or insufficient parameters in the API call.
+        HTTPRequestError, HTTPClientError, HTTPServerError
+            Error while sending and processing HTTP request.
         """
         # Docstring is maintained separately
         method, request_params = self._prepare_apikey_new(
@@ -299,14 +314,27 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
 
     def apikey_info(self, *, api_key=None):
         """
-        Returns information about API key used for authorization. The request fails if
-        authorization is performed using token.
+        Get information about an API key. The API returning information about the API
+        key used to authorize the request. The request fails if a token is used for
+        authorization. If the parameter ``api_key`` is *None*, then the default
+        security key (set by ``REManagerAPI.set_authorization_key()`` and must be
+        an API key, not a token) is used. The API key passed with the parameter ``api_key``
+        override the default security key (the default is ignored). This allows to
+        obtain information on any API key without logging out or changing
+        the default security key.
 
         Parameters
         ----------
-        api_key: str or None
-            API key of interest if different from the security key set by default.
-            The default API key is used if the value is ``None``.
+        api_key: str or None, optional
+            API key of interest. The parameter is used for authorization of the request
+            instead of the default security key, which is ignored. Default: ``None``.
+
+        Raises
+        ------
+        RequestParameterError
+            Incorrect or insufficient parameters in the API call.
+        HTTPRequestError, HTTPClientError, HTTPServerError
+            Error while sending and processing HTTP request.
         """
         # Docstring is maintained separately
         headers = self._prepare_apikey_info(api_key=api_key)
