@@ -6,6 +6,7 @@ flake8
 pytest
 pytest-cov
 pytest-xprocess
+py
 sphinx
 twine
 pre-commit
