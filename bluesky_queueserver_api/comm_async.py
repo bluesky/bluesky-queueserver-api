@@ -1,24 +1,22 @@
 import httpx
-
-from .comm_base import ReManagerAPI_ZMQ_Base, ReManagerAPI_HTTP_Base
 from bluesky_queueserver import ZMQCommSendAsync
 
 from .api_docstrings import (
-    _doc_send_request,
-    _doc_close,
+    _doc_api_api_scopes,
+    _doc_api_apikey_delete,
+    _doc_api_apikey_info,
+    _doc_api_apikey_new,
     _doc_api_login,
+    _doc_api_logout,
+    _doc_api_principal_info,
     _doc_api_session_refresh,
     _doc_api_session_revoke,
-    _doc_api_apikey_new,
-    _doc_api_apikey_info,
-    _doc_api_apikey_delete,
     _doc_api_whoami,
-    _doc_api_principal_info,
-    _doc_api_api_scopes,
-    _doc_api_logout,
+    _doc_close,
+    _doc_send_request,
 )
-
-from .console_monitor import ConsoleMonitor_ZMQ_Async, ConsoleMonitor_HTTP_Async
+from .comm_base import ReManagerAPI_HTTP_Base, ReManagerAPI_ZMQ_Base
+from .console_monitor import ConsoleMonitor_HTTP_Async, ConsoleMonitor_ZMQ_Async
 
 
 class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):

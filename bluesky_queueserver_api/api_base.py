@@ -1,14 +1,14 @@
-from collections.abc import Mapping, Iterable
 import copy
 import getpass
 import os
-from pathlib import Path
 import secrets
 import time as ttime
+from collections.abc import Iterable, Mapping
+from pathlib import Path
 
-from .item import BItem
+from ._defaults import default_user_group, default_user_name
 from .comm_base import RequestParameterError
-from ._defaults import default_user_name, default_user_group
+from .item import BItem
 
 
 class WaitTimeoutError(TimeoutError):
@@ -167,7 +167,6 @@ class API_Base:
     WaitCancelError = WaitCancelError
 
     def __init__(self, *, status_expiration_period, status_polling_period):
-
         self._status_expiration_period = status_expiration_period  # seconds
         self._status_polling_period = status_polling_period  # seconds
 

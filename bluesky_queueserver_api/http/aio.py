@@ -1,18 +1,16 @@
-from ..api_async import API_Async_Mixin
-from ..comm_async import ReManagerComm_HTTP_Async
-
 from .._defaults import (
     default_allow_request_fail_exceptions,
-    default_http_request_timeout,
+    default_console_monitor_max_lines,
+    default_console_monitor_max_msgs,
+    default_console_monitor_poll_period,
     default_http_login_timeout,
+    default_http_request_timeout,
     default_status_expiration_period,
     default_status_polling_period,
-    default_console_monitor_poll_period,
-    default_console_monitor_max_msgs,
-    default_console_monitor_max_lines,
 )
-
+from ..api_async import API_Async_Mixin
 from ..api_docstrings import _doc_REManagerAPI_HTTP
+from ..comm_async import ReManagerComm_HTTP_Async
 
 
 class REManagerAPI(ReManagerComm_HTTP_Async, API_Async_Mixin):

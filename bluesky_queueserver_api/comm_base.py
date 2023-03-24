@@ -1,23 +1,23 @@
-from bluesky_queueserver import CommTimeoutError
-from collections.abc import Mapping, Iterable
 import enum
 import getpass
-import httpx
 import os
+from collections.abc import Iterable, Mapping
+
+import httpx
+from bluesky_queueserver import CommTimeoutError
 
 from ._defaults import (
     default_allow_request_fail_exceptions,
+    default_console_monitor_max_lines,
+    default_console_monitor_max_msgs,
+    default_console_monitor_poll_period,
+    default_console_monitor_poll_timeout,
+    default_http_login_timeout,
+    default_http_request_timeout,
+    default_http_server_uri,
     default_zmq_request_timeout_recv,
     default_zmq_request_timeout_send,
-    default_http_request_timeout,
-    default_http_login_timeout,
-    default_http_server_uri,
-    default_console_monitor_poll_timeout,
-    default_console_monitor_poll_period,
-    default_console_monitor_max_msgs,
-    default_console_monitor_max_lines,
 )
-
 
 rest_api_method_map = {
     "ping": ("GET", "/api/ping"),
@@ -120,7 +120,6 @@ class AuthorizationMethods(enum.Enum):
 
 
 class ReManagerAPI_Base:
-
     RequestParameterError = RequestParameterError
     RequestTimeoutError = RequestTimeoutError
     RequestFailedError = RequestFailedError

@@ -1,7 +1,7 @@
-from collections.abc import Mapping, Iterable
 import copy
+from collections.abc import Iterable, Mapping
 
-from .api_docstrings import _doc_BItem, _doc_BPlan, _doc_BInst, _doc_BFunc
+from .api_docstrings import _doc_BFunc, _doc_BInst, _doc_BItem, _doc_BPlan
 
 
 class BItem:

@@ -8,4 +8,5 @@ exclude =
     bluesky_queueserver_api/_version.py,
     docs/source/conf.py
 max-line-length = 115
-ignore = E203, W503  # Ignore some style 'errors' produced while formatting by 'black'
+# Ignore some style 'errors' produced while formatting by 'black'
+ignore = E203, W503

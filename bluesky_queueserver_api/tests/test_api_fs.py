@@ -1,24 +1,23 @@
 import asyncio
 import getpass
-from io import StringIO
 import pprint
-import pytest
 import time as ttime
+from io import StringIO
 
+import pytest
 from bluesky_queueserver import generate_zmq_keys
 
-from .common import re_manager_cmd  # noqa: F401
+from ..comm_base import RequestParameterError
 from .common import fastapi_server_fs  # noqa: F401
+from .common import re_manager_cmd  # noqa: F401
 from .common import (
-    set_qserver_zmq_address,
-    set_qserver_zmq_public_key,
     _is_async,
     _select_re_manager_api,
     instantiate_re_api_class,
+    set_qserver_zmq_address,
+    set_qserver_zmq_public_key,
     setup_server_with_config_file,
 )
-
-from ..comm_base import RequestParameterError
 
 
 # fmt: off
@@ -530,7 +529,6 @@ def test_login_3_fail(
     ]
 
     if not _is_async(library):
-
         for provider, except_type, msg in invalid_providers:
             with pytest.raises(except_type, match=msg):
                 RM = instantiate_re_api_class(rm_api_class, http_auth_provider=provider)

@@ -1,17 +1,22 @@
 import asyncio
-import pytest
 import re
 
+import pytest
 from bluesky_queueserver import generate_zmq_keys
 
-from bluesky_queueserver_api.comm_base import ReManagerAPI_Base
-from bluesky_queueserver_api.comm_threads import ReManagerComm_ZMQ_Threads, ReManagerComm_HTTP_Threads
-from bluesky_queueserver_api.comm_async import ReManagerComm_ZMQ_Async, ReManagerComm_HTTP_Async
 from bluesky_queueserver_api._defaults import default_http_server_uri, default_user_group
+from bluesky_queueserver_api.comm_async import ReManagerComm_HTTP_Async, ReManagerComm_ZMQ_Async
+from bluesky_queueserver_api.comm_base import ReManagerAPI_Base
+from bluesky_queueserver_api.comm_threads import ReManagerComm_HTTP_Threads, ReManagerComm_ZMQ_Threads
 
-from .common import re_manager, re_manager_cmd  # noqa: F401
 from .common import fastapi_server  # noqa: F401
-from .common import set_qserver_zmq_address, set_qserver_zmq_public_key, API_KEY_FOR_TESTS
+from .common import (  # noqa: F401
+    API_KEY_FOR_TESTS,
+    re_manager,
+    re_manager_cmd,
+    set_qserver_zmq_address,
+    set_qserver_zmq_public_key,
+)
 
 _plan1 = {"name": "count", "args": [["det1", "det2"]], "item_type": "plan"}
 _user = "Test User"
