@@ -1,18 +1,16 @@
-from ..api_threads import API_Threads_Mixin
-from ..comm_threads import ReManagerComm_HTTP_Threads
-
 from .._defaults import (
     default_allow_request_fail_exceptions,
-    default_http_request_timeout,
+    default_console_monitor_max_lines,
+    default_console_monitor_max_msgs,
+    default_console_monitor_poll_period,
     default_http_login_timeout,
+    default_http_request_timeout,
     default_status_expiration_period,
     default_status_polling_period,
-    default_console_monitor_poll_period,
-    default_console_monitor_max_msgs,
-    default_console_monitor_max_lines,
 )
-
 from ..api_docstrings import _doc_REManagerAPI_HTTP
+from ..api_threads import API_Threads_Mixin
+from ..comm_threads import ReManagerComm_HTTP_Threads
 
 
 class REManagerAPI(ReManagerComm_HTTP_Threads, API_Threads_Mixin):

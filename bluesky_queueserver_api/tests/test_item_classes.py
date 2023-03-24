@@ -1,13 +1,14 @@
 import copy
 import pprint
-import pytest
 import re
 
-from bluesky_queueserver_api import BItem, BPlan, BFunc, BInst
+import pytest
 
+from bluesky_queueserver_api import BFunc, BInst, BItem, BPlan
 
 # ======================================================================================
 #                               BItem
+
 
 # fmt: off
 @pytest.mark.parametrize("item_args, item_kwargs", [

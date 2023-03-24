@@ -1,19 +1,26 @@
 import asyncio
 import getpass
-import pytest
+import os
+import pprint
 import re
 import threading
 import time as ttime
 from pathlib import Path
-import os
-import pprint
 
-from .common import re_manager, re_manager_cmd  # noqa: F401
-from .common import fastapi_server, fastapi_server_fs  # noqa: F401
-from .common import _is_async, _select_re_manager_api, instantiate_re_api_class
+import pytest
 
-from bluesky_queueserver_api import BPlan, BFunc, WaitMonitor
+from bluesky_queueserver_api import BFunc, BPlan, WaitMonitor
 from bluesky_queueserver_api._defaults import default_user_group
+
+from .common import (  # noqa: F401
+    _is_async,
+    _select_re_manager_api,
+    fastapi_server,
+    fastapi_server_fs,
+    instantiate_re_api_class,
+    re_manager,
+    re_manager_cmd,
+)
 
 _user, _user_group = "Test User", default_user_group
 
@@ -3072,7 +3079,6 @@ lines
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
 def test_console_monitor_01(re_manager_cmd, fastapi_server, read_timeout, option, library, protocol):  # noqa: F811
-
     script = _script1
     expected_output = _script1_output
 
@@ -3086,7 +3092,6 @@ def test_console_monitor_01(re_manager_cmd, fastapi_server, read_timeout, option
         assert status["worker_environment_exists"] == worker_environment_exists
 
     if not _is_async(library):
-
         RM = instantiate_re_api_class(rm_api_class)
 
         RM.environment_open()
@@ -3145,7 +3150,6 @@ def test_console_monitor_01(re_manager_cmd, fastapi_server, read_timeout, option
     else:
 
         async def testing():
-
             RM = instantiate_re_api_class(rm_api_class)
 
             await RM.environment_open()
@@ -3217,7 +3221,6 @@ def test_console_monitor_02(re_manager_cmd, fastapi_server, library, protocol): 
     rm_api_class = _select_re_manager_api(protocol, library)
 
     if not _is_async(library):
-
         RM = instantiate_re_api_class(rm_api_class)
 
         RM.console_monitor.enable()
@@ -3240,7 +3243,6 @@ def test_console_monitor_02(re_manager_cmd, fastapi_server, library, protocol): 
     else:
 
         async def testing():
-
             RM = instantiate_re_api_class(rm_api_class)
 
             RM.console_monitor.enable()
@@ -3276,7 +3278,6 @@ def test_console_monitor_03(re_manager_cmd, fastapi_server, pause_before_enable,
     rm_api_class = _select_re_manager_api(protocol, library)
 
     if not _is_async(library):
-
         RM = instantiate_re_api_class(rm_api_class)
 
         RM.console_monitor.enable()
@@ -3302,7 +3303,6 @@ def test_console_monitor_03(re_manager_cmd, fastapi_server, pause_before_enable,
     else:
 
         async def testing():
-
             RM = instantiate_re_api_class(rm_api_class)
 
             RM.console_monitor.enable()
@@ -3340,7 +3340,6 @@ def test_console_monitor_04(re_manager_cmd, fastapi_server, library, protocol): 
     rm_api_class = _select_re_manager_api(protocol, library)
 
     if not _is_async(library):
-
         RM = instantiate_re_api_class(rm_api_class)
 
         RM.console_monitor.enable()
@@ -3359,7 +3358,6 @@ def test_console_monitor_04(re_manager_cmd, fastapi_server, library, protocol): 
     else:
 
         async def testing():
-
             RM = instantiate_re_api_class(rm_api_class)
 
             RM.console_monitor.enable()
@@ -3411,7 +3409,6 @@ def test_console_monitor_05(
     re_manager_cmd(params)
 
     if not _is_async(library):
-
         RM = instantiate_re_api_class(rm_api_class)
 
         RM.console_monitor.enable()
@@ -3440,7 +3437,6 @@ def test_console_monitor_05(
     else:
 
         async def testing():
-
             RM = instantiate_re_api_class(rm_api_class)
 
             RM.console_monitor.enable()
@@ -3536,7 +3532,6 @@ def test_console_monitor_06(re_manager_cmd, fastapi_server, library, protocol, n
     else:
 
         async def testing():
-
             RM = instantiate_re_api_class(rm_api_class)
 
             check_resp(await RM.environment_open())
@@ -3644,7 +3639,6 @@ def test_console_monitor_07(
     else:
 
         async def testing():
-
             RM = instantiate_re_api_class(rm_api_class, **params)
 
             RM.console_monitor.enable()
@@ -3752,7 +3746,6 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
     else:
 
         async def testing():
-
             RM = instantiate_re_api_class(rm_api_class)
 
             RM.console_monitor.enable()
@@ -3813,6 +3806,7 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
 # ====================================================================================================
 #                                     Locking RE Manager
 # ====================================================================================================
+
 
 # fmt: off
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])

@@ -1,17 +1,16 @@
-from ..api_threads import API_Threads_Mixin
-from ..comm_threads import ReManagerComm_ZMQ_Threads
 from .._defaults import (
     default_allow_request_fail_exceptions,
-    default_zmq_request_timeout_recv,
-    default_zmq_request_timeout_send,
-    default_console_monitor_poll_timeout,
-    default_console_monitor_max_msgs,
     default_console_monitor_max_lines,
+    default_console_monitor_max_msgs,
+    default_console_monitor_poll_timeout,
     default_status_expiration_period,
     default_status_polling_period,
+    default_zmq_request_timeout_recv,
+    default_zmq_request_timeout_send,
 )
-
 from ..api_docstrings import _doc_REManagerAPI_ZMQ
+from ..api_threads import API_Threads_Mixin
+from ..comm_threads import ReManagerComm_ZMQ_Threads
 
 
 class REManagerAPI(ReManagerComm_ZMQ_Threads, API_Threads_Mixin):

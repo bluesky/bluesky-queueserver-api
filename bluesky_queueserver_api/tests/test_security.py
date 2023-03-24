@@ -1,11 +1,11 @@
 import asyncio
 import pprint
-import pytest
 import time as ttime
 
-from .common import re_manager, re_manager_cmd  # noqa: F401
+import pytest
+
 from .common import fastapi_server_fs  # noqa: F401
-from .common import _is_async, _select_re_manager_api
+from .common import _is_async, _select_re_manager_api, re_manager, re_manager_cmd  # noqa: F401
 
 
 # fmt: off
@@ -133,7 +133,6 @@ def test_ReManagerAPI_authorization_api_key_01(
     else:
 
         async def testing():
-
             RM = rm_api_class()
             RM.set_authorization_key(api_key=api_key, token=None, refresh_token=None)
 
