@@ -1394,26 +1394,35 @@ def test_queue_mode_set_01(re_manager, fastapi_server, protocol, library):  # no
         assert resp["success"] is True
         assert resp["msg"] == ""
 
-    def check_status(status, loop_mode):
+    def check_status(status, loop_mode, ignore_failures):
         assert status["plan_queue_mode"]["loop"] == loop_mode
+        assert status["plan_queue_mode"]["ignore_failures"] == ignore_failures
 
     if not _is_async(library):
         RM = instantiate_re_api_class(rm_api_class)
-        check_status(RM.status(), False)
+        check_status(RM.status(), False, False)
         check_resp(RM.queue_mode_set(loop=True))
-        check_status(RM.status(), True)
+        check_status(RM.status(), True, False)
         check_resp(RM.queue_mode_set(loop=False))
-        check_status(RM.status(), False)
+        check_status(RM.status(), False, False)
+        check_resp(RM.queue_mode_set(ignore_failures=True))
+        check_status(RM.status(), False, True)
+        check_resp(RM.queue_mode_set(ignore_failures=False))
+        check_status(RM.status(), False, False)
         RM.close()
     else:
 
         async def testing():
             RM = instantiate_re_api_class(rm_api_class)
-            check_status(await RM.status(), False)
+            check_status(await RM.status(), False, False)
             check_resp(await RM.queue_mode_set(loop=True))
-            check_status(await RM.status(), True)
+            check_status(await RM.status(), True, False)
             check_resp(await RM.queue_mode_set(loop=False))
-            check_status(await RM.status(), False)
+            check_status(await RM.status(), False, False)
+            check_resp(await RM.queue_mode_set(ignore_failures=True))
+            check_status(await RM.status(), False, True)
+            check_resp(await RM.queue_mode_set(ignore_failures=False))
+            check_status(await RM.status(), False, False)
             await RM.close()
 
         asyncio.run(testing())
@@ -1433,26 +1442,27 @@ def test_queue_mode_set_02(re_manager, fastapi_server, protocol, library):  # no
         assert resp["success"] is True
         assert resp["msg"] == ""
 
-    def check_status(status, loop_mode):
+    def check_status(status, loop_mode, ignore_failures):
         assert status["plan_queue_mode"]["loop"] == loop_mode
+        assert status["plan_queue_mode"]["ignore_failures"] == ignore_failures
 
     if not _is_async(library):
         RM = instantiate_re_api_class(rm_api_class)
-        check_status(RM.status(), False)
-        check_resp(RM.queue_mode_set(mode={"loop": True}))
-        check_status(RM.status(), True)
+        check_status(RM.status(), False, False)
+        check_resp(RM.queue_mode_set(mode={"loop": True, "ignore_failures": True}))
+        check_status(RM.status(), True, True)
         check_resp(RM.queue_mode_set(mode="default"))
-        check_status(RM.status(), False)
+        check_status(RM.status(), False, False)
         RM.close()
     else:
 
         async def testing():
             RM = instantiate_re_api_class(rm_api_class)
-            check_status(await RM.status(), False)
-            check_resp(await RM.queue_mode_set(mode={"loop": True}))
-            check_status(await RM.status(), True)
+            check_status(await RM.status(), False, False)
+            check_resp(await RM.queue_mode_set(mode={"loop": True, "ignore_failures": True}))
+            check_status(await RM.status(), True, True)
             check_resp(await RM.queue_mode_set(mode="default"))
-            check_status(await RM.status(), False)
+            check_status(await RM.status(), False, False)
             await RM.close()
 
         asyncio.run(testing())

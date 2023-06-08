@@ -1249,6 +1249,10 @@ _doc_api_queue_mode_set = """
         ignored if ``mode`` kwarg is passed.
     loop: boolean
         Turns LOOP mode ON and OFF
+    ignore_failures: boolean
+        Tells the manager to handle failed plans as successful. If the mode is enabled,
+        the manager proceeds to execution of the next plan in the queue even if
+        the previous plan fails. The mode is disabled by default.
     lock_key: str or None (optional)
         The lock key enables access to the API when RE Manager queue is locked.
         If the parameter is not ``None``, the key overrides the current lock key set by
