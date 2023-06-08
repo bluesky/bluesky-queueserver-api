@@ -281,6 +281,10 @@ class API_Threads_Mixin(API_Base):
         # Docstring is maintained separately
         return self.status(reload=reload)
 
+    def config_get(self):
+        # Docstring is maintained separately
+        return self.send_request(method="config_get")
+
     def wait_for_idle(self, *, timeout=default_wait_timeout, monitor=None):
         # Docstring is maintained separately
         def condition(status):

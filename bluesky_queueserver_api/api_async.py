@@ -286,6 +286,10 @@ class API_Async_Mixin(API_Base):
         # Docstring is maintained separately
         return await self.status(reload=reload)
 
+    async def config_get(self):
+        # Docstring is maintained separately
+        return await self.send_request(method="config_get")
+
     async def wait_for_idle(self, *, timeout=default_wait_timeout, monitor=None):
         # Docstring is maintained separately
 

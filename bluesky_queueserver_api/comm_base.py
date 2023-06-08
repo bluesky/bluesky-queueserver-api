@@ -22,6 +22,7 @@ from ._defaults import (
 rest_api_method_map = {
     "ping": ("GET", "/api/ping"),
     "status": ("GET", "/api/status"),
+    "config_get": ("GET", "/api/config/get"),
     "queue_start": ("POST", "/api/queue/start"),
     "queue_stop": ("POST", "/api/queue/stop"),
     "queue_stop_cancel": ("POST", "/api/queue/stop/cancel"),
