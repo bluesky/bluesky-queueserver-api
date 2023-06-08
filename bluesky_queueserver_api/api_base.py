@@ -422,6 +422,14 @@ class API_Base:
         self._add_lock_key(request_params, lock_key)
         return request_params
 
+    def _prepare_queue_autostart(self, *, enable, lock_key):
+        """
+        Prepare parameters for ``queue_autostart``.
+        """
+        request_params = {"enable": bool(enable)}
+        self._add_lock_key(request_params, lock_key)
+        return request_params
+
     def _prepare_queue_mode_set(self, **kwargs):
         """
         Prepare parameters for ``queue_mode_set`` operation.

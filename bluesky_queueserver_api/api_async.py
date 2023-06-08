@@ -433,6 +433,12 @@ class API_Async_Mixin(API_Base):
         request_params = self._prepare_queue_clear(lock_key=lock_key)
         return await self.send_request(method="queue_clear", params=request_params)
 
+    async def queue_autostart(self, enable, *, lock_key=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_queue_autostart(enable=enable, lock_key=lock_key)
+        self._clear_status_timestamp()
+        return await self.send_request(method="queue_autostart", params=request_params)
+
     async def queue_mode_set(self, **kwargs):
         # Docstring is maintained separately
         request_params = self._prepare_queue_mode_set(**kwargs)

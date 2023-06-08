@@ -1384,6 +1384,45 @@ def test_queue_clear_01(re_manager, fastapi_server, protocol, library):  # noqa:
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
+def test_queue_autostart_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+    """
+    ``queue_autostart``: basic test
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
+
+    def check_status(status, autostart):
+        assert status["queue_autostart_enabled"] == autostart
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+        check_status(RM.status(), False)
+        check_resp(RM.queue_autostart(True))
+        check_status(RM.status(), True)
+        check_resp(RM.queue_autostart(enable=False))
+        check_status(RM.status(), False)
+        RM.close()
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+            check_status(await RM.status(), False)
+            check_resp(await RM.queue_autostart(True))
+            check_status(await RM.status(), True)
+            check_resp(await RM.queue_autostart(enable=False))
+            check_status(await RM.status(), False)
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
 def test_queue_mode_set_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
     """
     ``queue_mode_set``: basic test

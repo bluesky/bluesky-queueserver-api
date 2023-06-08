@@ -27,6 +27,7 @@ rest_api_method_map = {
     "queue_stop_cancel": ("POST", "/api/queue/stop/cancel"),
     "queue_get": ("GET", "/api/queue/get"),
     "queue_clear": ("POST", "/api/queue/clear"),
+    "queue_autostart": ("POST", "/api/queue/autostart"),
     "queue_mode_set": ("POST", "/api/queue/mode/set"),
     "queue_item_add": ("POST", "/api/queue/item/add"),
     "queue_item_add_batch": ("POST", "/api/queue/item/add/batch"),

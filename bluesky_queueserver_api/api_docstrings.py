@@ -1232,6 +1232,53 @@ _doc_api_queue_clear = """
         await RM.queue_clear()
 """
 
+_doc_api_queue_autostart = """
+    Enable/disable autostart mode. In autostart mode, the queue execution is
+    automatically started whenever the queue contains items and the manager
+    and the environment are ready to execute plans. Client applications may
+    check if the manager is in autostart mode using queue_autostart_enabled
+    parameter of RE Manager status (see ‘status’ API).
+
+    Parameters
+    ----------
+    enable: boolean
+        Pass *True* to enable the 'autostart' mode and *False* to disable it.
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager queue is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
+
+    Returns
+    -------
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+    Raises
+    ------
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
+        All exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.queue_autostart(True)
+        RM.queue_autostart(False)
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.queue_autostart(True)
+        await RM.queue_autostart(False)
+"""
+
 
 _doc_api_queue_mode_set = """
     Set parameters that define the mode of plan queue execution. Only the parameters
