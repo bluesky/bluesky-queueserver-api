@@ -398,6 +398,42 @@ _doc_api_ping = """
     failed (e.g. timeout occurred). See documentation for ``status`` API.
 """
 
+_doc_api_config_get = """
+    Returns config info for RE Manager.
+
+    Returns
+    -------
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``config``: *dict* with the key **'ip_connect_info'** (a dictionary with
+          IP kernel connect info if the kernel is currently running in the IP worker,
+          empty dictionary otherwise).
+
+    Raises
+    ------
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
+        All exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ and HTTP)
+        config_info = RM.config_get()["config"]["ip_config_info"]
+
+        # Asynchronous code (0MQ and HTTP)
+        config_info = (await RM.config_get())["config"]["ip_config_info"]
+"""
+
+
 _doc_api_wait_for_idle = """
     Wait for RE Manager to return to ``"idle"`` state. The function performs
     periodic polling of RE Manager status and returns when ``manager_state``
