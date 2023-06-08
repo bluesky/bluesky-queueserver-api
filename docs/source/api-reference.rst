@@ -92,6 +92,7 @@ API for controlling RE Manager
 
     zmq.REManagerAPI.status
     zmq.REManagerAPI.ping
+    zmq.REManagerAPI.config_get
     zmq.REManagerAPI.wait_for_idle
     zmq.REManagerAPI.wait_for_idle_or_paused
 
@@ -143,6 +144,7 @@ API for management of RE Queue
     zmq.REManagerAPI.queue_stop
     zmq.REManagerAPI.queue_stop_cancel
     zmq.REManagerAPI.queue_mode_set
+    zmq.REManagerAPI.queue_autostart
 
 API for Controlling RE History
 ******************************

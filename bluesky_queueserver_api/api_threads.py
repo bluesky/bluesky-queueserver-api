@@ -5,6 +5,7 @@ import time as ttime
 from ._defaults import default_wait_timeout
 from .api_base import API_Base, WaitMonitor
 from .api_docstrings import (
+    _doc_api_config_get,
     _doc_api_devices_allowed,
     _doc_api_devices_existing,
     _doc_api_environment_close,
@@ -33,6 +34,7 @@ from .api_docstrings import (
     _doc_api_ping,
     _doc_api_plans_allowed,
     _doc_api_plans_existing,
+    _doc_api_queue_autostart,
     _doc_api_queue_clear,
     _doc_api_queue_get,
     _doc_api_queue_mode_set,
@@ -281,6 +283,10 @@ class API_Threads_Mixin(API_Base):
         # Docstring is maintained separately
         return self.status(reload=reload)
 
+    def config_get(self):
+        # Docstring is maintained separately
+        return self.send_request(method="config_get")
+
     def wait_for_idle(self, *, timeout=default_wait_timeout, monitor=None):
         # Docstring is maintained separately
         def condition(status):
@@ -424,6 +430,12 @@ class API_Threads_Mixin(API_Base):
         self._clear_status_timestamp()
         request_params = self._prepare_queue_clear(lock_key=lock_key)
         return self.send_request(method="queue_clear", params=request_params)
+
+    def queue_autostart(self, enable, *, lock_key=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_queue_autostart(enable=enable, lock_key=lock_key)
+        self._clear_status_timestamp()
+        return self.send_request(method="queue_autostart", params=request_params)
 
     def queue_mode_set(self, **kwargs):
         # Docstring is maintained separately
@@ -707,6 +719,7 @@ class API_Threads_Mixin(API_Base):
 
 API_Threads_Mixin.status.__doc__ = _doc_api_status
 API_Threads_Mixin.ping.__doc__ = _doc_api_ping
+API_Threads_Mixin.config_get.__doc__ = _doc_api_config_get
 API_Threads_Mixin.wait_for_idle.__doc__ = _doc_api_wait_for_idle
 API_Threads_Mixin.wait_for_idle_or_paused.__doc__ = _doc_api_wait_for_idle_or_paused
 API_Threads_Mixin.item_add.__doc__ = _doc_api_item_add
@@ -723,6 +736,7 @@ API_Threads_Mixin.queue_stop.__doc__ = _doc_api_queue_stop
 API_Threads_Mixin.queue_stop_cancel.__doc__ = _doc_api_queue_stop_cancel
 API_Threads_Mixin.queue_clear.__doc__ = _doc_api_queue_clear
 API_Threads_Mixin.queue_mode_set.__doc__ = _doc_api_queue_mode_set
+API_Threads_Mixin.queue_autostart.__doc__ = _doc_api_queue_autostart
 API_Threads_Mixin.queue_get.__doc__ = _doc_api_queue_get
 API_Threads_Mixin.history_get.__doc__ = _doc_api_history_get
 API_Threads_Mixin.history_clear.__doc__ = _doc_api_history_clear

@@ -22,11 +22,13 @@ from ._defaults import (
 rest_api_method_map = {
     "ping": ("GET", "/api/ping"),
     "status": ("GET", "/api/status"),
+    "config_get": ("GET", "/api/config/get"),
     "queue_start": ("POST", "/api/queue/start"),
     "queue_stop": ("POST", "/api/queue/stop"),
     "queue_stop_cancel": ("POST", "/api/queue/stop/cancel"),
     "queue_get": ("GET", "/api/queue/get"),
     "queue_clear": ("POST", "/api/queue/clear"),
+    "queue_autostart": ("POST", "/api/queue/autostart"),
     "queue_mode_set": ("POST", "/api/queue/mode/set"),
     "queue_item_add": ("POST", "/api/queue/item/add"),
     "queue_item_add_batch": ("POST", "/api/queue/item/add/batch"),
