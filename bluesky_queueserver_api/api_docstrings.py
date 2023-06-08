@@ -1806,7 +1806,7 @@ _doc_api_environment_open = """
 
 _doc_api_environment_close = """
     Close RE Worker environment. The API request only initiates the operation of
-    opening an environment. The request fails if a plans or foreground task is running.
+    closing an environment. The request fails if a plans or foreground task is running.
     If the request is accepted, the ``manager_state`` status parameter is expected
     to change to ``closing_environment`` and then back to ``idle`` when the operation
     is completed. Check ``worker_environment_exists`` status flag to see if
