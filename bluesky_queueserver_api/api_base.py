@@ -613,6 +613,17 @@ class API_Base:
         self._add_lock_key(request_params, lock_key)
         return request_params
 
+    def _prepare_environment_update(self, *, interrupt_task, interrupt_plan, lock_key):
+        """
+        Prepare parameters for ``environment_update``
+        """
+        request_params = {}
+        self._add_request_param(request_params, "interrupt_task", interrupt_task)
+        self._add_request_param(request_params, "interrupt_plan", interrupt_plan)
+        self._add_lock_key(request_params, lock_key)
+        return request_params
+
+
     def _prepare_script_upload(self, *, script, update_lists, update_re, run_in_background, lock_key):
         """
         Prepare parameters for ``script_upload``
