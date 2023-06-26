@@ -407,12 +407,10 @@ class API_Threads_Mixin(API_Base):
         request_params = self._prepare_environment_control(lock_key=lock_key)
         return self.send_request(method="environment_destroy", params=request_params)
 
-    def environment_update(self, *, interrupt_task=None, interrupt_plan=None, lock_key=None):
+    def environment_update(self, *, run_in_background=None, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        request_params = self._prepare_environment_update(
-            interrupt_task=interrupt_task, interrupt_plan=interrupt_plan, lock_key=lock_key
-        )
+        request_params = self._prepare_environment_update(run_in_background=run_in_background, lock_key=lock_key)
         return self.send_request(method="environment_update", params=request_params)
 
     def queue_start(self, *, lock_key=None):
@@ -719,6 +717,14 @@ class API_Threads_Mixin(API_Base):
         request_params = self._prepare_unlock(lock_key=lock_key)
         self._clear_status_timestamp()
         return self.send_request(method="unlock", params=request_params)
+
+    def kernel_interrupt(self, *, interrupt_task=None, interrupt_plan=None, lock_key=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_kernel_interrupt(
+            interrupt_task=interrupt_task, interrupt_plan=interrupt_plan, lock_key=lock_key
+        )
+        self._clear_status_timestamp()
+        return self.send_request(method="kernel_interrupt", params=request_params)
 
     # =======================================================================================
     #                            Console monitor

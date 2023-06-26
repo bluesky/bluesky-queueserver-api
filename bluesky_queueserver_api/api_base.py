@@ -613,16 +613,14 @@ class API_Base:
         self._add_lock_key(request_params, lock_key)
         return request_params
 
-    def _prepare_environment_update(self, *, interrupt_task, interrupt_plan, lock_key):
+    def _prepare_environment_update(self, *, run_in_background, lock_key):
         """
         Prepare parameters for ``environment_update``
         """
         request_params = {}
-        self._add_request_param(request_params, "interrupt_task", interrupt_task)
-        self._add_request_param(request_params, "interrupt_plan", interrupt_plan)
+        self._add_request_param(request_params, "run_in_background", run_in_background)
         self._add_lock_key(request_params, lock_key)
         return request_params
-
 
     def _prepare_script_upload(self, *, script, update_lists, update_re, run_in_background, lock_key):
         """
@@ -784,6 +782,16 @@ class API_Base:
             return {_: task_status[_] for _ in task_uids if task_status[_] in completed_status_vals}
         else:
             return {}
+
+    def _prepare_kernel_interrupt(self, *, interrupt_task, interrupt_plan, lock_key):
+        """
+        Prepare parameters for ``kernel_interrupt``
+        """
+        request_params = {}
+        self._add_request_param(request_params, "interrupt_task", interrupt_task)
+        self._add_request_param(request_params, "interrupt_plan", interrupt_plan)
+        self._add_lock_key(request_params, lock_key)
+        return request_params
 
     def _validate_lock_key(self, lock_key):
         # lock key may be a non-empty string or None
