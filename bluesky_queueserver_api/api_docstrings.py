@@ -433,6 +433,30 @@ _doc_api_config_get = """
         config_info = (await RM.config_get())["config"]["ip_config_info"]
 """
 
+_doc_api_wait_for_condition = """
+    The function periodically checks RE Manager status and blocks until the ``condition``
+    callable returns *True* and can be used to wait for arbitrary conditions based on
+    RE Manager status and/or user-provided data. The function is raises ``WaitTimeoutError``
+    if timeout occurs. The timeout can not be infinite, but may be set to
+    a large value if necessary.
+
+    Parameters
+    ----------
+    condition: callable
+        Condition is a function (any callable), which is waiting for the returned
+        status to satisfy certain fixed set of conditions. For example, the function
+        which waits for the manager status to become idle:
+
+        .. code-block:: python
+
+            def condition(status):
+                return (status["manager_state"] == "idle")
+
+    timeout: float
+        timeout in seconds
+    monitor: WaitMonitor or None
+        Reference to wait monitor
+"""
 
 _doc_api_wait_for_idle = """
     Wait for RE Manager to return to ``"idle"`` state. The function performs
@@ -489,6 +513,14 @@ _doc_api_wait_for_idle = """
 _doc_api_wait_for_idle_or_paused = """
     Wait for RE Manager to switch to ``idle`` or ``paused`` state. See the documentation
     for ``wait_for_idle`` API.
+"""
+
+_doc_api_wait_for_idle_or_running = """
+    Wait for RE Manager to switch to ``idle`` or ``executing_queue`` state. The API
+    may be useful when working with the queue in AUTOSTART mode. For example, if AUTOSTART
+    mode is enabled and then the environment is opened, the manager is switched to ``idle``
+    mode if the queue is empty or ``executing_queue`` mode if the queue contains plans.
+    See the documentation for ``wait_for_idle`` API.
 """
 
 _doc_api_item_add = """
@@ -1982,6 +2014,63 @@ _doc_api_environment_destroy = """
         await RM.environment_destroy()
 """
 
+
+_doc_api_environment_update = """
+
+    Update RE Worker environment cache. Updates the state and cached parameters of
+    the worker environment based on contents of the worker namespace. The updated
+    parameters include the reference to the Run Engine and lists of existing and
+    available plans and devices. The API is intended for using in cases when
+    users bypass RE Manager to modify contents of the namespace, for example
+    by connecting directly to IPython kernel (IPython mode) and executing
+    commands via Jupyter Console. Use returned ``task_uid`` to monitor execution of
+    the update task and check the update results.
+
+    Parameters
+    ----------
+
+    run_in_background: boolean (optional, default False)
+        Set this parameter *True* to execute the update in the background thread (while a plan or
+        another foreground task is running). Generally, it is recommended to run the update
+        in the main thread. **Developers of data acquisition workflows and/or user specific code
+        are responsible for thread safety.**
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
+
+    Returns
+    -------
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+        - ``task_uid``: UID of the task that runs the update.
+
+    Raises
+    ------
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
+        All exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.environment_update()
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.environment_update()
+"""
+
+
 _doc_api_script_upload = r"""
     Upload and execute script in RE Worker namespace. The script may add, modify or
     replace objects defined in the namespace, including plans and devices. Dynamic
@@ -2597,6 +2686,60 @@ _doc_api_re_halt = """
         All exceptions raised by ``send_request`` API.
 """
 
+_doc_api_kernel_interrupt = """
+
+    Send interrupt request (Ctrl-C) to the running IPython kernel. The API call fails if
+    IPython mode is not enabled or environment does not exist (there is no IPython kernel).
+    The API is primarily intended to interrupt tasks started by clients connected directly
+    to IPython kernel (such as Jupyter Console) and by default it fails if the manager is
+    executing a plan or a task. Set the ``interrupt_task`` and/or ``interrupt_plan``
+    parameters *True* in order to be able to interrupt a running foreground task or a plan
+    (single interrupt initiates deferred pause, two consecutive interrupts initiate immediate
+    pause). Note, that ``re_pause`` API is more reliable method of pausing the plan.
+
+    Parameters
+    ----------
+
+    interrupt_task: boolean (optional, default False)
+        Allow the API request to interrupt a task started by RE Manager.
+    interrupt_plan: boolean (optional, default False)
+        Allow the API request to interrupt a running plan (started by RE Manager or directly via
+        Jupyter Console).
+    lock_key: str or None (optional)
+        The lock key enables access to the API when RE Manager environment is locked.
+        If the parameter is not ``None``, the key overrides the current lock key set by
+        ``REManagerAPI.lock_key``. See documentation on ``REMangerAPI.lock()`` for
+        more information. Default: ``None``.
+
+    Returns
+    -------
+    response: dict
+
+        Dictionary keys:
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager
+          or operation failed.
+
+    Raises
+    ------
+    RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
+        All exceptions raised by ``send_request`` API.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        # Synchronous code (0MQ, HTTP)
+        RM.kernel_interrupt()
+
+        # Asynchronous code (0MQ, HTTP)
+        await RM.kernel_interrupt()
+"""
+
+
 _doc_api_lock = """
     Lock RE Manager with a lock key. The lock may prevent other users (or clients) from modifying
     the environment, starting plans or tasks or editing the queue. The API is intented to
@@ -2633,6 +2776,7 @@ _doc_api_lock = """
     - REManagerAPI.environment_open()
     - REManagerAPI.environment_close()
     - REManagerAPI.environment_destroy()
+    - REManagerAPI.environment_update()
     - REManagerAPI.queue_start()
     - REManagerAPI.queue_stop()
     - REManagerAPI.queue_stop_cancel()
@@ -2642,6 +2786,7 @@ _doc_api_lock = """
     - REManagerAPI.re_stop()
     - REManagerAPI.re_abort()
     - REManagerAPI.re_halt()
+    - REManagerAPI.kernel_interrupt()
     - REManagerAPI.script_upload()
     - REManagerAPI.function_execute()
 
@@ -2649,6 +2794,7 @@ _doc_api_lock = """
     affects the following API:
 
     - REManagerAPI.queue_mode_set()
+    - REManagerAPI.queue_autostart()
     - REManagerAPI.item_add()
     - REManagerAPI.item_add_batch()
     - REManagerAPI.item_update()

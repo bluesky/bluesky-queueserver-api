@@ -44,6 +44,7 @@ rest_api_method_map = {
     "environment_open": ("POST", "/api/environment/open"),
     "environment_close": ("POST", "/api/environment/close"),
     "environment_destroy": ("POST", "/api/environment/destroy"),
+    "environment_update": ("POST", "/api/environment/update"),
     "re_pause": ("POST", "/api/re/pause"),
     "re_resume": ("POST", "/api/re/resume"),
     "re_stop": ("POST", "/api/re/stop"),
@@ -64,6 +65,7 @@ rest_api_method_map = {
     "lock": ("POST", "/api/lock"),
     "unlock": ("POST", "/api/unlock"),
     "lock_info": ("GET", "/api/lock/info"),
+    "kernel_interrupt": ("POST", "/api/kernel/interrupt"),
     "manager_stop": ("POST", "/api/manager/stop"),
     "manager_kill": ("POST", "/api/test/manager/kill"),
     # API available only in HTTP version

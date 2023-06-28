@@ -95,6 +95,8 @@ API for controlling RE Manager
     zmq.REManagerAPI.config_get
     zmq.REManagerAPI.wait_for_idle
     zmq.REManagerAPI.wait_for_idle_or_paused
+    zmq.REManagerAPI.wait_for_idle_or_running
+    zmq.REManagerAPI.wait_for_condition
 
 API for controlling RE Environment
 **********************************
@@ -106,6 +108,7 @@ API for controlling RE Environment
     zmq.REManagerAPI.environment_open
     zmq.REManagerAPI.environment_close
     zmq.REManagerAPI.environment_destroy
+    zmq.REManagerAPI.environment_update
 
 API for Monitoring Available Resources
 **************************************
@@ -202,6 +205,15 @@ API for controlling Run Engine
     zmq.REManagerAPI.re_stop
     zmq.REManagerAPI.re_abort
     zmq.REManagerAPI.re_halt
+
+API for controlling IPython kernel
+**********************************
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    zmq.REManagerAPI.kernel_interrupt
 
 API for monitoring console output of RE manager
 ***********************************************

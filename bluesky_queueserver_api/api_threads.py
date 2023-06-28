@@ -11,6 +11,7 @@ from .api_docstrings import (
     _doc_api_environment_close,
     _doc_api_environment_destroy,
     _doc_api_environment_open,
+    _doc_api_environment_update,
     _doc_api_function_execute,
     _doc_api_history_clear,
     _doc_api_history_get,
@@ -23,6 +24,7 @@ from .api_docstrings import (
     _doc_api_item_remove,
     _doc_api_item_remove_batch,
     _doc_api_item_update,
+    _doc_api_kernel_interrupt,
     _doc_api_lock,
     _doc_api_lock_all,
     _doc_api_lock_environment,
@@ -53,8 +55,10 @@ from .api_docstrings import (
     _doc_api_task_status,
     _doc_api_unlock,
     _doc_api_wait_for_completed_task,
+    _doc_api_wait_for_condition,
     _doc_api_wait_for_idle,
     _doc_api_wait_for_idle_or_paused,
+    _doc_api_wait_for_idle_or_running,
 )
 
 
@@ -287,6 +291,10 @@ class API_Threads_Mixin(API_Base):
         # Docstring is maintained separately
         return self.send_request(method="config_get")
 
+    def wait_for_condition(self, condition, *, timeout=default_wait_timeout, monitor=None):
+        # Docstring is maintained separately
+        self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
+
     def wait_for_idle(self, *, timeout=default_wait_timeout, monitor=None):
         # Docstring is maintained separately
         def condition(status):
@@ -298,6 +306,13 @@ class API_Threads_Mixin(API_Base):
         # Docstring is maintained separately
         def condition(status):
             return status["manager_state"] in ("paused", "idle")
+
+        self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
+
+    def wait_for_idle_or_running(self, *, timeout=default_wait_timeout, monitor=None):
+        # Docstring is maintained separately
+        def condition(status):
+            return status["manager_state"] in ("executing_queue", "idle")
 
         self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
 
@@ -406,6 +421,12 @@ class API_Threads_Mixin(API_Base):
         self._clear_status_timestamp()
         request_params = self._prepare_environment_control(lock_key=lock_key)
         return self.send_request(method="environment_destroy", params=request_params)
+
+    def environment_update(self, *, run_in_background=None, lock_key=None):
+        # Docstring is maintained separately
+        self._clear_status_timestamp()
+        request_params = self._prepare_environment_update(run_in_background=run_in_background, lock_key=lock_key)
+        return self.send_request(method="environment_update", params=request_params)
 
     def queue_start(self, *, lock_key=None):
         # Docstring is maintained separately
@@ -712,6 +733,14 @@ class API_Threads_Mixin(API_Base):
         self._clear_status_timestamp()
         return self.send_request(method="unlock", params=request_params)
 
+    def kernel_interrupt(self, *, interrupt_task=None, interrupt_plan=None, lock_key=None):
+        # Docstring is maintained separately
+        request_params = self._prepare_kernel_interrupt(
+            interrupt_task=interrupt_task, interrupt_plan=interrupt_plan, lock_key=lock_key
+        )
+        self._clear_status_timestamp()
+        return self.send_request(method="kernel_interrupt", params=request_params)
+
     # =======================================================================================
     #                            Console monitor
     # =======================================================================================
@@ -720,8 +749,10 @@ class API_Threads_Mixin(API_Base):
 API_Threads_Mixin.status.__doc__ = _doc_api_status
 API_Threads_Mixin.ping.__doc__ = _doc_api_ping
 API_Threads_Mixin.config_get.__doc__ = _doc_api_config_get
+API_Threads_Mixin.wait_for_condition.__doc__ = _doc_api_wait_for_condition
 API_Threads_Mixin.wait_for_idle.__doc__ = _doc_api_wait_for_idle
 API_Threads_Mixin.wait_for_idle_or_paused.__doc__ = _doc_api_wait_for_idle_or_paused
+API_Threads_Mixin.wait_for_idle_or_running.__doc__ = _doc_api_wait_for_idle_or_running
 API_Threads_Mixin.item_add.__doc__ = _doc_api_item_add
 API_Threads_Mixin.item_add_batch.__doc__ = _doc_api_item_add_batch
 API_Threads_Mixin.item_update.__doc__ = _doc_api_item_update
@@ -750,6 +781,7 @@ API_Threads_Mixin.permissions_set.__doc__ = _doc_api_permissions_set
 API_Threads_Mixin.environment_open.__doc__ = _doc_api_environment_open
 API_Threads_Mixin.environment_close.__doc__ = _doc_api_environment_close
 API_Threads_Mixin.environment_destroy.__doc__ = _doc_api_environment_destroy
+API_Threads_Mixin.environment_update.__doc__ = _doc_api_environment_update
 API_Threads_Mixin.script_upload.__doc__ = _doc_api_script_upload
 API_Threads_Mixin.function_execute.__doc__ = _doc_api_function_execute
 API_Threads_Mixin.task_status.__doc__ = _doc_api_task_status
@@ -761,6 +793,7 @@ API_Threads_Mixin.re_resume.__doc__ = _doc_api_re_resume
 API_Threads_Mixin.re_stop.__doc__ = _doc_api_re_stop
 API_Threads_Mixin.re_abort.__doc__ = _doc_api_re_abort
 API_Threads_Mixin.re_halt.__doc__ = _doc_api_re_halt
+API_Threads_Mixin.kernel_interrupt.__doc__ = _doc_api_kernel_interrupt
 API_Threads_Mixin.lock.__doc__ = _doc_api_lock
 API_Threads_Mixin.lock_environment.__doc__ = _doc_api_lock_environment
 API_Threads_Mixin.lock_queue.__doc__ = _doc_api_lock_queue
