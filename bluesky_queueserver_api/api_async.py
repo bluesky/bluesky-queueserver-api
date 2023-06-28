@@ -57,6 +57,8 @@ from .api_docstrings import (
     _doc_api_wait_for_completed_task,
     _doc_api_wait_for_idle,
     _doc_api_wait_for_idle_or_paused,
+    _doc_api_wait_for_condition,
+    _doc_api_wait_for_idle_or_running,
 )
 
 
@@ -758,8 +760,10 @@ class API_Async_Mixin(API_Base):
 API_Async_Mixin.status.__doc__ = _doc_api_status
 API_Async_Mixin.ping.__doc__ = _doc_api_ping
 API_Async_Mixin.config_get.__doc__ = _doc_api_config_get
+API_Async_Mixin.wait_for_condition.__doc__ = _doc_api_wait_for_condition
 API_Async_Mixin.wait_for_idle.__doc__ = _doc_api_wait_for_idle
 API_Async_Mixin.wait_for_idle_or_paused.__doc__ = _doc_api_wait_for_idle_or_paused
+API_Async_Mixin.wait_for_idle_or_running.__doc__ = _doc_api_wait_for_idle_or_running
 API_Async_Mixin.item_add.__doc__ = _doc_api_item_add
 API_Async_Mixin.item_add_batch.__doc__ = _doc_api_item_add_batch
 API_Async_Mixin.item_update.__doc__ = _doc_api_item_update

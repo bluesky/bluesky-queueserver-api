@@ -95,6 +95,8 @@ API for controlling RE Manager
     zmq.REManagerAPI.config_get
     zmq.REManagerAPI.wait_for_idle
     zmq.REManagerAPI.wait_for_idle_or_paused
+    zmq.REManagerAPI.wait_for_idle_or_running
+    zmq.REManagerAPI.wait_for_condition
 
 API for controlling RE Environment
 **********************************

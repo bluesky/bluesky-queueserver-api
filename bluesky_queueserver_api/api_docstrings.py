@@ -433,6 +433,30 @@ _doc_api_config_get = """
         config_info = (await RM.config_get())["config"]["ip_config_info"]
 """
 
+_doc_api_wait_for_condition = """
+    The function periodically checks RE Manager status and blocks until the ``condition`` 
+    callable returns *True* and can be used to wait for arbitrary conditions based on
+    RE Manager status and/or user-provided data. The function is raises ``WaitTimeoutError`` 
+    if timeout occurs. The timeout can not be infinite, but may be set to 
+    a large value if necessary.
+
+    Parameters
+    ----------
+    condition: callable
+        Condition is a function (any callable), which is waiting for the returned
+        status to satisfy certain fixed set of conditions. For example, the function
+        which waits for the manager status to become idle:
+
+        .. code-block:: python
+
+            def condition(status):
+                return (status["manager_state"] == "idle")
+
+    timeout: float
+        timeout in seconds
+    monitor: WaitMonitor or None
+        Reference to wait monitor
+"""
 
 _doc_api_wait_for_idle = """
     Wait for RE Manager to return to ``"idle"`` state. The function performs
@@ -489,6 +513,14 @@ _doc_api_wait_for_idle = """
 _doc_api_wait_for_idle_or_paused = """
     Wait for RE Manager to switch to ``idle`` or ``paused`` state. See the documentation
     for ``wait_for_idle`` API.
+"""
+
+_doc_api_wait_for_idle_or_running = """
+    Wait for RE Manager to switch to ``idle`` or ``executing_queue`` state. The API
+    may be useful when working with the queue in AUTOSTART mode. For example, if AUTOSTART 
+    mode is enabled and then the environment is opened, the manager is switched to ``idle``
+    mode if the queue is empty or ``executing_queue`` mode if the queue contains plans.  
+    See the documentation for ``wait_for_idle`` API.
 """
 
 _doc_api_item_add = """
