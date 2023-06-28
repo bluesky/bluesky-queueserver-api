@@ -55,9 +55,9 @@ from .api_docstrings import (
     _doc_api_task_status,
     _doc_api_unlock,
     _doc_api_wait_for_completed_task,
+    _doc_api_wait_for_condition,
     _doc_api_wait_for_idle,
     _doc_api_wait_for_idle_or_paused,
-    _doc_api_wait_for_condition,
     _doc_api_wait_for_idle_or_running,
 )
 

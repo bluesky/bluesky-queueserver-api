@@ -434,10 +434,10 @@ _doc_api_config_get = """
 """
 
 _doc_api_wait_for_condition = """
-    The function periodically checks RE Manager status and blocks until the ``condition`` 
+    The function periodically checks RE Manager status and blocks until the ``condition``
     callable returns *True* and can be used to wait for arbitrary conditions based on
-    RE Manager status and/or user-provided data. The function is raises ``WaitTimeoutError`` 
-    if timeout occurs. The timeout can not be infinite, but may be set to 
+    RE Manager status and/or user-provided data. The function is raises ``WaitTimeoutError``
+    if timeout occurs. The timeout can not be infinite, but may be set to
     a large value if necessary.
 
     Parameters
@@ -517,9 +517,9 @@ _doc_api_wait_for_idle_or_paused = """
 
 _doc_api_wait_for_idle_or_running = """
     Wait for RE Manager to switch to ``idle`` or ``executing_queue`` state. The API
-    may be useful when working with the queue in AUTOSTART mode. For example, if AUTOSTART 
+    may be useful when working with the queue in AUTOSTART mode. For example, if AUTOSTART
     mode is enabled and then the environment is opened, the manager is switched to ``idle``
-    mode if the queue is empty or ``executing_queue`` mode if the queue contains plans.  
+    mode if the queue is empty or ``executing_queue`` mode if the queue contains plans.
     See the documentation for ``wait_for_idle`` API.
 """
 
