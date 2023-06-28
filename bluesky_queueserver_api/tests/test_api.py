@@ -6,6 +6,7 @@ import re
 import threading
 import time as ttime
 from pathlib import Path
+from threading import Thread
 
 import pytest
 
@@ -18,6 +19,7 @@ from .common import (  # noqa: F401
     fastapi_server,
     fastapi_server_fs,
     instantiate_re_api_class,
+    ip_kernel_simple_client,
     re_manager,
     re_manager_cmd,
 )
@@ -3039,6 +3041,152 @@ def test_re_pause_01(re_manager, fastapi_server, protocol, library, pause_option
             check_resp(await RM.environment_close())
             await RM.wait_for_idle()
             check_status(await RM.status(), 0 if continue_option in ("resume", "stop") else 1, 1, "idle")
+
+            await RM.close()
+
+        asyncio.run(testing())
+
+
+_busy_script_01 = """
+import time
+for n in range(30):
+    time.sleep(1)
+"""
+
+
+# fmt: off
+@pytest.mark.parametrize("option", ["ip_client", "script", "plan"])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_kernel_interrupt_01(
+    re_manager_cmd, fastapi_server, protocol, library, ip_kernel_simple_client, option  # noqa: F811
+):
+    """
+    "REManagerAPI.kernel_interrupt():  basic test.
+    """
+    re_manager_cmd(["--use-ipython-kernel=ON"])  # Start in IPython mode
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def check_status(status, ip_kernel_state, ip_kernel_captured):
+        # Returned status may be used to do additional checks
+        if isinstance(ip_kernel_state, (str, type(None))):
+            ip_kernel_state = [ip_kernel_state]
+        assert status["ip_kernel_state"] in ip_kernel_state
+        assert status["ip_kernel_captured"] == ip_kernel_captured
+        return status
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        RM.environment_open()
+        RM.wait_for_idle(timeout=20)
+
+        kernel_int_params = {}
+
+        if option == "ip_client":
+            ip_kernel_simple_client.start()
+            ip_kernel_simple_client.execute_with_check(_busy_script_01)
+        elif option == "script":
+            RM.script_upload(script=_busy_script_01)
+            kernel_int_params.update(dict(interrupt_task=True))
+        elif option == "plan":
+            RM.item_add(BPlan("count", ["det1"], num=5, delay=1))
+            status = RM.status()
+            assert status["items_in_queue"] == 1
+            RM.queue_start()
+            kernel_int_params.update(dict(interrupt_plan=True))
+        else:
+            assert False, f"Unknown option {option!r}"
+
+        ttime.sleep(2)
+
+        ip_kernel_captured = option != "ip_client"
+        status = RM.status()
+        check_status(status, "busy", ip_kernel_captured)
+
+        resp4 = RM.kernel_interrupt(**kernel_int_params)
+        assert resp4["success"] is True, pprint.pformat(resp4)
+        assert resp4["msg"] == "", pprint.pformat(resp4)
+
+        if option == "ip_client":
+
+            def condition(s):
+                return s["ip_kernel_state"] == "idle"
+
+            RM.wait_for_condition(condition, timeout=3)
+        else:
+            RM.wait_for_idle_or_paused(timeout=3)
+
+        status = RM.status()
+        check_status(status, "idle", False)
+        if status["re_state"] == "paused":
+            RM.re_stop()
+            RM.wait_for_idle(timeout=10)
+
+        RM.environment_close()
+        RM.wait_for_idle(timeout=10)
+
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            await RM.environment_open()
+            await RM.wait_for_idle(timeout=20)
+
+            kernel_int_params = {}
+
+            if option == "ip_client":
+                # 'ip_kernel_simple_client.start()' creates another asyncio loop,
+                #   so it needs to be run in a separate thread.
+                def f():
+                    ip_kernel_simple_client.start()
+                    ip_kernel_simple_client.execute_with_check(_busy_script_01)
+
+                th = Thread(target=f, daemon=True)
+                th.start()
+            elif option == "script":
+                await RM.script_upload(script=_busy_script_01)
+                kernel_int_params.update(dict(interrupt_task=True))
+            elif option == "plan":
+                await RM.item_add(BPlan("count", ["det1"], num=5, delay=1))
+                status = await RM.status()
+                assert status["items_in_queue"] == 1
+                await RM.queue_start()
+                kernel_int_params.update(dict(interrupt_plan=True))
+            else:
+                assert False, f"Unknown option {option!r}"
+
+            ttime.sleep(2)
+
+            ip_kernel_captured = option != "ip_client"
+            status = await RM.status()
+            check_status(status, "busy", ip_kernel_captured)
+
+            resp4 = await RM.kernel_interrupt(**kernel_int_params)
+            assert resp4["success"] is True, pprint.pformat(resp4)
+            assert resp4["msg"] == "", pprint.pformat(resp4)
+
+            if option == "ip_client":
+
+                def condition(s):
+                    return s["ip_kernel_state"] == "idle"
+
+                await RM.wait_for_condition(condition, timeout=3)
+            else:
+                await RM.wait_for_idle_or_paused(timeout=3)
+
+            status = await RM.status()
+            check_status(status, "idle", False)
+            if status["re_state"] == "paused":
+                await RM.re_stop()
+                await RM.wait_for_idle(timeout=10)
+
+            await RM.environment_close()
+            await RM.wait_for_idle(timeout=10)
 
             await RM.close()
 

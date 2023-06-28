@@ -289,6 +289,10 @@ class API_Threads_Mixin(API_Base):
         # Docstring is maintained separately
         return self.send_request(method="config_get")
 
+    def wait_for_condition(self, condition, *, timeout=default_wait_timeout, monitor=None):
+        # Docstring is maintained separately
+        self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
+
     def wait_for_idle(self, *, timeout=default_wait_timeout, monitor=None):
         # Docstring is maintained separately
         def condition(status):
@@ -300,6 +304,13 @@ class API_Threads_Mixin(API_Base):
         # Docstring is maintained separately
         def condition(status):
             return status["manager_state"] in ("paused", "idle")
+
+        self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
+
+    def wait_for_idle_or_running(self, *, timeout=default_wait_timeout, monitor=None):
+        # Docstring is maintained separately
+        def condition(status):
+            return status["manager_state"] in ("executing_queue", "idle")
 
         self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
 

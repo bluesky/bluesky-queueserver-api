@@ -5,6 +5,7 @@ from bluesky_httpserver.tests.conftest import (  # noqa: F401
     setup_server_with_config_file,
 )
 from bluesky_queueserver.manager.tests.common import (  # noqa: F401
+    ip_kernel_simple_client,
     re_manager,
     re_manager_cmd,
     set_qserver_zmq_address,

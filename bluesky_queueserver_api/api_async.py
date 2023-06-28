@@ -294,6 +294,10 @@ class API_Async_Mixin(API_Base):
         # Docstring is maintained separately
         return await self.send_request(method="config_get")
 
+    async def wait_for_condition(self, condition, *, timeout=default_wait_timeout, monitor=None):
+        # Docstring is maintained separately
+        await self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
+
     async def wait_for_idle(self, *, timeout=default_wait_timeout, monitor=None):
         # Docstring is maintained separately
 
@@ -306,6 +310,13 @@ class API_Async_Mixin(API_Base):
         # Docstring is maintained separately
         def condition(status):
             return status["manager_state"] in ("paused", "idle")
+
+        await self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
+
+    async def wait_for_idle_or_running(self, *, timeout=default_wait_timeout, monitor=None):
+        # Docstring is maintained separately
+        def condition(status):
+            return status["manager_state"] in ("executing_queue", "idle")
 
         await self._wait_for_condition(condition=condition, timeout=timeout, monitor=monitor)
 
