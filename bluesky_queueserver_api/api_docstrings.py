@@ -1985,23 +1985,23 @@ _doc_api_environment_destroy = """
 
 _doc_api_environment_update = """
 
-    Update RE Worker environment cache. Updates the state and cached parameters of 
-    the worker environment based on contents of the worker namespace. The updated 
-    parameters include the reference to the Run Engine and lists of existing and 
-    available plans and devices. The API is intended for using in cases when 
-    users bypass RE Manager to modify contents of the namespace, for example 
-    by connecting directly to IPython kernel (IPython mode) and executing 
-    commands via Jupyter Console. Use returned ``task_uid`` to monitor execution of 
+    Update RE Worker environment cache. Updates the state and cached parameters of
+    the worker environment based on contents of the worker namespace. The updated
+    parameters include the reference to the Run Engine and lists of existing and
+    available plans and devices. The API is intended for using in cases when
+    users bypass RE Manager to modify contents of the namespace, for example
+    by connecting directly to IPython kernel (IPython mode) and executing
+    commands via Jupyter Console. Use returned ``task_uid`` to monitor execution of
     the update task and check the update results.
 
     Parameters
     ----------
 
     run_in_background: boolean (optional, default False)
-        Set this parameter *True* to execute the update in the background thread (while a plan or 
-        another foreground task is running). Generally, it is recommended to run the update 
-        in the main thread. **Developers of data acquisition workflows and/or user specific code 
-        are responsible for thread safety.**    
+        Set this parameter *True* to execute the update in the background thread (while a plan or
+        another foreground task is running). Generally, it is recommended to run the update
+        in the main thread. **Developers of data acquisition workflows and/or user specific code
+        are responsible for thread safety.**
     lock_key: str or None (optional)
         The lock key enables access to the API when RE Manager environment is locked.
         If the parameter is not ``None``, the key overrides the current lock key set by
@@ -2663,7 +2663,7 @@ _doc_api_kernel_interrupt = """
     executing a plan or a task. Set the ``interrupt_task`` and/or ``interrupt_plan``
     parameters *True* in order to be able to interrupt a running foreground task or a plan
     (single interrupt initiates deferred pause, two consecutive interrupts initiate immediate
-    pause). Note, that ``re_pause`` API is more reliable method of pausing the plan. 
+    pause). Note, that ``re_pause`` API is more reliable method of pausing the plan.
 
     Parameters
     ----------
