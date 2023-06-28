@@ -2,6 +2,18 @@
 Release History
 ===============
 
+v0.0.10 (2023-06-28)
+====================
+
+Added
+-----
+
+- New API: ``config_get``, ``queue_autostart``, ``environment_update``, ``kernel_interrupt``,
+  ``wait_for_condition``, ``wait_for_idle_or_running``.
+
+- ``queue_mode_set`` API can now set ``ignore_failures`` mode.
+
+
 v0.0.9 (2022-10-02)
 ===================
 
