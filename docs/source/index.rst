@@ -13,3 +13,4 @@ Bluesky Queue Server API Documentation
    usage
    api-reference
    release-history
+   contributing
