@@ -1,7 +1,8 @@
 [tool.black]
 line-length = 115
+target-version = ['py310']
 include = '\.pyi?$'
-exclude = '''
+force-exclude = '''
 /(
     \.git
   | \.hg
