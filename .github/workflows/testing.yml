@@ -8,6 +8,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8, 3.9, "3.10", "3.11"]
+        group: [1, 2, 3]
       fail-fast: false
 
     env:
@@ -53,7 +54,7 @@ jobs:
 
     - name: Test with pytest
       run: |
-        pytest --cov=./ --cov-report=xml --cov-report=term-missing -vv
+        pytest --cov=./ --cov-report=xml --cov-report=term-missing -vv --splits 3 --group ${{ matrix.group }}
 
     - name: Check if coverage data needs to be uploaded to Codecov
       # if: github.repository_owner == 'bluesky' && github.ref == 'refs/heads/main' && matrix.python-version == 3.9
