@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
         group: [1, 2, 3]
       fail-fast: false
 
@@ -50,6 +50,7 @@ jobs:
 
         pip install .
         pip install -r requirements-dev.txt
+        pip install bluesky==1.11.0
         pip list
 
     - name: Test with pytest
