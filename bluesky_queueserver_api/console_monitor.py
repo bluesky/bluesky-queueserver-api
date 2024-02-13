@@ -606,8 +606,7 @@ class ConsoleMonitor_HTTP_Threads(_ConsoleMonitor_Threads):
         self._console_output_last_msg_uid = ""
         super().__init__(max_msgs=max_msgs, max_lines=max_lines)
 
-    def _monitor_init(self):
-        ...
+    def _monitor_init(self): ...
 
     def _thread_receive_msgs(self):
         with self._monitor_thread_lock:
@@ -763,8 +762,7 @@ class ConsoleMonitor_HTTP_Async(_ConsoleMonitor_Async):
         self._console_output_last_msg_uid = ""
         super().__init__(max_msgs=max_msgs, max_lines=max_lines)
 
-    def _monitor_init(self):
-        ...
+    def _monitor_init(self): ...
 
     async def _task_receive_msgs(self):
         async with self._monitor_task_lock:
