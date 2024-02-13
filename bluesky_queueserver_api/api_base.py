@@ -11,12 +11,10 @@ from .comm_base import RequestParameterError
 from .item import BItem
 
 
-class WaitTimeoutError(TimeoutError):
-    ...
+class WaitTimeoutError(TimeoutError): ...
 
 
-class WaitCancelError(TimeoutError):
-    ...
+class WaitCancelError(TimeoutError): ...
 
 
 class WaitMonitor:
