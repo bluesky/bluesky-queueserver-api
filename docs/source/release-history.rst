@@ -2,6 +2,12 @@
 Release History
 ===============
 
+v0.0.11 (2024-07-25)
+====================
+
+Maintenance release. There are no API changes.
+
+
 v0.0.10 (2023-06-28)
 ====================
 
