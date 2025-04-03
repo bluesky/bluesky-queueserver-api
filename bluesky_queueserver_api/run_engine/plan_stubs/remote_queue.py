@@ -1,12 +1,12 @@
 from bluesky import Msg
-from .. import WaitMonitor, BItem, BPlan, BInst
-from ..zmq import REManagerAPI as ZMQ_REManagerAPI
-from ..zmq.aio import REManagerAPI as ZMQ_REManagerAPI_AIO
-from ..http import REManagerAPI as HTTP_REManagerAPI
-from ..http.aio import REManagerAPI as HTTP_REManagerAPI_AIO
+from bluesky_queueserver_api import WaitMonitor, BItem, BPlan, BInst
+from bluesky_queueserver_api.zmq import REManagerAPI as ZMQ_REManagerAPI
+from bluesky_queueserver_api.zmq.aio import REManagerAPI as ZMQ_REManagerAPI_AIO
+from bluesky_queueserver_api.http import REManagerAPI as HTTP_REManagerAPI
+from bluesky_queueserver_api.http.aio import REManagerAPI as HTTP_REManagerAPI_AIO
 from typing import Callable, List, Iterable
 
-from .re_command import REMOTE_QUEUE_COMMAND
+from ..re_command import REMOTE_QUEUE_COMMAND
 
 UnionREManagerAPI = (
         ZMQ_REManagerAPI | ZMQ_REManagerAPI_AIO | HTTP_REManagerAPI | HTTP_REManagerAPI_AIO
