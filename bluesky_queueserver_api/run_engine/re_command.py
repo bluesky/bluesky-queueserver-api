@@ -9,10 +9,11 @@ from ..console_monitor import (
     ConsoleMonitor_ZMQ_Threads,
     ConsoleMonitor_ZMQ_Async,
     ConsoleMonitor_HTTP_Threads,
-    ConsoleMonitor_HTTP_Async
+    ConsoleMonitor_HTTP_Async,
 )
 
 REMOTE_QUEUE_COMMAND = "remote_queue"
+
 
 def is_allowed_type(obj: Any) -> bool:
     if isinstance(
@@ -56,8 +57,6 @@ async def remote_queue_coroutine(msg: Msg) -> Any:
                 setattr(run_manager, attr_name, args[0])
         result = attr
     else:
-        raise ValueError(
-            f"The attribute '{attr_name}' is neither callable nor a property of REManagerAPI."
-        )
+        raise ValueError(f"The attribute '{attr_name}' is neither callable nor a property of REManagerAPI.")
 
     return result
