@@ -1,7 +1,7 @@
 import asyncio
 import copy
-import time as ttime
 import threading
+import time as ttime
 import weakref
 
 from ._defaults import default_wait_timeout
