@@ -92,7 +92,7 @@ class API_Async_Mixin(API_Base):
         try:
             # 'get_running_loop' is raising RuntimeError if running outside async context
             self._loop = asyncio.get_running_loop()
-            self._init_async()
+            self._init_tasks()
         except RuntimeError:
             if loop is None:
                 loop = asyncio.new_event_loop()
@@ -101,10 +101,10 @@ class API_Async_Mixin(API_Base):
             self._th = _ensure_event_loop_running(loop)
 
             asyncio.set_event_loop(self.loop)
-            f = asyncio.run_coroutine_threadsafe(self._init_asyn_from_loop(), self.loop)
+            f = asyncio.run_coroutine_threadsafe(self._init_async(), self.loop)
             f.result(timeout=None)
 
-    def _init_async(self):
+    def _init_tasks(self):
         self._event_status_get = asyncio.Event()
         self._status_get_cb = []  # A list of callbacks
         self._status_get_cb_lock = asyncio.Lock()
@@ -114,8 +114,8 @@ class API_Async_Mixin(API_Base):
         self._task_status_get = asyncio.create_task(self._task_status_get_func())
         self._task_status_get = asyncio.create_task(self._task_status_poll_func())
 
-    async def _init_asyn_from_loop(self):
-        self._init_async()
+    async def _init_async(self):
+        self._init_tasks()
 
     @property
     def loop(self):
