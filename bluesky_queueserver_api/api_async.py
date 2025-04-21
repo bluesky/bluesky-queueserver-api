@@ -1,6 +1,7 @@
 import asyncio
 import copy
 import time as ttime
+import weakref
 
 from ._defaults import default_wait_timeout
 from .api_base import API_Base, WaitMonitor
@@ -62,12 +63,41 @@ from .api_docstrings import (
 )
 
 
+def _ensure_event_loop_running(loop):
+    """
+    Run an asyncio event loop forever on a background thread.
+
+    This is idempotent: if the loop is already running nothing will be done.
+    """
+    if not loop.is_running():
+        th = threading.Thread(target=loop.run_forever, daemon=True, name="bluesky-queueserver-api")
+        th.start()
+        _ensure_event_loop_running.loop_to_thread[loop] = th
+    else:
+        th = _ensure_event_loop_running.loop_to_thread.get(loop, None)
+    return th
+
+
+_ensure_event_loop_running.loop_to_thread = weakref.WeakKeyDictionary()  # type: ignore
+
+
 class API_Async_Mixin(API_Base):
-    def __init__(self, *, status_expiration_period, status_polling_period):
+    def __init__(self, *, status_expiration_period, status_polling_period, loop):
         super().__init__(
-            status_expiration_period=status_expiration_period, status_polling_period=status_polling_period
+            status_expiration_period=status_expiration_period,
+            status_polling_period=status_polling_period,
         )
 
+        if loop is None:
+            loop = asyncio.new_event_loop()
+        self._loop = loop
+        weakref.ref(loop)
+        self._th = _ensure_event_loop_running(loop)
+
+        f = asyncio.run_coroutine_threadsafe(self._init_async(), self.loop)
+        f.result(timeout=None)
+
+    async def _init_async(self):
         self._event_status_get = asyncio.Event()
         self._status_get_cb = []  # A list of callbacks
         self._status_get_cb_lock = asyncio.Lock()
@@ -76,6 +106,10 @@ class API_Async_Mixin(API_Base):
         # Use tasks instead of threads
         self._task_status_get = asyncio.create_task(self._task_status_get_func())
         self._task_status_get = asyncio.create_task(self._task_status_poll_func())
+
+    @property
+    def loop(self):
+        return self._loop
 
     async def _event_wait(self, event, timeout):
         """
