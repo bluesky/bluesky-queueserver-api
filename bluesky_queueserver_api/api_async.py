@@ -1,6 +1,7 @@
 import asyncio
 import copy
 import time as ttime
+import threading
 import weakref
 
 from ._defaults import default_wait_timeout
@@ -88,16 +89,22 @@ class API_Async_Mixin(API_Base):
             status_polling_period=status_polling_period,
         )
 
-        if loop is None:
-            loop = asyncio.new_event_loop()
-        self._loop = loop
-        weakref.ref(loop)
-        self._th = _ensure_event_loop_running(loop)
+        try:
+            # 'get_running_loop' is raising RuntimeError if running outside async context
+            self._loop = asyncio.get_running_loop()
+            self._init_async()
+        except RuntimeError:
+            if loop is None:
+                loop = asyncio.new_event_loop()
+            self._loop = loop
+            weakref.ref(loop)
+            self._th = _ensure_event_loop_running(loop)
 
-        f = asyncio.run_coroutine_threadsafe(self._init_async(), self.loop)
-        f.result(timeout=None)
+            asyncio.set_event_loop(self.loop)
+            f = asyncio.run_coroutine_threadsafe(self._init_asyn_from_loop(), self.loop)
+            f.result(timeout=None)
 
-    async def _init_async(self):
+    def _init_async(self):
         self._event_status_get = asyncio.Event()
         self._status_get_cb = []  # A list of callbacks
         self._status_get_cb_lock = asyncio.Lock()
@@ -106,6 +113,9 @@ class API_Async_Mixin(API_Base):
         # Use tasks instead of threads
         self._task_status_get = asyncio.create_task(self._task_status_get_func())
         self._task_status_get = asyncio.create_task(self._task_status_poll_func())
+
+    async def _init_asyn_from_loop(self):
+        self._init_async()
 
     @property
     def loop(self):
@@ -227,7 +237,7 @@ class API_Async_Mixin(API_Base):
         event = asyncio.Event()
 
         def cb(status):
-            nonlocal timeout_occurred, wait_cancelled, event, monitor
+            nonlocal timeout_occurred, wait_cancelled
             result = condition(status) if status else False
 
             if not result and (monitor.time_elapsed > monitor.timeout):
@@ -298,7 +308,7 @@ class API_Async_Mixin(API_Base):
         event = asyncio.Event()
 
         def cb(status, ex):
-            nonlocal _status, _ex, event
+            nonlocal _status, _ex
             _status, _ex = status, ex
             event.set()
 

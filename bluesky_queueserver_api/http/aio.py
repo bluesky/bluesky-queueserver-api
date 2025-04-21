@@ -44,7 +44,7 @@ class REManagerAPI(ReManagerComm_HTTP_Async, API_Async_Mixin):
             self,
             status_expiration_period=status_expiration_period,
             status_polling_period=status_polling_period,
-            loop=loop
+            loop=loop,
         )
 
 
