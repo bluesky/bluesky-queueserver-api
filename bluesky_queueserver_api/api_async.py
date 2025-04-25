@@ -64,24 +64,6 @@ from .api_docstrings import (
 )
 
 
-def _ensure_event_loop_running(loop):
-    """
-    Run an asyncio event loop forever on a background thread.
-
-    This is idempotent: if the loop is already running nothing will be done.
-    """
-    if not loop.is_running():
-        th = threading.Thread(target=loop.run_forever, daemon=True, name="bluesky-queueserver-api")
-        th.start()
-        _ensure_event_loop_running.loop_to_thread[loop] = th
-    else:
-        th = _ensure_event_loop_running.loop_to_thread.get(loop, None)
-    return th
-
-
-_ensure_event_loop_running.loop_to_thread = weakref.WeakKeyDictionary()  # type: ignore
-
-
 class API_Async_Mixin(API_Base):
     def __init__(self, *, status_expiration_period, status_polling_period, loop):
         super().__init__(
@@ -91,18 +73,21 @@ class API_Async_Mixin(API_Base):
 
         try:
             # 'get_running_loop' is raising RuntimeError if running outside async context
-            self._loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
             self._init_tasks()
         except RuntimeError:
             if loop is None:
-                loop = asyncio.new_event_loop()
-            self._loop = loop
-            weakref.ref(loop)
-            self._th = _ensure_event_loop_running(loop)
+                raise RuntimeError(
+                    "Failed to instantiate REManagerAPI class. 'loop' argument is required if REManagerAPI "
+                    "is instantiated outside asyncio context."
+                )
+            if not loop.is_running():
+                raise RuntimeError(
+                    "Failed to instantiate REManagerAPI class. The provided 'loop' is not running."
+                )
 
-            asyncio.set_event_loop(self.loop)
-            f = asyncio.run_coroutine_threadsafe(self._init_async(), self.loop)
-            f.result(timeout=None)
+            f = asyncio.run_coroutine_threadsafe(self._init_tasks_async(), self.loop)
+            f.result(timeout=10)  # Use long timeout.
 
     def _init_tasks(self):
         self._event_status_get = asyncio.Event()
@@ -114,7 +99,7 @@ class API_Async_Mixin(API_Base):
         self._task_status_get = asyncio.create_task(self._task_status_get_func())
         self._task_status_get = asyncio.create_task(self._task_status_poll_func())
 
-    async def _init_async(self):
+    async def _init_tasks_async(self):
         self._init_tasks()
 
     @property
