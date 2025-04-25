@@ -102,10 +102,6 @@ class API_Async_Mixin(API_Base):
     async def _init_tasks_async(self):
         self._init_tasks()
 
-    @property
-    def loop(self):
-        return self._loop
-
     async def _event_wait(self, event, timeout):
         """
         Emulation of ``threading.Event.wait`` with timeout.
