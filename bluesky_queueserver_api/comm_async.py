@@ -20,12 +20,13 @@ from .console_monitor import ConsoleMonitor_HTTP_Async, ConsoleMonitor_ZMQ_Async
 
 
 class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
-    def _init_console_monitor(self):
+    def _init_console_monitor(self, loop):
         self._console_monitor = ConsoleMonitor_ZMQ_Async(
             zmq_info_addr=self._zmq_info_addr,
             poll_timeout=self._console_monitor_poll_timeout,
             max_msgs=self._console_monitor_max_msgs,
             max_lines=self._console_monitor_max_lines,
+            loop=loop,
         )
 
     def _create_client(
@@ -65,12 +66,13 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
 
 
 class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
-    def _init_console_monitor(self):
+    def _init_console_monitor(self, loop):
         self._console_monitor = ConsoleMonitor_HTTP_Async(
             parent=self,
             poll_period=self._console_monitor_poll_period,
             max_msgs=self._console_monitor_max_msgs,
             max_lines=self._console_monitor_max_lines,
+            loop=loop,
         )
 
     def _create_client(self, http_server_uri, timeout):

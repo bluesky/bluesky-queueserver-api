@@ -1,5 +1,6 @@
 import asyncio
 import queue
+import sys
 import threading
 import time as ttime
 import uuid
@@ -655,9 +656,19 @@ class ConsoleMonitor_HTTP_Threads(_ConsoleMonitor_Threads):
 
 
 class _ConsoleMonitor_Async(_ConsoleMonitor):
-    def __init__(self, *, max_msgs, max_lines):
+    def __init__(self, *, max_msgs, max_lines, loop):
         self._msg_queue_max = max_msgs
-        self._msg_queue = asyncio.Queue(maxsize=max_msgs)
+        if sys.version_info.major == 3 and sys.version_info.minor >= 9:
+            self._msg_queue = asyncio.Queue(maxsize=max_msgs)
+        else:
+            # It is still possible that someone passes the value other then None to the
+            # loop when the object is instantiated in Python 3.9 or older.
+            try:
+                asyncio.get_running_loop()
+                loop = None
+            except RuntimeError:
+                pass
+            self._msg_queue = asyncio.Queue(maxsize=max_msgs, loop=loop)
 
         self._monitor_task = None  # Thread or asyncio task
         self._monitor_task_running = asyncio.Event()
@@ -701,10 +712,10 @@ class _ConsoleMonitor_Async(_ConsoleMonitor):
 class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
     # Docstring is maintained separately
 
-    def __init__(self, *, zmq_info_addr, poll_timeout, max_msgs, max_lines):
+    def __init__(self, *, zmq_info_addr, poll_timeout, max_msgs, max_lines, loop):
         self._zmq_subscribe_addr = zmq_info_addr
         self._monitor_poll_timeout = poll_timeout
-        super().__init__(max_msgs=max_msgs, max_lines=max_lines)
+        super().__init__(max_msgs=max_msgs, max_lines=max_lines, loop=loop)
 
     def _monitor_init(self):
         self._rco = ReceiveConsoleOutputAsync(
@@ -754,13 +765,13 @@ class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
 class ConsoleMonitor_HTTP_Async(_ConsoleMonitor_Async):
     # Docstring is maintained separately
 
-    def __init__(self, *, parent, poll_period, max_msgs, max_lines):
+    def __init__(self, *, parent, poll_period, max_msgs, max_lines, loop):
         # The parent class is must have ``_client`` attribute with
         #   active httpx client.
         self._parent = parent  # Reference to the parent class
         self._monitor_poll_period = poll_period
         self._console_output_last_msg_uid = ""
-        super().__init__(max_msgs=max_msgs, max_lines=max_lines)
+        super().__init__(max_msgs=max_msgs, max_lines=max_lines, loop=loop)
 
     def _monitor_init(self): ...
 

@@ -179,7 +179,7 @@ class ReManagerAPI_Base:
         """
         return self._console_monitor
 
-    def _init_console_monitor(self):
+    def _init_console_monitor(self, loop):
         raise NotImplementedError()
 
     @property
@@ -229,7 +229,7 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
             loop=loop,
         )
 
-        self._init_console_monitor()
+        self._init_console_monitor(loop=loop)
 
     def _create_client(
         self,
@@ -260,6 +260,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         console_monitor_max_msgs=default_console_monitor_max_msgs,
         console_monitor_max_lines=default_console_monitor_max_lines,
         request_fail_exceptions=default_allow_request_fail_exceptions,
+        loop=None,  # Used only in async implementation
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
 
@@ -292,7 +293,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
         self._client = self._create_client(http_server_uri=http_server_uri, timeout=self._timeout)
 
-        self._init_console_monitor()
+        self._init_console_monitor(loop=loop)
 
     def _create_client(self, http_server_uri, timeout):
         raise NotImplementedError()
