@@ -1,8 +1,6 @@
 import asyncio
 import copy
-import threading
 import time as ttime
-import weakref
 
 from ._defaults import default_wait_timeout
 from .api_base import API_Base, WaitMonitor
@@ -66,6 +64,7 @@ from .api_docstrings import (
 
 class API_Async_Mixin(API_Base):
     def __init__(self, *, status_expiration_period, status_polling_period, loop):
+
         super().__init__(
             status_expiration_period=status_expiration_period,
             status_polling_period=status_polling_period,
@@ -82,14 +81,13 @@ class API_Async_Mixin(API_Base):
                     "is instantiated outside asyncio context."
                 )
             if not loop.is_running():
-                raise RuntimeError(
-                    "Failed to instantiate REManagerAPI class. The provided 'loop' is not running."
-                )
+                raise RuntimeError("Failed to instantiate REManagerAPI class. The provided 'loop' is not running.")
 
-            f = asyncio.run_coroutine_threadsafe(self._init_tasks_async(), self.loop)
+            f = asyncio.run_coroutine_threadsafe(self._init_tasks_async(), loop)
             f.result(timeout=10)  # Use long timeout.
 
     def _init_tasks(self):
+
         self._event_status_get = asyncio.Event()
         self._status_get_cb = []  # A list of callbacks
         self._status_get_cb_lock = asyncio.Lock()

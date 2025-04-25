@@ -79,6 +79,46 @@ def test_instantiation_01(re_manager, fastapi_server, protocol, library):  # noq
 
 
 # fmt: off
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_instantiation_02(re_manager, fastapi_server, protocol):  # noqa: F811
+    """
+    ``REManagerAPI``: instantiation of classes. Check if ``set_user_name_to_login_name`` works as expected.
+    Check that ``user`` and ``user_group`` properties work properly.
+    """
+    rm_api_class = _select_re_manager_api(protocol, "ASYNC")
+    user_name = "Queue Server API User"
+    user_name_2 = getpass.getuser()
+
+    loop = asyncio.new_event_loop()
+    th = threading.Thread(target=loop.run_forever, daemon=True, name="bs-api-tests")
+    th.start()
+
+    RM = instantiate_re_api_class(rm_api_class, loop=loop)
+    assert RM.protocol == RM.Protocols(protocol)
+    assert RM.user == user_name
+    assert RM.user_group == default_user_group
+
+    RM.set_user_name_to_login_name()
+    assert RM.user == user_name_2
+
+    RM.user = "TestUser"
+    RM.user_group = "TestUserGroup"
+    assert RM.user == "TestUser"
+    assert RM.user_group == "TestUserGroup"
+
+    async def testing():
+
+        status = await RM.status()
+        assert status["manager_state"] == "idle"
+
+        await RM.close()
+
+    f = asyncio.run_coroutine_threadsafe(testing(), loop)
+    f.result(timeout=10)
+
+
+# fmt: off
 @pytest.mark.parametrize("api", ["status", "ping"])
 @pytest.mark.parametrize("reload", [None, False, True])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])

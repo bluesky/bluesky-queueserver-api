@@ -35,6 +35,7 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
         timeout_recv,
         timeout_send,
         zmq_public_key,
+        loop,
     ):
         return ZMQCommSendAsync(
             zmq_server_address=zmq_control_addr,
@@ -42,6 +43,7 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
             timeout_send=int(timeout_send * 1000),  # Convert to ms
             raise_exceptions=True,
             server_public_key=zmq_public_key,
+            loop=loop,
         )
 
     async def send_request(self, *, method, params=None):
