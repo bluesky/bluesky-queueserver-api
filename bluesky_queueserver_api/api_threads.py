@@ -188,7 +188,7 @@ class API_Threads_Mixin(API_Base):
         event = threading.Event()
 
         def cb(status):
-            nonlocal timeout_occurred, wait_cancelled, event, monitor
+            nonlocal timeout_occurred, wait_cancelled
             result = condition(status) if status else False
 
             if not result and (monitor.time_elapsed > monitor.timeout):
@@ -259,7 +259,7 @@ class API_Threads_Mixin(API_Base):
         event = threading.Event()
 
         def cb(status, ex):
-            nonlocal _status, _ex, event
+            nonlocal _status, _ex
             _status, _ex = status, ex
             event.set()
 

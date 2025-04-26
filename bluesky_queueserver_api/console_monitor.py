@@ -386,7 +386,7 @@ class _ConsoleMonitor:
 
         pattern_new_line = "\n"
         pattern_cr = "\r"
-        pattern_up_one_line = "\x1B\x5B\x41"  # ESC [#A
+        pattern_up_one_line = "\x1b\x5b\x41"  # ESC [#A
 
         patterns = {"new_line": pattern_new_line, "cr": pattern_cr, "one_line_up": pattern_up_one_line}
 

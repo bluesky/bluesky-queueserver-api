@@ -162,6 +162,12 @@ _doc_REManagerAPI_ZMQ = """
     status_polling_period: float
         Polling period for RE Manager status used by 'wait' operations,
         default value: 1 second
+    loop
+        Running asyncio event loop (only for async API). The parameter is
+        ignored if the object is instantiated in the asyncio context
+        (e.g. inside ``asyncio.run()``). The parameter is REQUIRED if
+        the object is instantiated outside the asyncio context.
+        Default: *None*.
 
     Examples
     --------
@@ -232,6 +238,13 @@ _doc_REManagerAPI_HTTP = """
     status_polling_period: float
         Polling period for RE Manager status used by 'wait' operations,
         default value: 1 second
+    loop
+        Running asyncio event loop (only for async API). The parameter is
+        ignored if the object is instantiated in the asyncio context
+        (e.g. inside ``asyncio.run()``). The parameter is REQUIRED if
+        the object is instantiated outside the asyncio context.
+        Default: *None*.
+
 
     Examples
     --------

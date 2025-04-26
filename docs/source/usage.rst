@@ -95,3 +95,38 @@ Asynchronous code:
         await RM.close()
 
     asyncio.run(run_single_plan())
+
+The asynchronous ``REManagerAPI`` class can be instantiated outside of the asyncio context. In this case,
+the reference to the running loop must be passed to the constructor. For example:
+
+.. code-block:: python
+
+    import asyncio
+    import threading
+    from bluesky_queueserver_api.zmq.aio import REManagerAPI
+
+    loop = asyncio.new_event_loop()
+    th = threading.Thread(target=loop.run_forever, daemon=True, name="bs-api-tests")
+    th.start()
+
+    RM = REManagerAPI(loop=loop)
+
+    async def communicate():
+        status = await RM.status()
+        assert status["manager_state"] == "idle"
+        await RM.close()
+
+    f = asyncio.run_coroutine_threadsafe(communicate(), loop)
+    f.result(timeout=10)
+
+Primary application of this feature is to allow instantiating REManagerAPI in Bluesky
+startup code and configure it to run in the event loop created by Bluesky Run Engine.
+This is required if the REManagerAPI is used from a Bluesky plan.
+
+.. code-block:: python
+
+    from bluesky_queueserver_api.zmq.aio import REManagerAPI
+    from bluesky import RunEngine
+
+    RE = RunEngine()
+    RM = REManagerAPI(loop=RE.loop)

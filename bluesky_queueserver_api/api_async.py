@@ -64,8 +64,10 @@ from .api_docstrings import (
 
 class API_Async_Mixin(API_Base):
     def __init__(self, *, status_expiration_period, status_polling_period):
+
         super().__init__(
-            status_expiration_period=status_expiration_period, status_polling_period=status_polling_period
+            status_expiration_period=status_expiration_period,
+            status_polling_period=status_polling_period,
         )
 
         self._event_status_get = asyncio.Event()
@@ -76,6 +78,18 @@ class API_Async_Mixin(API_Base):
         # Use tasks instead of threads
         self._task_status_get = asyncio.create_task(self._task_status_get_func())
         self._task_status_get = asyncio.create_task(self._task_status_poll_func())
+
+    def _validate_loop(self, loop):
+        """
+        Check if the loop is in valid state to instantiate the class outside asyncio context.
+        """
+        if loop is None:
+            raise RuntimeError(
+                "Failed to instantiate REManagerAPI class. 'loop' argument is required if REManagerAPI "
+                "is instantiated outside asyncio context."
+            )
+        if not loop.is_running():
+            raise RuntimeError("Failed to instantiate REManagerAPI class. The provided 'loop' is not running.")
 
     async def _event_wait(self, event, timeout):
         """
@@ -193,7 +207,7 @@ class API_Async_Mixin(API_Base):
         event = asyncio.Event()
 
         def cb(status):
-            nonlocal timeout_occurred, wait_cancelled, event, monitor
+            nonlocal timeout_occurred, wait_cancelled
             result = condition(status) if status else False
 
             if not result and (monitor.time_elapsed > monitor.timeout):
@@ -264,7 +278,7 @@ class API_Async_Mixin(API_Base):
         event = asyncio.Event()
 
         def cb(status, ex):
-            nonlocal _status, _ex, event
+            nonlocal _status, _ex
             _status, _ex = status, ex
             event.set()
 
