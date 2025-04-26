@@ -119,8 +119,9 @@ the reference to the running loop must be passed to the constructor. For example
     f = asyncio.run_coroutine_threadsafe(communicate(), loop)
     f.result(timeout=10)
 
-This feature is particularly useful if asyncio REManagerAPI is used from Bluesky plans and
-needs to use the event loop created by Bluesky Run Engine:
+Primary application of this feature is to allow instantiating REManagerAPI in Bluesky
+startup code and configure it to run in the event loop created by Bluesky Run Engine.
+This is required if the REManagerAPI is used from a Bluesky plan.
 
 .. code-block:: python
 
