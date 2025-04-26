@@ -100,6 +100,18 @@ class API_Async_Mixin(API_Base):
     async def _init_tasks_async(self):
         self._init_tasks()
 
+    def _validate_loop(self, loop):
+        """
+        Check if the loop is in valid state to instantiate the class outside asyncio context.
+        """
+        if loop is None:
+            raise RuntimeError(
+                "Failed to instantiate REManagerAPI class. 'loop' argument is required if REManagerAPI "
+                "is instantiated outside asyncio context."
+            )
+        if not loop.is_running():
+            raise RuntimeError("Failed to instantiate REManagerAPI class. The provided 'loop' is not running.")
+
     async def _event_wait(self, event, timeout):
         """
         Emulation of ``threading.Event.wait`` with timeout.
