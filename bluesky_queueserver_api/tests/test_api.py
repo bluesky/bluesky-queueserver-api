@@ -126,6 +126,32 @@ def test_instantiation_02(re_manager, fastapi_server, loop_source, protocol):  #
 
 
 # fmt: off
+@pytest.mark.parametrize("case", ["NO_LOOP", "NONE", "NOT_RUNNING"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_instantiation_03_fail(re_manager, fastapi_server, case, protocol):  # noqa: F811
+    """
+    ``REManagerAPI``: instantiation of classes. Check if ``set_user_name_to_login_name`` works as expected.
+    Check that ``user`` and ``user_group`` properties work properly.
+    """
+    rm_api_class = _select_re_manager_api(protocol, "ASYNC")
+
+    params = {}
+    msg = ""
+    if case == "NO_LOOP":
+        msg = "'loop' argument is required"
+    elif case == "NONE":
+        params["loop"] = None
+        msg = "'loop' argument is required"
+    elif case == "NOT_RUNNING":
+        params["loop"] = asyncio.new_event_loop()
+        msg = "The provided 'loop' is not running"
+
+    with pytest.raises(RuntimeError, match=msg):
+        instantiate_re_api_class(rm_api_class, **params)
+
+
+# fmt: off
 @pytest.mark.parametrize("api", ["status", "ping"])
 @pytest.mark.parametrize("reload", [None, False, True])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
