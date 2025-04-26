@@ -79,9 +79,10 @@ def test_instantiation_01(re_manager, fastapi_server, protocol, library):  # noq
 
 
 # fmt: off
+@pytest.mark.parametrize("loop_source", ["LOCAL", "BLUESKY"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
-def test_instantiation_02(re_manager, fastapi_server, protocol):  # noqa: F811
+def test_instantiation_02(re_manager, fastapi_server, loop_source, protocol):  # noqa: F811
     """
     ``REManagerAPI``: instantiation of classes. Check if ``set_user_name_to_login_name`` works as expected.
     Check that ``user`` and ``user_group`` properties work properly.
@@ -90,9 +91,15 @@ def test_instantiation_02(re_manager, fastapi_server, protocol):  # noqa: F811
     user_name = "Queue Server API User"
     user_name_2 = getpass.getuser()
 
-    loop = asyncio.new_event_loop()
-    th = threading.Thread(target=loop.run_forever, daemon=True, name="bs-api-tests")
-    th.start()
+    if loop_source == "LOCAL":
+        loop = asyncio.new_event_loop()
+        th = threading.Thread(target=loop.run_forever, daemon=True, name="bs-api-tests")
+        th.start()
+    elif loop_source == "BLUESKY":
+        from bluesky import RunEngine
+
+        RE = RunEngine()
+        loop = RE.loop
 
     RM = instantiate_re_api_class(rm_api_class, loop=loop)
     assert RM.protocol == RM.Protocols(protocol)

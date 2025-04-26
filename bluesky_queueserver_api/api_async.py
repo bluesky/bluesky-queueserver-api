@@ -70,24 +70,6 @@ class API_Async_Mixin(API_Base):
             status_polling_period=status_polling_period,
         )
 
-        try:
-            # 'get_running_loop' is raising RuntimeError if running outside async context
-            asyncio.get_running_loop()
-            self._init_tasks()
-        except RuntimeError:
-            if loop is None:
-                raise RuntimeError(
-                    "Failed to instantiate REManagerAPI class. 'loop' argument is required if REManagerAPI "
-                    "is instantiated outside asyncio context."
-                )
-            if not loop.is_running():
-                raise RuntimeError("Failed to instantiate REManagerAPI class. The provided 'loop' is not running.")
-
-            f = asyncio.run_coroutine_threadsafe(self._init_tasks_async(), loop)
-            f.result(timeout=10)  # Use long timeout.
-
-    def _init_tasks(self):
-
         self._event_status_get = asyncio.Event()
         self._status_get_cb = []  # A list of callbacks
         self._status_get_cb_lock = asyncio.Lock()
@@ -96,9 +78,6 @@ class API_Async_Mixin(API_Base):
         # Use tasks instead of threads
         self._task_status_get = asyncio.create_task(self._task_status_get_func())
         self._task_status_get = asyncio.create_task(self._task_status_poll_func())
-
-    async def _init_tasks_async(self):
-        self._init_tasks()
 
     def _validate_loop(self, loop):
         """

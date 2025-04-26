@@ -1,6 +1,5 @@
 import asyncio
 import queue
-import sys
 import threading
 import time as ttime
 import uuid
@@ -658,17 +657,7 @@ class ConsoleMonitor_HTTP_Threads(_ConsoleMonitor_Threads):
 class _ConsoleMonitor_Async(_ConsoleMonitor):
     def __init__(self, *, max_msgs, max_lines, loop):
         self._msg_queue_max = max_msgs
-        if sys.version_info.major == 3 and sys.version_info.minor >= 9:
-            self._msg_queue = asyncio.Queue(maxsize=max_msgs)
-        else:
-            # It is still possible that someone passes the value other then None to the
-            # loop when the object is instantiated in Python 3.9 or older.
-            try:
-                asyncio.get_running_loop()
-                loop = None
-            except RuntimeError:
-                pass
-            self._msg_queue = asyncio.Queue(maxsize=max_msgs, loop=loop)
+        self._msg_queue = asyncio.Queue(maxsize=max_msgs)
 
         self._monitor_task = None  # Thread or asyncio task
         self._monitor_task_running = asyncio.Event()
