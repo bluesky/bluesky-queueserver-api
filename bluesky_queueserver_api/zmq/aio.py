@@ -43,12 +43,10 @@ class REManagerAPI(ReManagerComm_ZMQ_Async, API_Async_Mixin):
             "console_monitor_max_lines": console_monitor_max_lines,
             "zmq_public_key": zmq_public_key,
             "request_fail_exceptions": request_fail_exceptions,
-            "loop": None,
         }
         params_api = {
             "status_expiration_period": status_expiration_period,
             "status_polling_period": status_polling_period,
-            "loop": None,
         }
 
         try:

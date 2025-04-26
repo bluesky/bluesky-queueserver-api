@@ -110,7 +110,7 @@ the reference to the running loop must be passed to the constructor. For example
     th.start()
 
     RM = REManagerAPI(loop=loop)
-    
+
     async def communicate():
         status = await RM.status()
         assert status["manager_state"] == "idle"
@@ -129,6 +129,3 @@ needs to use the event loop created by Bluesky Run Engine:
 
     RE = RunEngine()
     RM = REManagerAPI(loop=RE.loop)
-
-
-

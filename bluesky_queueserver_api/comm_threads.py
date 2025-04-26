@@ -20,7 +20,7 @@ from .console_monitor import ConsoleMonitor_HTTP_Threads, ConsoleMonitor_ZMQ_Thr
 
 
 class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
-    def _init_console_monitor(self, loop):
+    def _init_console_monitor(self):
         self._console_monitor = ConsoleMonitor_ZMQ_Threads(
             zmq_info_addr=self._zmq_info_addr,
             poll_timeout=self._console_monitor_poll_timeout,
@@ -35,7 +35,6 @@ class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
         timeout_recv,
         timeout_send,
         zmq_public_key,
-        loop,  # Unused in threading implementation
     ):
         return ZMQCommSendThreads(
             zmq_server_address=zmq_control_addr,
@@ -64,7 +63,7 @@ class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
 
 
 class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
-    def _init_console_monitor(self, loop):
+    def _init_console_monitor(self):
         self._console_monitor = ConsoleMonitor_HTTP_Threads(
             parent=self,
             poll_period=self._console_monitor_poll_period,

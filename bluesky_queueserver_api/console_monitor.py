@@ -655,7 +655,7 @@ class ConsoleMonitor_HTTP_Threads(_ConsoleMonitor_Threads):
 
 
 class _ConsoleMonitor_Async(_ConsoleMonitor):
-    def __init__(self, *, max_msgs, max_lines, loop):
+    def __init__(self, *, max_msgs, max_lines):
         self._msg_queue_max = max_msgs
         self._msg_queue = asyncio.Queue(maxsize=max_msgs)
 
@@ -701,10 +701,13 @@ class _ConsoleMonitor_Async(_ConsoleMonitor):
 class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
     # Docstring is maintained separately
 
-    def __init__(self, *, zmq_info_addr, poll_timeout, max_msgs, max_lines, loop):
+    def __init__(self, *, zmq_info_addr, poll_timeout, max_msgs, max_lines):
         self._zmq_subscribe_addr = zmq_info_addr
         self._monitor_poll_timeout = poll_timeout
-        super().__init__(max_msgs=max_msgs, max_lines=max_lines, loop=loop)
+        super().__init__(
+            max_msgs=max_msgs,
+            max_lines=max_lines,
+        )
 
     def _monitor_init(self):
         self._rco = ReceiveConsoleOutputAsync(
@@ -754,13 +757,13 @@ class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
 class ConsoleMonitor_HTTP_Async(_ConsoleMonitor_Async):
     # Docstring is maintained separately
 
-    def __init__(self, *, parent, poll_period, max_msgs, max_lines, loop):
+    def __init__(self, *, parent, poll_period, max_msgs, max_lines):
         # The parent class is must have ``_client`` attribute with
         #   active httpx client.
         self._parent = parent  # Reference to the parent class
         self._monitor_poll_period = poll_period
         self._console_output_last_msg_uid = ""
-        super().__init__(max_msgs=max_msgs, max_lines=max_lines, loop=loop)
+        super().__init__(max_msgs=max_msgs, max_lines=max_lines)
 
     def _monitor_init(self): ...
 

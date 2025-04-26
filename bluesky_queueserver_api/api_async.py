@@ -63,7 +63,7 @@ from .api_docstrings import (
 
 
 class API_Async_Mixin(API_Base):
-    def __init__(self, *, status_expiration_period, status_polling_period, loop):
+    def __init__(self, *, status_expiration_period, status_polling_period):
 
         super().__init__(
             status_expiration_period=status_expiration_period,
