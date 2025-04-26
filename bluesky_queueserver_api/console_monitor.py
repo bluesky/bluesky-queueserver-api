@@ -704,10 +704,7 @@ class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
     def __init__(self, *, zmq_info_addr, poll_timeout, max_msgs, max_lines):
         self._zmq_subscribe_addr = zmq_info_addr
         self._monitor_poll_timeout = poll_timeout
-        super().__init__(
-            max_msgs=max_msgs,
-            max_lines=max_lines,
-        )
+        super().__init__(max_msgs=max_msgs, max_lines=max_lines)
 
     def _monitor_init(self):
         self._rco = ReceiveConsoleOutputAsync(
