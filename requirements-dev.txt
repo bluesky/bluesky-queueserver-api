@@ -19,6 +19,7 @@ nbstripout
 ipython
 matplotlib
 numpydoc
+pandas
 sphinx-copybutton
 sphinx_rtd_theme
 bluesky-httpserver
