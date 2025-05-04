@@ -132,6 +132,10 @@ _doc_REManagerAPI_ZMQ = """
         Address of 0MQ socket used for publishing console output.
         If ``None``, then the default address ``"tcp://localhost:60625"``
         is used.
+    zmq_encoding: str or None
+        Encoding for 0MQ messages. The encoding must match the encoding
+        used by RE Manager. Supported values: ``"json"`` (default) or
+        ``"msgpack"``. If ``None``, then the default value is used.
     timeout_recv: float
         ``recv`` timeout for 0MQ socket. Default value is 2.0 seconds.
     timeout_send: float

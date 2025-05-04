@@ -23,6 +23,7 @@ class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
     def _init_console_monitor(self):
         self._console_monitor = ConsoleMonitor_ZMQ_Threads(
             zmq_info_addr=self._zmq_info_addr,
+            zmq_encoding=self._zmq_encoding,
             poll_timeout=self._console_monitor_poll_timeout,
             max_msgs=self._console_monitor_max_msgs,
             max_lines=self._console_monitor_max_lines,
@@ -32,12 +33,14 @@ class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
         self,
         *,
         zmq_control_addr,
+        zmq_encoding,
         timeout_recv,
         timeout_send,
         zmq_public_key,
     ):
         return ZMQCommSendThreads(
             zmq_server_address=zmq_control_addr,
+            encoding=zmq_encoding,
             timeout_recv=int(timeout_recv * 1000),  # Convert to ms
             timeout_send=int(timeout_send * 1000),  # Convert to ms
             raise_exceptions=True,

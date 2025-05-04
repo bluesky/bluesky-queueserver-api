@@ -22,6 +22,7 @@ class REManagerAPI(ReManagerComm_ZMQ_Async, API_Async_Mixin):
         *,
         zmq_control_addr=None,
         zmq_info_addr=None,
+        zmq_encoding=None,
         timeout_recv=default_zmq_request_timeout_recv,
         timeout_send=default_zmq_request_timeout_send,
         console_monitor_poll_timeout=default_console_monitor_poll_timeout,
@@ -36,6 +37,7 @@ class REManagerAPI(ReManagerComm_ZMQ_Async, API_Async_Mixin):
         params_comm = {
             "zmq_control_addr": zmq_control_addr,
             "zmq_info_addr": zmq_info_addr,
+            "zmq_encoding": zmq_encoding or "json",
             "timeout_recv": timeout_recv,
             "timeout_send": timeout_send,
             "console_monitor_poll_timeout": console_monitor_poll_timeout,

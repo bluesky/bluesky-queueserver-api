@@ -15,6 +15,7 @@ from .common import (  # noqa: F401
     re_manager,
     re_manager_cmd,
     set_qserver_zmq_address,
+    set_qserver_zmq_encoding,
     set_qserver_zmq_public_key,
 )
 
@@ -109,6 +110,35 @@ def test_ReManagerComm_ZMQ_02(monkeypatch, re_manager_cmd):  # noqa: F811
 
     async def testing():
         RM = ReManagerComm_ZMQ_Async(zmq_control_addr=zmq_server_addr, zmq_public_key=public_key)
+        result = await RM.send_request(method="queue_item_add", params=params)
+        assert result["success"] is True
+        await RM.close()
+
+    asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("zmq_encoding", ["json", "msgpack"])
+# fmt: on
+def test_ReManagerComm_ZMQ_03(monkeypatch, re_manager_cmd, zmq_encoding):  # noqa: F811
+    """
+    ReManagerComm_ZMQ_Threads, ReManagerComm_ZMQ_Async: Test if the setting
+    ``zmq_encoding`` works as expected.
+    """
+    params = {"item": _plan1, "user": _user, "user_group": _user_group}
+
+    public_key, private_key = generate_zmq_keys()
+
+    set_qserver_zmq_encoding(monkeypatch, encoding=zmq_encoding)
+    re_manager_cmd([f"--zmq-encoding={zmq_encoding}"])
+
+    RM = ReManagerComm_ZMQ_Threads(zmq_encoding=zmq_encoding)
+    result = RM.send_request(method="queue_item_add", params=params)
+    assert result["success"] is True
+    RM.close()
+
+    async def testing():
+        RM = ReManagerComm_ZMQ_Async(zmq_encoding=zmq_encoding)
         result = await RM.send_request(method="queue_item_add", params=params)
         assert result["success"] is True
         await RM.close()

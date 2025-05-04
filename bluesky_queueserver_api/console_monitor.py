@@ -550,14 +550,17 @@ class _ConsoleMonitor_Threads(_ConsoleMonitor):
 class ConsoleMonitor_ZMQ_Threads(_ConsoleMonitor_Threads):
     # Docstring is maintained separately
 
-    def __init__(self, *, zmq_info_addr, poll_timeout, max_msgs, max_lines):
+    def __init__(self, *, zmq_info_addr, zmq_encoding, poll_timeout, max_msgs, max_lines):
         self._zmq_subscribe_addr = zmq_info_addr
+        self._zmq_encoding = zmq_encoding
         self._monitor_poll_timeout = poll_timeout
         super().__init__(max_msgs=max_msgs, max_lines=max_lines)
 
     def _monitor_init(self):
         self._rco = ReceiveConsoleOutput(
-            zmq_subscribe_addr=self._zmq_subscribe_addr, timeout=int(self._monitor_poll_timeout * 1000)
+            zmq_subscribe_addr=self._zmq_subscribe_addr,
+            encoding=self._zmq_encoding,
+            timeout=int(self._monitor_poll_timeout * 1000),
         )
 
     def _thread_receive_msgs(self):
@@ -701,14 +704,17 @@ class _ConsoleMonitor_Async(_ConsoleMonitor):
 class ConsoleMonitor_ZMQ_Async(_ConsoleMonitor_Async):
     # Docstring is maintained separately
 
-    def __init__(self, *, zmq_info_addr, poll_timeout, max_msgs, max_lines):
+    def __init__(self, *, zmq_info_addr, zmq_encoding, poll_timeout, max_msgs, max_lines):
         self._zmq_subscribe_addr = zmq_info_addr
+        self._zmq_encoding = zmq_encoding
         self._monitor_poll_timeout = poll_timeout
         super().__init__(max_msgs=max_msgs, max_lines=max_lines)
 
     def _monitor_init(self):
         self._rco = ReceiveConsoleOutputAsync(
-            zmq_subscribe_addr=self._zmq_subscribe_addr, timeout=int(self._monitor_poll_timeout * 1000)
+            zmq_subscribe_addr=self._zmq_subscribe_addr,
+            encoding=self._zmq_encoding,
+            timeout=int(self._monitor_poll_timeout * 1000),
         )
 
     async def _task_receive_msgs(self):
