@@ -9,6 +9,7 @@ from bluesky_queueserver.manager.tests.common import (  # noqa: F401
     re_manager,
     re_manager_cmd,
     set_qserver_zmq_address,
+    set_qserver_zmq_encoding,
     set_qserver_zmq_public_key,
 )
 

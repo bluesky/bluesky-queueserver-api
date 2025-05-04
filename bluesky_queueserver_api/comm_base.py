@@ -199,6 +199,7 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         *,
         zmq_control_addr=None,
         zmq_info_addr=None,
+        zmq_encoding="json",
         timeout_recv=default_zmq_request_timeout_recv,
         timeout_send=default_zmq_request_timeout_send,
         console_monitor_poll_timeout=default_console_monitor_poll_timeout,
@@ -215,6 +216,7 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         zmq_info_addr = zmq_info_addr or os.environ.get("QSERVER_ZMQ_INFO_ADDRESS", None)
         zmq_public_key = zmq_public_key or os.environ.get("QSERVER_ZMQ_PUBLIC_KEY", None)
 
+        self._zmq_encoding = zmq_encoding
         self._zmq_info_addr = zmq_info_addr
         self._console_monitor_poll_timeout = console_monitor_poll_timeout
         self._console_monitor_max_msgs = console_monitor_max_msgs
@@ -222,6 +224,7 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
 
         self._client = self._create_client(
             zmq_control_addr=zmq_control_addr,
+            zmq_encoding=zmq_encoding,
             timeout_recv=timeout_recv,
             timeout_send=timeout_send,
             zmq_public_key=zmq_public_key,
