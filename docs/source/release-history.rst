@@ -2,6 +2,20 @@
 Release History
 ===============
 
+v0.0.12 (2025-05-18)
+====================
+
+Added
+-----
+
+- New parameter ``loop`` was added to async versions of REManagerAPI. The parameter
+  may be used to instantiate the object outside asyncio context. For example,
+  ``REManagerAPI`` may be instantiated directly in the Bluesky startup code using
+  the event loop created by Bluesky Run Engine.
+
+- The new parameter ``zmq_encoding`` to 0MQ versions of ``REManagerAPI``.
+
+
 v0.0.11 (2024-07-25)
 ====================
 
