@@ -3588,3 +3588,146 @@ _doc_api_whoami
 _doc_api_principal_info
 _doc_api_api_scopes
 _doc_api_logout
+
+
+# WebSocket API Documentation
+_doc_REManagerAPI_WS = """
+    WebSocket-based REManager API. This API provides real-time bidirectional communication
+    with the Bluesky Queue Server via WebSocket connections, enabling immediate notifications
+    of status changes, plan execution progress, console output, and device coordination.
+
+    The WebSocket API supports all standard queue server operations plus real-time subscriptions
+    to various event streams and device lock coordination for conflict prevention with other
+    services (such as the ophyd WebSocket service).
+
+    Parameters
+    ----------
+    ws_server_uri : str, optional
+        URI of the WebSocket server. If ``None``, then the URI is set to the default value
+        or the value of the environment variable ``QSERVER_WS_SERVER_URI`` if it is set.
+    ws_auth_provider : str, optional
+        Authentication provider endpoint for WebSocket authentication.
+    ws_connection_timeout : float, optional
+        Timeout for WebSocket connection establishment in seconds.
+    ws_heartbeat_interval : float, optional
+        Interval between WebSocket heartbeat/ping messages in seconds.
+    ws_max_reconnect_attempts : int, optional
+        Maximum number of automatic reconnection attempts.
+    ws_reconnect_delay : float, optional
+        Delay between reconnection attempts in seconds.
+    console_monitor_poll_period : float, optional
+        Period between console monitor polls (for HTTP fallback).
+    console_monitor_max_msgs : int, optional
+        Maximum number of console messages to keep in buffer.
+    console_monitor_max_lines : int, optional
+        Maximum number of console text lines to keep in buffer.
+    request_fail_exceptions : boolean, optional
+        Enable raising exceptions when requests fail.
+    status_expiration_period : float, optional
+        Time period for status cache expiration.
+    status_polling_period : float, optional
+        Period between status polling operations.
+    loop : asyncio event loop, optional
+        Event loop for async operations (async version only).
+
+    Examples
+    --------
+
+    Basic WebSocket connection and queue operations:
+
+    .. code-block:: python
+
+        from bluesky_queueserver_api.ws.aio import REManagerAPI
+        import asyncio
+
+        async def main():
+            # Connect to WebSocket server
+            RM = REManagerAPI(ws_server_uri="ws://localhost:60610/ws")
+            await RM.connect()
+            
+            # Subscribe to real-time updates
+            await RM.subscribe_queue_updates(lambda data: print(f"Queue: {data}"))
+            await RM.subscribe_execution_progress(lambda data: print(f"Progress: {data}"))
+            
+            # Standard queue operations work the same
+            await RM.environment_open()
+            await RM.wait_for_idle()
+            
+            # Add and execute plans
+            plan = BPlan("count", ["det1"], num=5)
+            await RM.item_add(plan)
+            await RM.queue_start()
+            
+            # Clean up
+            await RM.close()
+
+        asyncio.run(main())
+
+    Device lock coordination example:
+
+    .. code-block:: python
+
+        async def device_coordination_example():
+            RM = REManagerAPI()
+            await RM.connect()
+            
+            # Request exclusive lock on a motor
+            lock_response = await RM.request_device_lock("motor1", user_id="operator1")
+            lock_key = lock_response.get("lock_key")
+            
+            if lock_response.get("success"):
+                try:
+                    # Safe to move motor manually or via plans
+                    await RM.set_device_value("motor1", 10.5, lock_key=lock_key)
+                    
+                    # Execute plan with locked device
+                    plan = BPlan("move_motor", "motor1", 15.0)
+                    await RM.item_add(plan)
+                    await RM.queue_start()
+                    
+                finally:
+                    # Always release the lock
+                    await RM.release_device_lock("motor1", lock_key=lock_key)
+            
+            await RM.close()
+
+    Real-time monitoring with multiple subscriptions:
+
+    .. code-block:: python
+
+        async def monitoring_example():
+            RM = REManagerAPI()
+            await RM.connect()
+            
+            # Set up comprehensive monitoring
+            def on_queue_update(data):
+                print(f"Queue changed: {len(data.get('items', []))} items")
+            
+            def on_execution_update(data):
+                if data.get('status') == 'running':
+                    print(f"Executing: {data.get('item', {}).get('name')}")
+            
+            def on_console_output(data):
+                for line in data.get('lines', []):
+                    print(f"Console: {line}")
+            
+            def on_device_update(data):
+                device = data.get('device_name')
+                value = data.get('value')
+                print(f"Device {device} = {value}")
+            
+            # Subscribe to all updates
+            await RM.subscribe_all_updates(
+                queue_callback=on_queue_update,
+                execution_callback=on_execution_update,
+                console_callback=on_console_output,
+                device_callback=on_device_update
+            )
+            
+            # Keep monitoring for a while
+            await asyncio.sleep(300)  # 5 minutes
+            
+            # Cleanup
+            await RM.unsubscribe_all()
+            await RM.close()
+"""

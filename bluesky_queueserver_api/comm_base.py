@@ -1,6 +1,7 @@
 import enum
 import getpass
 import os
+import time
 from collections.abc import Iterable, Mapping
 
 import httpx
@@ -15,6 +16,11 @@ from ._defaults import (
     default_http_login_timeout,
     default_http_request_timeout,
     default_http_server_uri,
+    default_ws_connection_timeout,
+    default_ws_heartbeat_interval,
+    default_ws_max_reconnect_attempts,
+    default_ws_reconnect_delay,
+    default_ws_server_uri,
     default_zmq_request_timeout_recv,
     default_zmq_request_timeout_send,
 )
@@ -609,3 +615,208 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         if principal_uid:
             method_url += f"/{principal_uid}"
         return ("GET", method_url)
+
+
+class WebSocketConnectionError(Exception): ...
+
+
+class WebSocketDisconnectError(Exception): ...
+
+
+class ReManagerAPI_WS_Base(ReManagerAPI_Base):
+    WebSocketConnectionError = WebSocketConnectionError
+    WebSocketDisconnectError = WebSocketDisconnectError
+    
+    def __init__(
+        self,
+        *,
+        ws_server_uri=None,
+        ws_auth_provider=None,
+        ws_connection_timeout=default_ws_connection_timeout,
+        ws_heartbeat_interval=default_ws_heartbeat_interval,
+        ws_max_reconnect_attempts=default_ws_max_reconnect_attempts,
+        ws_reconnect_delay=default_ws_reconnect_delay,
+        console_monitor_poll_period=default_console_monitor_poll_period,
+        console_monitor_max_msgs=default_console_monitor_max_msgs,
+        console_monitor_max_lines=default_console_monitor_max_lines,
+        request_fail_exceptions=default_allow_request_fail_exceptions,
+    ):
+        super().__init__(request_fail_exceptions=request_fail_exceptions)
+
+        self._protocol = "WEBSOCKET"  # Add to Protocols enum if needed
+        
+        # WebSocket-specific configuration
+        ws_server_uri = ws_server_uri or os.environ.get("QSERVER_WS_SERVER_URI", default_ws_server_uri)
+        self._ws_server_uri = ws_server_uri
+        self._ws_auth_provider = ws_auth_provider
+        self._ws_connection_timeout = ws_connection_timeout
+        self._ws_heartbeat_interval = ws_heartbeat_interval
+        self._ws_max_reconnect_attempts = ws_max_reconnect_attempts
+        self._ws_reconnect_delay = ws_reconnect_delay
+        
+        # Console monitoring configuration
+        self._console_monitor_poll_period = console_monitor_poll_period
+        self._console_monitor_max_msgs = console_monitor_max_msgs
+        self._console_monitor_max_lines = console_monitor_max_lines
+        
+        # WebSocket connection state
+        self._websocket = None
+        self._connected = False
+        self._reconnect_attempts = 0
+        self._message_id_counter = 0
+        
+        # Subscription and message handling
+        self._subscriptions = {}  # topic -> callback mapping
+        self._pending_requests = {}  # message_id -> future mapping
+        self._message_handlers = {
+            "response": self._handle_response_message,
+            "subscription_update": self._handle_subscription_message,
+            "error": self._handle_error_message,
+            "status_update": self._handle_status_update,
+            "console_output": self._handle_console_output,
+            "device_update": self._handle_device_update,
+        }
+        
+        # Authorization (similar to HTTP)
+        self._auth_method = AuthorizationMethods.NONE
+        self._auth_key = None
+
+        self._init_console_monitor()
+
+    def _create_websocket_client(self):
+        """Create WebSocket client - to be implemented by async/sync subclasses"""
+        raise NotImplementedError()
+
+    def _generate_message_id(self):
+        """Generate unique message ID for request tracking"""
+        self._message_id_counter += 1
+        return f"msg_{self._message_id_counter}"
+
+    def _prepare_message(self, msg_type, **kwargs):
+        """Prepare WebSocket message with standard format"""
+        message = {
+            "id": self._generate_message_id(),
+            "type": msg_type,
+            "timestamp": time.time(),
+            **kwargs
+        }
+        return message
+
+    def _handle_response_message(self, message):
+        """Handle response to a request"""
+        message_id = message.get("id")
+        if message_id in self._pending_requests:
+            future = self._pending_requests.pop(message_id)
+            if not future.done():
+                if message.get("success", True):
+                    future.set_result(message.get("data", {}))
+                else:
+                    error_msg = message.get("error", "Unknown error")
+                    future.set_exception(self.RequestFailedError(message_id, error_msg))
+
+    def _handle_subscription_message(self, message):
+        """Handle subscription update message"""
+        topic = message.get("topic")
+        if topic in self._subscriptions:
+            callback = self._subscriptions[topic]
+            if callback:
+                try:
+                    callback(message.get("data", {}))
+                except Exception as e:
+                    # Log error but don't break the message handling loop
+                    print(f"Error in subscription callback for topic '{topic}': {e}")
+
+    def _handle_error_message(self, message):
+        """Handle error message from server"""
+        error_msg = message.get("error", "Unknown error")
+        print(f"WebSocket error: {error_msg}")
+
+    def _handle_status_update(self, message):
+        """Handle queue server status update"""
+        if "status" in self._subscriptions:
+            callback = self._subscriptions["status"]
+            if callback:
+                callback(message.get("data", {}))
+
+    def _handle_console_output(self, message):
+        """Handle console output update"""
+        if self._console_monitor:
+            # Forward to console monitor
+            self._console_monitor._process_ws_message(message)
+
+    def _handle_device_update(self, message):
+        """Handle device status update"""
+        if "devices" in self._subscriptions:
+            callback = self._subscriptions["devices"]
+            if callback:
+                callback(message.get("data", {}))
+
+    def _process_incoming_message(self, message_data):
+        """Process incoming WebSocket message"""
+        try:
+            if isinstance(message_data, str):
+                import json
+                message = json.loads(message_data)
+            else:
+                message = message_data
+
+            msg_type = message.get("type", "unknown")
+            handler = self._message_handlers.get(msg_type, self._handle_unknown_message)
+            handler(message)
+            
+        except Exception as e:
+            print(f"Error processing WebSocket message: {e}")
+
+    def _handle_unknown_message(self, message):
+        """Handle unknown message types"""
+        print(f"Received unknown message type: {message.get('type', 'none')}")
+
+    def subscribe(self, topic, callback=None):
+        """Subscribe to WebSocket topic updates"""
+        raise NotImplementedError("Implemented by async/sync subclasses")
+
+    def unsubscribe(self, topic):
+        """Unsubscribe from WebSocket topic"""
+        raise NotImplementedError("Implemented by async/sync subclasses")
+
+    def send_request(self, method, params=None):
+        """Send request via WebSocket"""
+        raise NotImplementedError("Implemented by async/sync subclasses")
+
+    @property
+    def connected(self):
+        """Check if WebSocket is connected"""
+        return self._connected
+
+    @property
+    def subscriptions(self):
+        """Get current subscriptions"""
+        return list(self._subscriptions.keys())
+
+    def set_authorization_key(self, *, api_key=None, token=None, refresh_token=None):
+        """Set authorization key for WebSocket authentication (similar to HTTP)"""
+        if api_key and (token or refresh_token):
+            raise self.RequestParameterError(
+                "API key and a token are mutually exclusive and can not be specified simultaneously."
+            )
+
+        if api_key:
+            self._auth_method = self.AuthorizationMethods.API_KEY
+            self._auth_key = api_key
+        elif token or refresh_token:
+            self._auth_method = self.AuthorizationMethods.TOKEN
+            self._auth_key = (token, refresh_token)
+        else:
+            self._auth_method = self.AuthorizationMethods.NONE
+            self._auth_key = None
+
+    def _prepare_auth_headers(self):
+        """Prepare authentication headers for WebSocket connection"""
+        headers = {}
+        if self._auth_method == self.AuthorizationMethods.API_KEY and self._auth_key:
+            headers["Authorization"] = f"ApiKey {self._auth_key}"
+        elif self._auth_method == self.AuthorizationMethods.TOKEN and self._auth_key:
+            access_token, _ = self._auth_key
+            if access_token:
+                headers["Authorization"] = f"Bearer {access_token}"
+        return headers
