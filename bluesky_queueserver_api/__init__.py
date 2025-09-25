@@ -6,16 +6,8 @@ del get_versions
 from .api_base import WaitMonitor  # noqa: F401, E402
 from .item import BFunc, BInst, BItem, BPlan  # noqa: F401, E402
 
-# Device configuration - optional import
-try:
-    from .device_config import DeviceConfigurationManager, DeviceDefinition, create_shared_device_config  # noqa: F401, E402
-except ImportError:
-    # Dependencies not available
-    pass
+# Device configuration moved to bluesky-queueserver repository
+# (was tightly coupled with server-side device discovery logic)
 
-# Device coordination - optional import
-try:
-    from . import coordination  # noqa: F401, E402
-except ImportError:
-    # Dependencies not available
-    pass
+# Note: Device coordination client was extracted from this package.
+# Import paths under `bluesky_queueserver_api.coordination` are no longer provided here.
