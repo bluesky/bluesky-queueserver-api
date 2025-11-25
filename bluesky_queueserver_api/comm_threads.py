@@ -16,7 +16,7 @@ from .api_docstrings import (
     _doc_send_request,
 )
 from .comm_base import ReManagerAPI_HTTP_Base, ReManagerAPI_ZMQ_Base
-from .console_monitor import ConsoleMonitor_HTTP_Threads, ConsoleMonitor_ZMQ_Threads, 
+from .console_monitor import ConsoleMonitor_HTTP_Threads, ConsoleMonitor_ZMQ_Threads
 from .system_info_monitor import SystemInfoMonitor_HTTP_Threads, SystemInfoMonitor_ZMQ_Threads
 
 
@@ -84,7 +84,7 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
             max_msgs=self._console_monitor_max_msgs,
             max_lines=self._console_monitor_max_lines,
         )
-        
+
     def _init_system_info_monitor(self):
         self._system_info_monitor = SystemInfoMonitor_HTTP_Threads(
             parent=self,
