@@ -7,6 +7,8 @@ from .._defaults import (
     default_http_request_timeout,
     default_status_expiration_period,
     default_status_polling_period,
+    default_system_info_monitor_poll_period,
+    default_system_info_monitor_max_msgs,
 )
 from ..api_docstrings import _doc_REManagerAPI_HTTP
 from ..api_threads import API_Threads_Mixin
@@ -24,6 +26,8 @@ class REManagerAPI(ReManagerComm_HTTP_Threads, API_Threads_Mixin):
         console_monitor_poll_period=default_console_monitor_poll_period,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
         console_monitor_max_lines=default_console_monitor_max_lines,
+        system_info_monitor_poll_period=default_system_info_monitor_poll_period,
+        system_info_monitor_max_msgs=default_system_info_monitor_max_msgs,
         request_fail_exceptions=default_allow_request_fail_exceptions,
         status_expiration_period=default_status_expiration_period,
         status_polling_period=default_status_polling_period,
@@ -37,6 +41,8 @@ class REManagerAPI(ReManagerComm_HTTP_Threads, API_Threads_Mixin):
             console_monitor_poll_period=console_monitor_poll_period,
             console_monitor_max_msgs=console_monitor_max_msgs,
             console_monitor_max_lines=console_monitor_max_lines,
+            system_info_monitor_poll_period=system_info_monitor_poll_period,
+            system_info_monitor_max_msgs=system_info_monitor_max_msgs,
             request_fail_exceptions=request_fail_exceptions,
         )
         API_Threads_Mixin.__init__(

@@ -7,6 +7,8 @@ from .._defaults import (
     default_status_polling_period,
     default_zmq_request_timeout_recv,
     default_zmq_request_timeout_send,
+    default_system_info_monitor_poll_timeout,
+    default_system_info_monitor_max_msgs,
 )
 from ..api_docstrings import _doc_REManagerAPI_ZMQ
 from ..api_threads import API_Threads_Mixin
@@ -26,6 +28,8 @@ class REManagerAPI(ReManagerComm_ZMQ_Threads, API_Threads_Mixin):
         console_monitor_poll_timeout=default_console_monitor_poll_timeout,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
         console_monitor_max_lines=default_console_monitor_max_lines,
+        system_info_monitor_poll_timeout=default_system_info_monitor_poll_timeout,
+        system_info_monitor_max_msgs=default_system_info_monitor_max_msgs,
         zmq_public_key=None,
         request_fail_exceptions=default_allow_request_fail_exceptions,
         status_expiration_period=default_status_expiration_period,
@@ -41,6 +45,8 @@ class REManagerAPI(ReManagerComm_ZMQ_Threads, API_Threads_Mixin):
             console_monitor_poll_timeout=console_monitor_poll_timeout,
             console_monitor_max_msgs=console_monitor_max_msgs,
             console_monitor_max_lines=console_monitor_max_lines,
+            system_info_monitor_poll_timeout=system_info_monitor_poll_timeout,
+            system_info_monitor_max_msgs=system_info_monitor_max_msgs,
             zmq_public_key=zmq_public_key,
             request_fail_exceptions=request_fail_exceptions,
         )
