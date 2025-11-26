@@ -337,121 +337,6 @@ class _SystemInfoMonitor:
         self._monitor_enabled = False
         self._monitor_init()
 
-        # self._buffers_modified_event = threading.Event()
-
-        # self._text = {}
-        # self._set_new_text_uid()
-
-        # self._text_buffer = []
-        # self._text_clear()
-        # self._text_max_lines = max(max_lines, 0)
-
-    # def _text_generate(self, nlines):
-    #     n_text_buffer = len(self._text_buffer)
-    #     nlines = max(nlines, 0) if (nlines is not None) else n_text_buffer
-
-    #     if self._text_buffer and self._text_buffer[-1] == "":
-    #         nlines = min(nlines, n_text_buffer - 1)
-    #         if nlines not in self._text:
-    #             text = "\n".join(self._text_buffer[-nlines - 1 : -1])
-    #             self._text[nlines] = text
-    #         else:
-    #             text = self._text[nlines]
-    #     else:
-    #         nlines = min(nlines, n_text_buffer)
-    #         if nlines not in self._text:
-    #             text = "\n".join(self._text_buffer[-nlines:])
-    #             self._text[nlines] = text
-    #         else:
-    #             text = self._text[nlines]
-    #     return text
-
-    # def _set_new_text_uid(self):
-    #     self._text_uid = str(uuid.uuid4())
-
-    # def _text_clear(self):
-    #     self._text.clear()
-    #     self._set_new_text_uid()
-
-    #     self._text_line = 0
-    #     self._text_pos = 0
-    #     self._text_buffer.clear()
-
-    # def _add_msg_to_text_buffer(self, response):
-    #     # Setting max number of lines to 0 disables text processing
-    #     if not self._text_max_lines:
-    #         return
-
-    #     msg = response["msg"]
-
-    #     pattern_new_line = "\n"
-    #     pattern_cr = "\r"
-    #     pattern_up_one_line = "\x1b\x5b\x41"  # ESC [#A
-
-    #     patterns = {"new_line": pattern_new_line, "cr": pattern_cr, "one_line_up": pattern_up_one_line}
-
-    #     while msg:
-    #         indices = {k: msg.find(v) for k, v in patterns.items()}
-    #         indices_nonzero = [_ for _ in indices.values() if (_ >= 0)]
-    #         next_ind = min(indices_nonzero) if indices_nonzero else len(msg)
-
-    #         # The following algorithm requires that there is at least one line in the list.
-    #         if not self._text_buffer:
-    #             self._text_buffer = [""]
-    #             self._text_line = 0
-    #             self._text_pos = 0
-
-    #         if next_ind != 0:
-    #             # Add a line to the current line and position
-    #             substr = msg[:next_ind]
-    #             msg = msg[next_ind:]
-
-    #             # Extend the current line with spaces if needed
-    #             line_len = len(self._text_buffer[self._text_line])
-    #             if line_len < self._text_pos:
-    #                 self._text_buffer[self._text_line] += " " * (self._text_pos - line_len)
-
-    #             line = self._text_buffer[self._text_line]
-    #             self._text_buffer[self._text_line] = (
-    #                 line[: self._text_pos] + substr + line[self._text_pos + len(substr) :]
-    #             )
-    #             self._text_pos = self._text_pos + len(substr)
-
-    #         elif indices["new_line"] == 0:
-    #             self._text_line += 1
-    #             if self._text_line >= len(self._text_buffer):
-    #                 self._text_buffer.insert(self._text_line, "")
-    #             self._text_pos = 0
-    #             msg = msg[len(patterns["new_line"]) :]
-
-    #         elif indices["cr"] == 0:
-    #             self._text_pos = 0
-    #             msg = msg[len(patterns["cr"]) :]
-
-    #         elif indices["one_line_up"] == 0:
-    #             if self._text_line:
-    #                 self._text_line -= 1
-    #             msg = msg[len(patterns["one_line_up"]) :]
-
-    #     self._set_new_text_uid()
-
-    # def _adjust_text_buffer_size(self):
-    #     if self._text_buffer and self._text_buffer[-1] == "":
-    #         # Do not count an empty string at the end
-    #         max_lines = self._text_max_lines + 1
-    #     else:
-    #         max_lines = self._text_max_lines
-
-    #     if len(self._text_buffer) > max_lines:
-    #         # Remove extra lines from the beginning of the list
-    #         n_remove = len(self._text_buffer) - max_lines
-    #         # In majority of cases only 1 (or a few) elements are removed
-    #         for _ in range(n_remove):
-    #             self._text_buffer.pop(0)
-    #         self._text_line = max(self._text_line - n_remove, 0)
-
-    #     self._set_new_text_uid()
-
     def _monitor_init(self):
         raise NotImplementedError()
 
@@ -460,23 +345,6 @@ class _SystemInfoMonitor:
 
     def _monitor_enable(self):
         raise NotImplementedError()
-
-    # @property
-    # def text_uid(self):
-    #     # Docstring is maintained separately
-    #     return self._text_uid
-
-    # @property
-    # def text_max_lines(self):
-    #     # Docstring is maintained separately
-    #     return self._text_max_lines
-
-    # @text_max_lines.setter
-    # def text_max_lines(self, max_lines):
-    #     # Docstring is maintained separately
-    #     max_lines = max(max_lines, 0)
-    #     self._text_max_lines = max_lines
-    #     self._adjust_text_buffer_size()
 
     @property
     def enabled(self):
@@ -511,7 +379,6 @@ class _SystemInfoMonitor_Threads(_SystemInfoMonitor):
         self._monitor_thread_running.set()
 
         self._monitor_thread_lock = threading.Lock()
-        # self._text_buffer_lock = threading.Lock()
 
         super().__init__()
 
@@ -539,12 +406,6 @@ class _SystemInfoMonitor_Threads(_SystemInfoMonitor):
             return self._msg_queue.get(block=block, timeout=timeout)
         except queue.Empty:
             raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
-
-    # def text(self, nlines=None):
-    #     # Docstring is maintained separately
-    #     with self._text_buffer_lock:
-    #         text = self._text_generate(nlines=nlines)
-    #     return text
 
 
 class SystemInfoMonitor_ZMQ_Threads(_SystemInfoMonitor_Threads):
@@ -581,11 +442,6 @@ class SystemInfoMonitor_ZMQ_Threads(_SystemInfoMonitor_Threads):
             try:
                 msg = self._rco.recv()
                 self._add_msg_to_queue(msg)
-
-                # with self._text_buffer_lock:
-                #     self._add_msg_to_queue(msg)
-                    # self._add_msg_to_text_buffer(msg)
-                    # self._adjust_text_buffer_size()
 
             except TimeoutError:
                 # No published messages are detected
@@ -668,7 +524,6 @@ class _SystemInfoMonitor_Async(_SystemInfoMonitor):
         self._monitor_task_running.set()
 
         self._monitor_task_lock = asyncio.Lock()
-        # self._text_buffer_lock = asyncio.Lock()
 
         super().__init__()
 
@@ -694,12 +549,6 @@ class _SystemInfoMonitor_Async(_SystemInfoMonitor):
                 return self._msg_queue.get_nowait()
         except (asyncio.QueueEmpty, asyncio.TimeoutError):
             raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
-
-    # async def text(self, nlines=None):
-    #     # Docstring is maintained separately
-    #     async with self._text_buffer_lock:
-    #         text = self._text_generate(nlines=nlines)
-    #     return text
 
 
 class SystemInfoMonitor_ZMQ_Async(_SystemInfoMonitor_Async):
@@ -737,10 +586,6 @@ class SystemInfoMonitor_ZMQ_Async(_SystemInfoMonitor_Async):
             try:
                 msg = await self._rco.recv()
                 self._add_msg_to_queue(msg)
-                # async with self._text_buffer_lock:
-                #     self._add_msg_to_queue(msg)
-                #     self._add_msg_to_text_buffer(msg)
-                #     self._adjust_text_buffer_size()
 
             except TimeoutError:
                 # No published messages are detected
@@ -750,7 +595,7 @@ class SystemInfoMonitor_ZMQ_Async(_SystemInfoMonitor_Async):
                 pass
 
     def _clear(self):
-        self._text_clear()
+        # self._text_clear()
         try:
             while True:
                 self._msg_queue.get_nowait()
@@ -802,12 +647,6 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
                 for m in console_output_msgs:
                     self._add_msg_to_queue(m)
 
-                # async with self._text_buffer_lock:
-                #     for m in console_output_msgs:
-                #         self._add_msg_to_queue(m)
-                #         self._add_msg_to_text_buffer(m)
-                #     self._adjust_text_buffer_size()
-
                 await asyncio.sleep(self._monitor_poll_period)
             except asyncio.QueueFull:
                 # Queue is full, ignore the new messages
@@ -830,19 +669,15 @@ _SystemInfoMonitor.enabled.__doc__ = _doc_ConsoleMonitor_enabled
 _SystemInfoMonitor.enable.__doc__ = _doc_ConsoleMonitor_enable
 _SystemInfoMonitor.disable.__doc__ = _doc_ConsoleMonitor_disable
 _SystemInfoMonitor.clear.__doc__ = _doc_ConsoleMonitor_clear
-# _SystemInfoMonitor.text_uid.__doc__ = _doc_ConsoleMonitor_text_uid
-# _SystemInfoMonitor.text_max_lines.__doc__ = _doc_ConsoleMonitor_text_max_lines
 
 _SystemInfoMonitor_Threads.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
 _SystemInfoMonitor_Threads.next_msg.__doc__ = _doc_ConsoleMonitor_next_msg
-# _SystemInfoMonitor_Threads.text.__doc__ = _doc_ConsoleMonitor_text
 
 SystemInfoMonitor_ZMQ_Threads.__doc__ = _doc_ConsoleMonitor_ZMQ
 SystemInfoMonitor_HTTP_Threads.__doc__ = _doc_ConsoleMonitor_HTTP
 
 _SystemInfoMonitor_Async.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
 _SystemInfoMonitor_Async.next_msg.__doc__ = _doc_ConsoleMonitor_next_msg
-# _SystemInfoMonitor_Async.text.__doc__ = _doc_ConsoleMonitor_text
 
 SystemInfoMonitor_ZMQ_Async.__doc__ = _doc_ConsoleMonitor_ZMQ
 SystemInfoMonitor_HTTP_Async.__doc__ = _doc_ConsoleMonitor_HTTP
