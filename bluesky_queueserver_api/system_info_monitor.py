@@ -1,9 +1,11 @@
 import asyncio
+import json
 import queue
 import threading
 import time as ttime
-import uuid
 
+import logger
+import websockets
 from bluesky_queueserver import ReceiveSystemInfo, ReceiveSystemInfoAsync
 
 from .comm_base import RequestTimeoutError
@@ -452,7 +454,7 @@ class SystemInfoMonitor_ZMQ_Threads(_SystemInfoMonitor_Threads):
 
     def _clear(self):
         self._msg_queue.queue.clear()
-        self._text_clear()
+        # self._text_clear()
 
 
 class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
@@ -481,37 +483,40 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
                 if not self._monitor_enabled:
                     self._monitor_thread_running.set()
                     break
+
+            http_server_uri = self._parent._http_server_uri
+            n = http_server_uri.find("://")
+            if n >= 0:
+                websocket_uri_base = f"ws://{http_server_uri[n + 3 :]}"
+            else:
+                websocket_uri_base = f"ws://{http_server_uri}"
+            websocket_uri = f"{websocket_uri_base}/api/status/ws"
+
             try:
-                headers = self._parent._prepare_headers()
-                kwargs = {"json": {"last_msg_uid": self._console_output_last_msg_uid}}
-                if headers:
-                    kwargs.update({"headers": headers})
-                client_response = self._parent._client.request(
-                    _console_monitor_http_method, _console_monitor_http_endpoint, **kwargs
-                )
-                client_response.raise_for_status()
-                response = client_response.json()
-                console_output_msgs = response.get("console_output_msgs", [])
-                self._console_output_last_msg_uid = response.get("last_msg_uid", "")
-
-                with self._text_buffer_lock:
-                    for m in console_output_msgs:
-                        self._add_msg_to_queue(m)
-                        self._add_msg_to_text_buffer(m)
-                    self._adjust_text_buffer_size()
-
-                ttime.sleep(self._monitor_poll_period)
-            except queue.Full:
-                # Queue is full, ignore the new messages
-                pass
+                with websockets.sync.client.connect(websocket_uri) as websocket:
+                    while self._monitor_enabled:
+                        try:
+                            msg_json = websocket.recv(timeout=1, decode=False)
+                            try:
+                                msg = json.loads(msg_json)
+                                self._add_msg_to_queue(msg)
+                            except json.JSONDecodeError as e:
+                                logger.error(f"Failed to decode JSON message: {e}. Message: {msg_json}")
+                            except queue.Full:
+                                # Queue is full, ignore the new messages
+                                pass
+                        except TimeoutError:
+                            pass
             except Exception:
                 # Ignore communication errors. More detailed processing may be added later.
                 pass
+            ttime.sleep(self._monitor_poll_period)
 
     def _clear(self):
         self._console_output_last_msg_uid = ""
         self._msg_queue.queue.clear()
-        self._text_clear()
+
+    #  self._text_clear()
 
 
 class _SystemInfoMonitor_Async(_SystemInfoMonitor):
@@ -656,7 +661,7 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
                 pass
 
     def _clear(self):
-        self._text_clear()
+        # self._text_clear()
         try:
             self._console_output_last_msg_uid = ""
             while True:

@@ -12,12 +12,12 @@ from ._defaults import (
     default_console_monitor_max_msgs,
     default_console_monitor_poll_period,
     default_console_monitor_poll_timeout,
-    default_system_info_monitor_max_msgs,
-    default_system_info_monitor_poll_period,
-    default_system_info_monitor_poll_timeout,
     default_http_login_timeout,
     default_http_request_timeout,
     default_http_server_uri,
+    default_system_info_monitor_max_msgs,
+    default_system_info_monitor_poll_period,
+    default_system_info_monitor_poll_timeout,
     default_zmq_request_timeout_recv,
     default_zmq_request_timeout_send,
 )
@@ -187,11 +187,10 @@ class ReManagerAPI_Base:
     def system_info_monitor(self):
         """
         Reference to a ``system_info_monitor``. System Info monitor is an instance of
-        a matching ``SystemInfoMonitor_...`` class. See documentation for the respective 
+        a matching ``SystemInfoMonitor_...`` class. See documentation for the respective
         class for more details.
         """
         return self._system_info_monitor
-
 
     def _init_console_monitor(self):
         raise NotImplementedError()
@@ -299,6 +298,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
         http_server_uri = http_server_uri or os.environ.get("QSERVER_HTTP_SERVER_URI")
         http_server_uri = http_server_uri or default_http_server_uri
+        self._http_server_uri = http_server_uri
 
         # The timeout may still have explicitly passed value of None, so replace it with the default value.
         self._timeout = timeout if timeout is not None else default_http_request_timeout
@@ -320,6 +320,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self._client = self._create_client(http_server_uri=http_server_uri, timeout=self._timeout)
 
         self._init_console_monitor()
+        self._init_system_info_monitor()
 
     def _create_client(self, http_server_uri, timeout):
         raise NotImplementedError()
