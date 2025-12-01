@@ -4,7 +4,6 @@ import queue
 import threading
 import time as ttime
 
-import logger
 import websockets
 from bluesky_queueserver import ReceiveSystemInfo, ReceiveSystemInfoAsync
 
@@ -454,7 +453,6 @@ class SystemInfoMonitor_ZMQ_Threads(_SystemInfoMonitor_Threads):
 
     def _clear(self):
         self._msg_queue.queue.clear()
-        # self._text_clear()
 
 
 class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
@@ -465,7 +463,6 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
         #   active httpx client.
         self._parent = parent  # Reference to the parent class
         self._monitor_poll_period = poll_period
-        self._console_output_last_msg_uid = ""
         super().__init__(max_msgs=max_msgs)
 
     def _monitor_init(self): ...
@@ -476,7 +473,6 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
                 return
             self._monitor_thread_running.clear()
             self.clear()
-            self._console_output_last_msg_uid = ""
 
         while True:
             with self._monitor_thread_lock:
@@ -490,10 +486,11 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
                 websocket_uri_base = f"ws://{http_server_uri[n + 3 :]}"
             else:
                 websocket_uri_base = f"ws://{http_server_uri}"
-            websocket_uri = f"{websocket_uri_base}/api/status/ws"
+            websocket_uri = f"{websocket_uri_base}/api/info/ws"
 
             try:
-                with websockets.sync.client.connect(websocket_uri) as websocket:
+                from websockets.sync.client import connect
+                with connect(websocket_uri) as websocket:
                     while self._monitor_enabled:
                         try:
                             msg_json = websocket.recv(timeout=1, decode=False)
@@ -501,7 +498,7 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
                                 msg = json.loads(msg_json)
                                 self._add_msg_to_queue(msg)
                             except json.JSONDecodeError as e:
-                                logger.error(f"Failed to decode JSON message: {e}. Message: {msg_json}")
+                                pass
                             except queue.Full:
                                 # Queue is full, ignore the new messages
                                 pass
@@ -513,10 +510,7 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
             ttime.sleep(self._monitor_poll_period)
 
     def _clear(self):
-        self._console_output_last_msg_uid = ""
         self._msg_queue.queue.clear()
-
-    #  self._text_clear()
 
 
 class _SystemInfoMonitor_Async(_SystemInfoMonitor):
@@ -600,7 +594,6 @@ class SystemInfoMonitor_ZMQ_Async(_SystemInfoMonitor_Async):
                 pass
 
     def _clear(self):
-        # self._text_clear()
         try:
             while True:
                 self._msg_queue.get_nowait()
@@ -616,7 +609,6 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
         #   active httpx client.
         self._parent = parent  # Reference to the parent class
         self._monitor_poll_period = poll_period
-        self._console_output_last_msg_uid = ""
         super().__init__(max_msgs=max_msgs)
 
     def _monitor_init(self): ...
@@ -627,7 +619,6 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
                 return
             self._monitor_task_running.clear()
             self.clear()
-            self._console_output_last_msg_uid = ""
 
         while True:
             async with self._monitor_task_lock:
@@ -636,21 +627,21 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
                     break
 
             try:
-                headers = self._parent._prepare_headers()
-                kwargs = {"json": {"last_msg_uid": self._console_output_last_msg_uid}}
-                if headers:
-                    kwargs.update({"headers": headers})
+                # headers = self._parent._prepare_headers()
+                # kwargs = {"json": {"last_msg_uid": self._console_output_last_msg_uid}}
+                # if headers:
+                #     kwargs.update({"headers": headers})
 
-                client_response = await self._parent._client.request(
-                    _console_monitor_http_method, _console_monitor_http_endpoint, **kwargs
-                )
-                client_response.raise_for_status()
-                response = client_response.json()
-                console_output_msgs = response.get("console_output_msgs", [])
-                self._console_output_last_msg_uid = response.get("last_msg_uid", "")
+                # client_response = await self._parent._client.request(
+                #     _console_monitor_http_method, _console_monitor_http_endpoint, **kwargs
+                # )
+                # client_response.raise_for_status()
+                # response = client_response.json()
+                # console_output_msgs = response.get("console_output_msgs", [])
+                # self._console_output_last_msg_uid = response.get("last_msg_uid", "")
 
-                for m in console_output_msgs:
-                    self._add_msg_to_queue(m)
+                # for m in console_output_msgs:
+                #     self._add_msg_to_queue(m)
 
                 await asyncio.sleep(self._monitor_poll_period)
             except asyncio.QueueFull:
@@ -661,9 +652,7 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
                 pass
 
     def _clear(self):
-        # self._text_clear()
         try:
-            self._console_output_last_msg_uid = ""
             while True:
                 self._msg_queue.get_nowait()
         except asyncio.QueueEmpty:
