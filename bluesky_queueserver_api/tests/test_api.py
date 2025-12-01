@@ -4211,6 +4211,212 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
 
 
 # ====================================================================================================
+#                                       System Info monitoring
+# ====================================================================================================
+
+# fmt: off
+@pytest.mark.parametrize("option", ["single_enable", "disable", "disable_with_pause"])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library, protocol):  # noqa: F811
+
+    params = ["--zmq-publish-console", "ON"]
+    re_manager_cmd(params)
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def check_status(status, manager_state, worker_environment_exists):
+        assert status["manager_state"] == manager_state
+        assert status["worker_environment_exists"] == worker_environment_exists
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+        assert RM.status_info_monitor.enabled is False
+
+        def _get_last_status():
+            st = None
+            while True:
+                try:
+                    msg = RM.status_info_monitor.next_msg(timeout=0.1)
+                except RM.RequestTimeoutError:
+                    break
+            st = msg["msg"]["status"]
+            return st
+
+        if option == "single_enable":
+            pass
+        elif option == "disable":
+            RM.status_info_monitor.enable()
+            ttime.sleep(1)
+            RM.status_info_monitor.disable()
+        elif option == "disable_with_pause":
+            RM.status_info_monitor.enable()
+            ttime.sleep(1)
+            RM.status_info_monitor.disable()
+            ttime.sleep(2)
+        else:
+            assert False, f"Unknown option {option!r}"
+
+        RM.status_info_monitor.enable()
+        assert RM.status_info_monitor.enabled is True
+
+        status_last = _get_last_status()
+        assert status_last["manager_state"] == "idle"
+        assert status_last["worker_environment_exists"] is False
+
+        RM.environment_open()
+        RM.wait_for_idle(timeout=10)
+        check_status(RM.status(), "idle", True)
+
+        status_last = _get_last_status()
+        assert status_last["manager_state"] == "idle"
+        assert status_last["worker_environment_exists"] is True
+
+        RM.environment_close()
+        RM.wait_for_idle(timeout=10)
+
+        status_last = _get_last_status()
+        assert status_last["manager_state"] == "idle"
+        assert status_last["worker_environment_exists"] is False
+
+        RM.console_monitor.disable()
+        assert RM.console_monitor.enabled is False
+
+        RM.close()
+
+    else:
+
+        async def testing():
+
+            RM = instantiate_re_api_class(rm_api_class)
+            assert RM.status_info_monitor.enabled is False
+
+            async def _get_last_status():
+                st = None
+                while True:
+                    try:
+                        msg = await RM.status_info_monitor.next_msg(timeout=0.1)
+                    except RM.RequestTimeoutError:
+                        break
+                st = msg["msg"]["status"]
+                return st
+
+            if option == "single_enable":
+                pass
+            elif option == "disable":
+                RM.status_info_monitor.enable()
+                await asyncio.sleep(1)
+                RM.status_info_monitor.disable()
+            elif option == "disable_with_pause":
+                RM.status_info_monitor.enable()
+                await asyncio.sleep(1)
+                RM.status_info_monitor.disable()
+                await asyncio.sleep(2)
+            else:
+                assert False, f"Unknown option {option!r}"
+
+            RM.status_info_monitor.enable()
+            assert RM.status_info_monitor.enabled is True
+
+            status_last = await _get_last_status()
+            assert status_last["manager_state"] == "idle"
+            assert status_last["worker_environment_exists"] is False
+
+            await RM.environment_open()
+            await RM.wait_for_idle(timeout=10)
+            check_status(await RM.status(), "idle", True)
+
+            status_last = await _get_last_status()
+            assert status_last["manager_state"] == "idle"
+            assert status_last["worker_environment_exists"] is True
+
+            await RM.environment_close()
+            await RM.wait_for_idle(timeout=10)
+
+            status_last = await _get_last_status()
+            assert status_last["manager_state"] == "idle"
+            assert status_last["worker_environment_exists"] is False
+
+            RM.console_monitor.disable()
+            assert RM.console_monitor.enabled is False
+
+            await RM.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            # RM = instantiate_re_api_class(rm_api_class)
+
+            # await RM.environment_open()
+            # await RM.wait_for_idle(timeout=10)
+            # check_status(await RM.status(), "idle", True)
+
+            # assert RM.console_monitor.enabled is False
+
+            # if option == "single_enable":
+            #     pass
+            # elif option == "disable":
+            #     RM.console_monitor.enable()
+            #     await asyncio.sleep(1)
+            #     RM.console_monitor.disable()
+            # elif option == "disable_with_pause":
+            #     RM.console_monitor.enable()
+            #     await asyncio.sleep(1)
+            #     RM.console_monitor.disable()
+            #     await asyncio.sleep(2)
+            # else:
+            #     assert False, f"Unknown option {option!r}"
+
+            # RM.console_monitor.enable()
+            # assert RM.console_monitor.enabled is True
+
+            # await RM.script_upload(script)
+            # await asyncio.sleep(2)
+            # await RM.wait_for_idle(timeout=10)
+            # check_status(await RM.status(), "idle", True)
+
+            # text = []
+            # while True:
+            #     try:
+            #         params = {"timeout": read_timeout} if read_timeout else {}
+            #         msg = await RM.console_monitor.next_msg(**params)
+            #         text.append(msg["msg"])
+            #     except RM.RequestTimeoutError:
+            #         break
+
+            # text = "".join(text)
+            # text2 = await RM.console_monitor.text()
+            # print(f"============= text=\n{text}")
+            # print(f"============= text2=\n'{text2}'")
+            # print(f"============= expected_output=\n{expected_output}")
+            # assert expected_output in text
+            # assert expected_output in text2
+
+            # RM.console_monitor.disable()
+            # assert RM.console_monitor.enabled is False
+
+            # await RM.environment_close()
+            # await RM.wait_for_idle(timeout=10)
+            # check_status(await RM.status(), "idle", False)
+
+            # await RM.close()
+
+        asyncio.run(testing())
+
+
+# ====================================================================================================
 #                                     Locking RE Manager
 # ====================================================================================================
 
