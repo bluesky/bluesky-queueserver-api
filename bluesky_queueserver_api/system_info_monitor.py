@@ -332,6 +332,19 @@ _doc_ConsoleMonitor_text = """
         RM.console_monitor.disable()
 """
 
+_websocket_endpoint_info = "/api/info/ws"
+
+def _websocket_uri(uri, endpoint):
+    """
+    Generate websocket URI based on the base URI used for http requests
+    """
+    n = uri.find("://")
+    if n >= 0:
+        uri_base = f"ws://{uri[n + 3 :]}"
+    else:
+        uri_base = f"ws://{uri}"
+    return f"{uri_base}{endpoint}"
+
 
 class _SystemInfoMonitor:
     def __init__(self):
@@ -480,14 +493,7 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
                     self._monitor_thread_running.set()
                     break
 
-            http_server_uri = self._parent._http_server_uri
-            n = http_server_uri.find("://")
-            if n >= 0:
-                websocket_uri_base = f"ws://{http_server_uri[n + 3 :]}"
-            else:
-                websocket_uri_base = f"ws://{http_server_uri}"
-            websocket_uri = f"{websocket_uri_base}/api/info/ws"
-
+            websocket_uri = _websocket_uri(self._parent._http_server_uri, _websocket_endpoint_info)
             try:
                 from websockets.sync.client import connect
                 with connect(websocket_uri) as websocket:
@@ -626,30 +632,27 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
                     self._monitor_task_running.set()
                     break
 
+            websocket_uri = _websocket_uri(self._parent._http_server_uri, _websocket_endpoint_info)
             try:
-                # headers = self._parent._prepare_headers()
-                # kwargs = {"json": {"last_msg_uid": self._console_output_last_msg_uid}}
-                # if headers:
-                #     kwargs.update({"headers": headers})
-
-                # client_response = await self._parent._client.request(
-                #     _console_monitor_http_method, _console_monitor_http_endpoint, **kwargs
-                # )
-                # client_response.raise_for_status()
-                # response = client_response.json()
-                # console_output_msgs = response.get("console_output_msgs", [])
-                # self._console_output_last_msg_uid = response.get("last_msg_uid", "")
-
-                # for m in console_output_msgs:
-                #     self._add_msg_to_queue(m)
-
-                await asyncio.sleep(self._monitor_poll_period)
-            except asyncio.QueueFull:
-                # Queue is full, ignore the new messages
-                pass
+                from websockets.asyncio.client import connect
+                async with connect(websocket_uri) as websocket:
+                    while self._monitor_enabled:
+                        try:
+                            msg_json = await asyncio.wait_for(websocket.recv(decode=False), timeout=1)
+                            try:
+                                msg = json.loads(msg_json)
+                                self._add_msg_to_queue(msg)
+                            except json.JSONDecodeError as e:
+                                pass
+                            except asyncio.QueueFull:
+                                # Queue is full, ignore the new messages
+                                pass
+                        except asyncio.TimeoutError:
+                            pass
             except Exception:
                 # Ignore communication errors. More detailed processing may be added later.
                 pass
+            await asyncio.sleep(self._monitor_poll_period)
 
     def _clear(self):
         try:
