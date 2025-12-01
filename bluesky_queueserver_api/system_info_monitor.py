@@ -12,8 +12,8 @@ from .comm_base import RequestTimeoutError
 _system_info_monitor_endpoint = "/api/info/ws"
 
 
-_doc_ConsoleMonitor_ZMQ = """
-    Console Monitor API (0MQ). The class implements a monitor for console output
+_doc_SystemInfoMonitor_ZMQ = """
+    System Info Monitor API (0MQ). The class implements a monitor for console output
     published by RE Manager over 0MQ. The asynchronous version of the class must
     be instantiated in the loop.
 
@@ -23,19 +23,16 @@ _doc_ConsoleMonitor_ZMQ = """
         Address of 0MQ PUB socket. The SUB socket of the monitor subscribes to this address
         once the class is instantiated.
     poll_timeout: float
-        Timeout used for polling 0MQ socket. The value does not influence performance.
+        Timeout used internally for polling 0MQ socket. The value does not influence performance.
         It may take longer to stop the background thread or task, if the value is too large.
     max_msgs: int
         Maximum number of messages in the buffer. New messages are ignored if the buffer
         is full. This could happen only if console monitoring is enabled, but messages
         are not read from the buffer. Setting the value to 0 disables collection of messages
         in the buffer.
-    max_lines: int
-        Maximum number of lines in the text buffer. Setting the value to 0 disables processing
-        of text messages and generation of text output.
 """
 
-_doc_ConsoleMonitor_HTTP = """
+_doc_SystemInfoMonitor_HTTP = """
     Console Monitor API (HTTP). The class implements a monitor for console output
     published by RE Manager over HTTP. The asynchronous version of the class must
     be instantiated in the loop.
@@ -46,18 +43,17 @@ _doc_ConsoleMonitor_HTTP = """
         Reference to the parent class (or any class). The class must expose the attribute
         ``_client`` that references configured ``httpx`` client.
     poll_period: float
-        Period between consecutive requests to HTTP server.
+        Period between consecutive retries to connect to the websocket at the server.
+        The value is also used as a timeout for websocket receive operation. It may take
+        longer to stop background thread if the value is too large.
     max_msgs: int
         Maximum number of messages in the buffer. New messages are ignored if the buffer
         is full. This could happen only if console monitoring is enabled, but messages
         are not read from the buffer. Setting the value to 0 disables collection of messages
         in the buffer.
-    max_lines: int
-        Maximum number of lines in the text buffer. Setting the value to 0 disables processing
-        of text messages and generation of text output.
 """
 
-_doc_ConsoleMonitor_enabled = """
+_doc_SystemInfoMonitor_enabled = """
     Indicates if monitoring is enabled. Returns ``True`` if monitoring is enabled,
     ``False`` otherwise.
 
@@ -68,11 +64,11 @@ _doc_ConsoleMonitor_enabled = """
 
     .. code-block:: python
 
-        is_enabled = RM.console_monitor.enabled
+        is_enabled = RM.system_info_monitor.enabled
 """
 
-_doc_ConsoleMonitor_enable = """
-    Enable monitoring of the console output. Received messages are accumulated in the buffer
+_doc_SystemInfoMonitor_enable = """
+    Enable monitoring of the system info. Received messages are accumulated in the buffer
     and need to be continuosly read using ``next_msg()`` to prevent buffer from overflowing.
     If the API is called when background thread or task is not running, the buffer is cleared
     and all old messages are discarded. Note, that disabling and then enabling the monitor in
@@ -86,12 +82,12 @@ _doc_ConsoleMonitor_enable = """
 
     .. code-block:: python
 
-        RM.console_monitor.enable()
-        RM.console_monitor.disable()
+        RM.system_info_monitor.enable()
+        RM.system_info_monitor.disable()
 """
 
-_doc_ConsoleMonitor_disable = """
-    Disable monitoring of the console output. The API does not immediately stop the background thread
+_doc_SystemInfoMonitor_disable = """
+    Disable monitoring of the system info. The API does not immediately stop the background thread
     or task. If the monitor is quickly re-enabled, the background thread or task may continue running
     continously.
 
@@ -102,11 +98,11 @@ _doc_ConsoleMonitor_disable = """
 
     .. code-block:: python
 
-        RM.console_monitor.enable()
-        RM.console_monitor.disable()
+        RM.system_info_monitor.enable()
+        RM.system_info_monitor.disable()
 """
 
-_doc_ConsoleMonitor_disable_wait = """
+_doc_SystemInfoMonitor_disable_wait = """
     Disable monitoring and wait for completion.
 
     Parameters
@@ -119,7 +115,7 @@ _doc_ConsoleMonitor_disable_wait = """
     TimeoutError
         Wait timeout (synchronous API)
     asyncio.TimeoutError
-        Wait timeout (ssynchronous API)
+        Wait timeout (asynchronous API)
 
     Examples
     --------
@@ -128,18 +124,18 @@ _doc_ConsoleMonitor_disable_wait = """
 
     .. code-block:: python
 
-        RM.console_monitor.enable()
-        RM.console_monitor.disable_wait()
+        RM.system_info_monitor.enable()
+        RM.system_info_monitor.disable_wait()
 
     Asynchronous API:
 
     .. code-block:: python
 
-        RM.console_monitor.enable()
-        await RM.console_monitor.disable_wait()
+        RM.system_info_monitor.enable()
+        await RM.system_info_monitor.disable_wait()
 """
 
-_doc_ConsoleMonitor_clear = """
+_doc_SystemInfoMonitor_clear = """
     Clear the message buffer. Removes all messages from the buffer.
 
     Examples
@@ -149,10 +145,10 @@ _doc_ConsoleMonitor_clear = """
 
     .. code-block:: python
 
-        RM.console_monitor.clear()
+        RM.system_info_monitor.clear()
 """
 
-_doc_ConsoleMonitor_next_msg = """
+_doc_SystemInfoMonitor_next_msg = """
     Returns the next message from the buffer. If ``timeout`` is ``None`` or zero, then
     the API returns the next available message. If the buffer contains no messages, the
     function waits for the next published message for ``timeout`` period and raises
@@ -160,6 +156,15 @@ _doc_ConsoleMonitor_next_msg = """
     and the buffer contains no messages, then the function immediately raises
     ``RequestTimeoutError``.
 
+    The returned message is a dictionary with two keys: ``"time"`` (timestamp indicating time
+    when the message was sent by RE Manager) and ``"msg"`` (dictionary with one key, the key 
+    indicates the message type, e.g. ``"status"``, and the value is the information itself).
+    For example:
+
+    .. code-block:: python
+
+        {"time": 1764605683.1407075, "msg": {"status": {<status info of RE Manager>}}}
+    
     Parameters
     ----------
     timeout: float or None
@@ -180,19 +185,19 @@ _doc_ConsoleMonitor_next_msg = """
         # Make sure RE Manager is started with option '--zmq-publish-console=ON'
 
         RM = REManagerAPI()
-        RM.console_output.enable()
+        RM.system_info_monitor.enable()
 
         # Run any command that generates console output
         RM.environment_open()
         RM.wait_for_idle()
 
         try:
-            msg = RM.console_output.next_msg()
-            print(msg["msg"], end="")
+            msg = RM.system_info_monitor.next_msg(timeout=1)
+            print(msg["msg"])
         except RM.RequestTimeoutError:
             pass
 
-        RM.console_output.disable()
+        RM.system_info_monitor.disable()
         RM.close()
 
     Asynchronous API:
@@ -202,134 +207,20 @@ _doc_ConsoleMonitor_next_msg = """
         # Make sure RE Manager is started with option '--zmq-publish-console=ON'
 
         RM = REManagerAPI()
-        RM.console_output.enable()
+        RM.system_info_monitor.enable()
 
         # Run any command that generates console output
         await RM.environment_open()
         await RM.wait_for_idle()
 
         try:
-            msg = await RM.console_output.next_msg()
-            print(msg["msg"], end="")
+            msg = await RM.system_info_monitor.next_msg(timeout=1)
+            print(msg["msg"])
         except RM.RequestTimeoutError:
             pass
 
-        RM.console_output.disable()
+        RM.system_info_monitor.disable()
         await RM.close()
-"""
-
-_doc_ConsoleMonitor_text_uid = """
-    Returns UID of the current text buffer. UID is changed whenever the contents
-    of the buffer is changed. Monitor UID to minimize the number of data reloads
-    (if necessary).
-
-    Examples
-    --------
-    Synchronous API
-
-    .. code-block:: python
-
-        RM.console_monitor.enable()
-
-        uid = RM.console_monitor.text_uid
-        while True:
-            uid_new = RM.console_monitor.text_uid
-            if uid_new != uid:
-                uid = uid_new
-                text = RM.console_monitor.text()
-                # Use 'text'
-            ttime.sleep(0.1)
-
-    Asynchronous API
-
-    .. code-block:: python
-
-        RM.console_monitor.enable()
-
-        uid = RM.console_monitor.text_uid
-        while True:
-            uid_new = RM.console_monitor.text_uid
-            if uid_new != uid:
-                uid = uid_new
-                text = await RM.console_monitor.text()
-                # Use 'text'
-            asyncio.sleep(0.1)
-"""
-
-_doc_ConsoleMonitor_text_max_lines = """
-    Get/set the maximum size of the text buffer. The new buffer size is
-    applied to the existing buffer, removing extra messages if necessary.
-
-    Examples
-    --------
-    Synchronous and asynchronous API
-
-    .. code-block:: python
-
-        # Get the maximum number of lines
-        n_lines = RM.console_monitor.text_max_lines
-
-        # Set the maximum number of lines
-        RM.console_monitor.text_max_lines = 1000
-"""
-
-_doc_ConsoleMonitor_text = """
-    Returns text representation of console output. Monitor ``text_uid``
-    property to check if text buffer was modified. The parameter ``nlines``
-    determines the maximum number of lines of text returned by the function.
-
-    Parameters
-    ----------
-    nlines: int
-        Number of lines to return. The value determines the maximum number of lines
-        of text returned by the function. The function returns ``""`` (empty string)
-        if the value is ``0`` or negative.
-
-    Returns
-    -------
-    text: str
-        String representing recent console output. The maximum number of
-        lines is determined by ``text_max_lines``.
-
-    Examples
-    --------
-    Synchronous API
-
-    .. code-block:: python
-
-        RM = REManagerAPI()
-        RM.console_monitor.enable()
-
-        # Wait for RE Manager to produce some output
-        ttime.sleep(20)
-
-        text = RM.console_monitor.text()
-        print(text)
-
-        # Return the last 10 lines
-        text = RM.console_monitor.text(10)
-        print(text)
-
-        RM.console_monitor.disable()
-
-    Asynchronous API
-
-    .. code-block:: python
-
-        RM = REManagerAPI()
-        RM.console_monitor.enable()
-
-        # Wait for RE Manager to produce some output
-        await asyncio.sleep(20)
-
-        text = await RM.console_monitor.text()
-        print(text)
-
-        # Return the last 10 lines
-        text = await RM.console_monitor.text(10)
-        print(text)
-
-        RM.console_monitor.disable()
 """
 
 def _websocket_uri(uri, endpoint):
@@ -497,7 +388,7 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
                 with connect(websocket_uri) as websocket:
                     while self._monitor_enabled:
                         try:
-                            msg_json = websocket.recv(timeout=1, decode=False)
+                            msg_json = websocket.recv(timeout=self._monitor_poll_period, decode=False)
                             try:
                                 msg = json.loads(msg_json)
                                 self._add_msg_to_queue(msg)
@@ -636,7 +527,9 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
                 async with connect(websocket_uri) as websocket:
                     while self._monitor_enabled:
                         try:
-                            msg_json = await asyncio.wait_for(websocket.recv(decode=False), timeout=1)
+                            msg_json = await asyncio.wait_for(
+                                websocket.recv(decode=False), timeout=self._monitor_poll_period
+                            )
                             try:
                                 msg = json.loads(msg_json)
                                 self._add_msg_to_queue(msg)
@@ -660,19 +553,19 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
             pass
 
 
-_SystemInfoMonitor.enabled.__doc__ = _doc_ConsoleMonitor_enabled
-_SystemInfoMonitor.enable.__doc__ = _doc_ConsoleMonitor_enable
-_SystemInfoMonitor.disable.__doc__ = _doc_ConsoleMonitor_disable
-_SystemInfoMonitor.clear.__doc__ = _doc_ConsoleMonitor_clear
+_SystemInfoMonitor.enabled.__doc__ = _doc_SystemInfoMonitor_enabled
+_SystemInfoMonitor.enable.__doc__ = _doc_SystemInfoMonitor_enable
+_SystemInfoMonitor.disable.__doc__ = _doc_SystemInfoMonitor_disable
+_SystemInfoMonitor.clear.__doc__ = _doc_SystemInfoMonitor_clear
 
-_SystemInfoMonitor_Threads.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
-_SystemInfoMonitor_Threads.next_msg.__doc__ = _doc_ConsoleMonitor_next_msg
+_SystemInfoMonitor_Threads.disable_wait.__doc__ = _doc_SystemInfoMonitor_disable_wait
+_SystemInfoMonitor_Threads.next_msg.__doc__ = _doc_SystemInfoMonitor_next_msg
 
-SystemInfoMonitor_ZMQ_Threads.__doc__ = _doc_ConsoleMonitor_ZMQ
-SystemInfoMonitor_HTTP_Threads.__doc__ = _doc_ConsoleMonitor_HTTP
+SystemInfoMonitor_ZMQ_Threads.__doc__ = _doc_SystemInfoMonitor_ZMQ
+SystemInfoMonitor_HTTP_Threads.__doc__ = _doc_SystemInfoMonitor_HTTP
 
-_SystemInfoMonitor_Async.disable_wait.__doc__ = _doc_ConsoleMonitor_disable_wait
-_SystemInfoMonitor_Async.next_msg.__doc__ = _doc_ConsoleMonitor_next_msg
+_SystemInfoMonitor_Async.disable_wait.__doc__ = _doc_SystemInfoMonitor_disable_wait
+_SystemInfoMonitor_Async.next_msg.__doc__ = _doc_SystemInfoMonitor_next_msg
 
-SystemInfoMonitor_ZMQ_Async.__doc__ = _doc_ConsoleMonitor_ZMQ
-SystemInfoMonitor_HTTP_Async.__doc__ = _doc_ConsoleMonitor_HTTP
+SystemInfoMonitor_ZMQ_Async.__doc__ = _doc_SystemInfoMonitor_ZMQ
+SystemInfoMonitor_HTTP_Async.__doc__ = _doc_SystemInfoMonitor_HTTP
