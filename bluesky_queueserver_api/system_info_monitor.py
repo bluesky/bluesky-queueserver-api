@@ -9,8 +9,8 @@ from bluesky_queueserver import ReceiveSystemInfo, ReceiveSystemInfoAsync
 
 from .comm_base import RequestTimeoutError
 
-_console_monitor_http_method = "GET"
-_console_monitor_http_endpoint = "/api/console_output_update"
+_system_info_monitor_endpoint = "/api/info/ws"
+
 
 _doc_ConsoleMonitor_ZMQ = """
     Console Monitor API (0MQ). The class implements a monitor for console output
@@ -332,8 +332,6 @@ _doc_ConsoleMonitor_text = """
         RM.console_monitor.disable()
 """
 
-_websocket_endpoint_info = "/api/info/ws"
-
 def _websocket_uri(uri, endpoint):
     """
     Generate websocket URI based on the base URI used for http requests
@@ -493,7 +491,7 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
                     self._monitor_thread_running.set()
                     break
 
-            websocket_uri = _websocket_uri(self._parent._http_server_uri, _websocket_endpoint_info)
+            websocket_uri = _websocket_uri(self._parent._http_server_uri, _system_info_monitor_endpoint)
             try:
                 from websockets.sync.client import connect
                 with connect(websocket_uri) as websocket:
@@ -632,7 +630,7 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
                     self._monitor_task_running.set()
                     break
 
-            websocket_uri = _websocket_uri(self._parent._http_server_uri, _websocket_endpoint_info)
+            websocket_uri = _websocket_uri(self._parent._http_server_uri, _system_info_monitor_endpoint)
             try:
                 from websockets.asyncio.client import connect
                 async with connect(websocket_uri) as websocket:
