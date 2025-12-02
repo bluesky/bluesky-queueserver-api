@@ -4214,6 +4214,7 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
 #                                       System Info monitoring
 # ====================================================================================================
 
+
 # fmt: off
 @pytest.mark.parametrize("option", ["single_enable", "disable", "disable_with_pause"])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
@@ -4232,34 +4233,35 @@ def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library,
 
     if not _is_async(library):
         RM = instantiate_re_api_class(rm_api_class)
-        assert RM.status_info_monitor.enabled is False
+        assert RM.system_info_monitor.enabled is False
 
         def _get_last_status():
             st = None
             while True:
                 try:
-                    msg = RM.status_info_monitor.next_msg(timeout=0.1)
+                    msg = RM.system_info_monitor.next_msg(timeout=0.1)
+                    st = msg["msg"]["status"]
                 except RM.RequestTimeoutError:
-                    break
-            st = msg["msg"]["status"]
+                    if st is not None:
+                        break
             return st
 
         if option == "single_enable":
             pass
         elif option == "disable":
-            RM.status_info_monitor.enable()
+            RM.system_info_monitor.enable()
             ttime.sleep(1)
-            RM.status_info_monitor.disable()
+            RM.system_info_monitor.disable()
         elif option == "disable_with_pause":
-            RM.status_info_monitor.enable()
+            RM.system_info_monitor.enable()
             ttime.sleep(1)
-            RM.status_info_monitor.disable()
+            RM.system_info_monitor.disable()
             ttime.sleep(2)
         else:
             assert False, f"Unknown option {option!r}"
 
-        RM.status_info_monitor.enable()
-        assert RM.status_info_monitor.enabled is True
+        RM.system_info_monitor.enable()
+        assert RM.system_info_monitor.enabled is True
 
         status_last = _get_last_status()
         assert status_last["manager_state"] == "idle"
@@ -4280,8 +4282,8 @@ def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library,
         assert status_last["manager_state"] == "idle"
         assert status_last["worker_environment_exists"] is False
 
-        RM.console_monitor.disable()
-        assert RM.console_monitor.enabled is False
+        RM.system_info_monitor.disable()
+        assert RM.system_info_monitor.enabled is False
 
         RM.close()
 
@@ -4290,34 +4292,35 @@ def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library,
         async def testing():
 
             RM = instantiate_re_api_class(rm_api_class)
-            assert RM.status_info_monitor.enabled is False
+            assert RM.system_info_monitor.enabled is False
 
             async def _get_last_status():
                 st = None
                 while True:
                     try:
-                        msg = await RM.status_info_monitor.next_msg(timeout=0.1)
+                        msg = await RM.system_info_monitor.next_msg(timeout=0.1)
+                        st = msg["msg"]["status"]
                     except RM.RequestTimeoutError:
-                        break
-                st = msg["msg"]["status"]
+                        if st is not None:
+                            break
                 return st
 
             if option == "single_enable":
                 pass
             elif option == "disable":
-                RM.status_info_monitor.enable()
+                RM.system_info_monitor.enable()
                 await asyncio.sleep(1)
-                RM.status_info_monitor.disable()
+                RM.system_info_monitor.disable()
             elif option == "disable_with_pause":
-                RM.status_info_monitor.enable()
+                RM.system_info_monitor.enable()
                 await asyncio.sleep(1)
-                RM.status_info_monitor.disable()
+                RM.system_info_monitor.disable()
                 await asyncio.sleep(2)
             else:
                 assert False, f"Unknown option {option!r}"
 
-            RM.status_info_monitor.enable()
-            assert RM.status_info_monitor.enabled is True
+            RM.system_info_monitor.enable()
+            assert RM.system_info_monitor.enabled is True
 
             status_last = await _get_last_status()
             assert status_last["manager_state"] == "idle"
@@ -4338,80 +4341,238 @@ def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library,
             assert status_last["manager_state"] == "idle"
             assert status_last["worker_environment_exists"] is False
 
-            RM.console_monitor.disable()
-            assert RM.console_monitor.enabled is False
+            RM.system_info_monitor.disable()
+            assert RM.system_info_monitor.enabled is False
 
             await RM.close()
 
+        asyncio.run(testing())
 
 
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_system_info_monitor_02(re_manager_cmd, fastapi_server, library, protocol):  # noqa: F811
+    """
+    RM.system_info_monitor.next_msg(): test that timeout works.
+    """
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        RM.system_info_monitor.enable()
+        assert RM.system_info_monitor.enabled is True
+
+        t0 = ttime.time()
+        with pytest.raises(RM.RequestTimeoutError):
+            RM.system_info_monitor.next_msg()  # Raises an exception immediately
+        assert ttime.time() - t0 < 0.5
+
+        with pytest.raises(RM.RequestTimeoutError):
+            RM.system_info_monitor.next_msg(timeout=2)  # Raises an exception after 2 sec. timeout
+        assert ttime.time() - t0 > 1.9
+
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            RM.system_info_monitor.enable()
+            assert RM.system_info_monitor.enabled is True
+
+            t0 = ttime.time()
+            with pytest.raises(RM.RequestTimeoutError):
+                await RM.system_info_monitor.next_msg()  # Raises an exception immediately
+            assert ttime.time() - t0 < 0.5
+
+            with pytest.raises(RM.RequestTimeoutError):
+                await RM.system_info_monitor.next_msg(timeout=2)  # Raises an exception after 2 sec. timeout
+            assert ttime.time() - t0 > 1.9
+
+            await RM.close()
+
+        asyncio.run(testing())
 
 
+# fmt: off
+@pytest.mark.parametrize("pause_before_enable", [False, True])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_system_info_monitor_03(
+    re_manager_cmd, fastapi_server, pause_before_enable, library, protocol  # noqa: F811
+):
+    """
+    RM.system_info_monitor: test that the message buffer is properly cleared when the queue is enabled.
+    """
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        RM.system_info_monitor.enable()
+        assert RM.system_info_monitor.enabled is True
+
+        RM.system_info_monitor._msg_queue.put({"time": "", "msg": {}})
+        RM.system_info_monitor._msg_queue.put({"time": "", "msg": {}})
+        RM.system_info_monitor.disable()
+        if pause_before_enable:
+            # Wait until the thread stops. The buffer will be cleared.
+            ttime.sleep(2)
+        RM.system_info_monitor.enable()
+
+        if pause_before_enable:
+            # The buffer is empty. The request should time out.
+            with pytest.raises(RM.RequestTimeoutError):
+                RM.system_info_monitor.next_msg()
+        else:
+            RM.system_info_monitor.next_msg()
+
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            RM.system_info_monitor.enable()
+            assert RM.system_info_monitor.enabled is True
+
+            RM.system_info_monitor._msg_queue.put_nowait({"time": "", "msg": {}})
+            RM.system_info_monitor._msg_queue.put_nowait({"time": "", "msg": {}})
+            RM.system_info_monitor.disable()
+            if pause_before_enable:
+                # Wait until the thread stops. The buffer will be cleared.
+                await asyncio.sleep(2)
+            RM.system_info_monitor.enable()
+
+            if pause_before_enable:
+                # The buffer is empty. The request should time out.
+                with pytest.raises(RM.RequestTimeoutError):
+                    await RM.system_info_monitor.next_msg()
+            else:
+                await RM.system_info_monitor.next_msg()
+
+            await RM.close()
+
+        asyncio.run(testing())
 
 
+# fmt: off
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_system_info_monitor_04(re_manager_cmd, fastapi_server, library, protocol):  # noqa: F811
+    """
+    RM.system_info_monitor.clear()
+    """
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class)
+
+        RM.system_info_monitor.enable()
+        assert RM.system_info_monitor.enabled is True
+
+        RM.system_info_monitor._msg_queue.put({"time": "", "msg": {}})
+        RM.system_info_monitor._msg_queue.put({"time": "", "msg": {}})
+        RM.system_info_monitor.clear()
+
+        with pytest.raises(RM.RequestTimeoutError):
+            RM.system_info_monitor.next_msg()
+
+        RM.close()
+
+    else:
+
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class)
+
+            RM.system_info_monitor.enable()
+            assert RM.system_info_monitor.enabled is True
+
+            RM.system_info_monitor._msg_queue.put_nowait({"time": "", "msg": {}})
+            RM.system_info_monitor._msg_queue.put_nowait({"time": "", "msg": {}})
+            RM.system_info_monitor.clear()
+
+            with pytest.raises(RM.RequestTimeoutError):
+                await RM.system_info_monitor.next_msg()
+
+            await RM.close()
+
+        asyncio.run(testing())
 
 
+# fmt: off
+@pytest.mark.parametrize("zero_max_msgs", [False, True])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+@pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
+# fmt: on
+def test_system_info_monitor_05(re_manager_cmd, fastapi_server, library, protocol, zero_max_msgs):  # noqa: F811
+    """
+    RM.system_info_monitor: test if message buffer is disabled if the buffer length is set to 0.
+    """
+    rm_api_class = _select_re_manager_api(protocol, library)
 
+    params = ["--zmq-publish-console", "ON"]
+    re_manager_cmd(params)
 
+    def check_resp(resp):
+        assert resp["success"] is True
+        assert resp["msg"] == ""
 
+    params = {}
+    if zero_max_msgs:
+        params["system_info_monitor_max_msgs"] = 0
 
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, **params)
 
+        RM.system_info_monitor.enable()
+        assert RM.system_info_monitor.enabled is True
+        ttime.sleep(1)
 
-            # RM = instantiate_re_api_class(rm_api_class)
+        check_resp(RM.environment_open())
+        RM.wait_for_idle(timeout=10)
+        check_resp(RM.environment_close())
+        RM.wait_for_idle(timeout=10)
 
-            # await RM.environment_open()
-            # await RM.wait_for_idle(timeout=10)
-            # check_status(await RM.status(), "idle", True)
+        if zero_max_msgs:
+            with pytest.raises(RM.RequestTimeoutError):
+                RM.system_info_monitor.next_msg()
+        else:
+            RM.system_info_monitor.next_msg()
 
-            # assert RM.console_monitor.enabled is False
+        RM.close()
 
-            # if option == "single_enable":
-            #     pass
-            # elif option == "disable":
-            #     RM.console_monitor.enable()
-            #     await asyncio.sleep(1)
-            #     RM.console_monitor.disable()
-            # elif option == "disable_with_pause":
-            #     RM.console_monitor.enable()
-            #     await asyncio.sleep(1)
-            #     RM.console_monitor.disable()
-            #     await asyncio.sleep(2)
-            # else:
-            #     assert False, f"Unknown option {option!r}"
+    else:
 
-            # RM.console_monitor.enable()
-            # assert RM.console_monitor.enabled is True
+        async def testing():
+            RM = instantiate_re_api_class(rm_api_class, **params)
 
-            # await RM.script_upload(script)
-            # await asyncio.sleep(2)
-            # await RM.wait_for_idle(timeout=10)
-            # check_status(await RM.status(), "idle", True)
+            RM.system_info_monitor.enable()
+            assert RM.system_info_monitor.enabled is True
+            await asyncio.sleep(1)
 
-            # text = []
-            # while True:
-            #     try:
-            #         params = {"timeout": read_timeout} if read_timeout else {}
-            #         msg = await RM.console_monitor.next_msg(**params)
-            #         text.append(msg["msg"])
-            #     except RM.RequestTimeoutError:
-            #         break
+            check_resp(await RM.environment_open())
+            await RM.wait_for_idle(timeout=10)
+            check_resp(await RM.environment_close())
+            await RM.wait_for_idle(timeout=10)
 
-            # text = "".join(text)
-            # text2 = await RM.console_monitor.text()
-            # print(f"============= text=\n{text}")
-            # print(f"============= text2=\n'{text2}'")
-            # print(f"============= expected_output=\n{expected_output}")
-            # assert expected_output in text
-            # assert expected_output in text2
+            if zero_max_msgs:
+                with pytest.raises(RM.RequestTimeoutError):
+                    await RM.system_info_monitor.next_msg()
+            else:
+                await RM.system_info_monitor.next_msg()
 
-            # RM.console_monitor.disable()
-            # assert RM.console_monitor.enabled is False
-
-            # await RM.environment_close()
-            # await RM.wait_for_idle(timeout=10)
-            # check_status(await RM.status(), "idle", False)
-
-            # await RM.close()
+            await RM.close()
 
         asyncio.run(testing())
 
