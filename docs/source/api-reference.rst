@@ -262,8 +262,8 @@ API for monitoring system info of RE Manager
 
 Each instance of ``REManagerAPI`` holds a reference to System Info Monitor. The monitor operates
 similary to the Console Monitor and allows to receive streamed system information in real time.
-The stream currently contains only messages with RE Manager *status*. Additional messages may be 
-added to the stream later. 
+The stream currently contains only messages with RE Manager *status*. Additional messages may be
+added to the stream later.
 
 .. autosummary::
    :nosignatures:
