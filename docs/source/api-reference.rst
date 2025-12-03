@@ -257,6 +257,45 @@ Other console monitor classes support identical API:
     console_monitor.ConsoleMonitor_HTTP_Threads
     console_monitor.ConsoleMonitor_HTTP_Async
 
+API for monitoring system info of RE Manager
+********************************************
+
+Each instance of ``REManagerAPI`` holds a reference to System Info Monitor. The monitor operates
+similary to the Console Monitor and allows to receive streamed system information in real time.
+The stream currently contains only messages with RE Manager *status*. Additional messages may be 
+added to the stream later. 
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    zmq.REManagerAPI.system_info_monitor
+
+The respective System Info Monitor class methods set_authorization_key
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    system_info_monitor.SystemInfoMonitor_ZMQ_Threads
+    system_info_monitor.SystemInfoMonitor_ZMQ_Threads.enabled
+    system_info_monitor.SystemInfoMonitor_ZMQ_Threads.enable
+    system_info_monitor.SystemInfoMonitor_ZMQ_Threads.disable
+    system_info_monitor.SystemInfoMonitor_ZMQ_Threads.disable_wait
+    system_info_monitor.SystemInfoMonitor_ZMQ_Threads.clear
+    system_info_monitor.SystemInfoMonitor_ZMQ_Threads.next_msg
+
+Other system info monitor classes support identical API:
+
+.. autosummary::
+   :nosignatures:
+   :toctree: generated
+
+    system_info_monitor.SystemInfoMonitor_ZMQ_Async
+    system_info_monitor.SystemInfoMonitor_HTTP_Threads
+    system_info_monitor.SystemInfoMonitor_HTTP_Async
+
+
 Asynchronous Communication with 0MQ Server
 ------------------------------------------
 

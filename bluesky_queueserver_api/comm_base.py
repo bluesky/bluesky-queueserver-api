@@ -15,6 +15,9 @@ from ._defaults import (
     default_http_login_timeout,
     default_http_request_timeout,
     default_http_server_uri,
+    default_system_info_monitor_max_msgs,
+    default_system_info_monitor_poll_period,
+    default_system_info_monitor_poll_timeout,
     default_zmq_request_timeout_recv,
     default_zmq_request_timeout_send,
 )
@@ -134,6 +137,7 @@ class ReManagerAPI_Base:
         # Raise exceptions if request fails (success=False)
         self._request_fail_exceptions = request_fail_exceptions
         self._console_monitor = None
+        self._system_info_monitor = None
 
         self._protocol = None
         self._pass_user_info = True
@@ -174,12 +178,24 @@ class ReManagerAPI_Base:
         Reference to a ``console_monitor``. Console monitor is an instance of
         a matching ``ConsoleMonitor_...`` class and supports methods ``enable()``,
         ``disable()``, ``disable_wait()``, ``clear()``, ``next_msg()`` and
-        property ``enabled``. See documentation for the appropriate class
+        property ``enabled``. See documentation for the respective class
         for more details.
         """
         return self._console_monitor
 
+    @property
+    def system_info_monitor(self):
+        """
+        Reference to a ``system_info_monitor``. System Info monitor is an instance of
+        a matching ``SystemInfoMonitor_...`` class. See documentation for the respective
+        class for more details.
+        """
+        return self._system_info_monitor
+
     def _init_console_monitor(self):
+        raise NotImplementedError()
+
+    def _init_system_info_monitor(self):
         raise NotImplementedError()
 
     @property
@@ -205,6 +221,8 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         console_monitor_poll_timeout=default_console_monitor_poll_timeout,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
         console_monitor_max_lines=default_console_monitor_max_lines,
+        system_info_monitor_poll_timeout=default_system_info_monitor_poll_timeout,
+        system_info_monitor_max_msgs=default_system_info_monitor_max_msgs,
         zmq_public_key=None,
         request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
@@ -221,6 +239,8 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         self._console_monitor_poll_timeout = console_monitor_poll_timeout
         self._console_monitor_max_msgs = console_monitor_max_msgs
         self._console_monitor_max_lines = console_monitor_max_lines
+        self._system_info_monitor_poll_timeout = system_info_monitor_poll_timeout
+        self._system_info_monitor_max_msgs = system_info_monitor_max_msgs
 
         self._client = self._create_client(
             zmq_control_addr=zmq_control_addr,
@@ -231,6 +251,7 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         )
 
         self._init_console_monitor()
+        self._init_system_info_monitor()
 
     def _create_client(
         self,
@@ -260,6 +281,8 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         console_monitor_poll_period=default_console_monitor_poll_period,
         console_monitor_max_msgs=default_console_monitor_max_msgs,
         console_monitor_max_lines=default_console_monitor_max_lines,
+        system_info_monitor_poll_period=default_system_info_monitor_poll_period,
+        system_info_monitor_max_msgs=default_system_info_monitor_max_msgs,
         request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
@@ -275,6 +298,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
         http_server_uri = http_server_uri or os.environ.get("QSERVER_HTTP_SERVER_URI")
         http_server_uri = http_server_uri or default_http_server_uri
+        self._http_server_uri = http_server_uri
 
         # The timeout may still have explicitly passed value of None, so replace it with the default value.
         self._timeout = timeout if timeout is not None else default_http_request_timeout
@@ -284,6 +308,8 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self._console_monitor_poll_period = console_monitor_poll_period
         self._console_monitor_max_msgs = console_monitor_max_msgs
         self._console_monitor_max_lines = console_monitor_max_lines
+        self._system_info_monitor_poll_period = system_info_monitor_poll_period
+        self._system_info_monitor_max_msgs = system_info_monitor_max_msgs
 
         self._rest_api_method_map = rest_api_method_map
 
@@ -294,6 +320,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self._client = self._create_client(http_server_uri=http_server_uri, timeout=self._timeout)
 
         self._init_console_monitor()
+        self._init_system_info_monitor()
 
     def _create_client(self, http_server_uri, timeout):
         raise NotImplementedError()

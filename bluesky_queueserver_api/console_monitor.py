@@ -118,7 +118,7 @@ _doc_ConsoleMonitor_disable_wait = """
     TimeoutError
         Wait timeout (synchronous API)
     asyncio.TimeoutError
-        Wait timeout (ssynchronous API)
+        Wait timeout (asynchronous API)
 
     Examples
     --------
@@ -186,7 +186,7 @@ _doc_ConsoleMonitor_next_msg = """
         RM.wait_for_idle()
 
         try:
-            msg = RM.console_output.next_msg()
+            msg = RM.console_output.next_msg(timeout=1)
             print(msg["msg"], end="")
         except RM.RequestTimeoutError:
             pass
@@ -208,7 +208,7 @@ _doc_ConsoleMonitor_next_msg = """
         await RM.wait_for_idle()
 
         try:
-            msg = await RM.console_output.next_msg()
+            msg = await RM.console_output.next_msg(timeout=1)
             print(msg["msg"], end="")
         except RM.RequestTimeoutError:
             pass
