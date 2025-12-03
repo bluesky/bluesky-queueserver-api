@@ -20,7 +20,6 @@ from .console_monitor import ConsoleMonitor_HTTP_Threads, ConsoleMonitor_ZMQ_Thr
 from .system_info_monitor import SystemInfoMonitor_HTTP_Threads, SystemInfoMonitor_ZMQ_Threads
 
 
-
 class ReManagerComm_ZMQ_Threads(ReManagerAPI_ZMQ_Base):
     def _init_console_monitor(self):
         self._console_monitor = ConsoleMonitor_ZMQ_Threads(

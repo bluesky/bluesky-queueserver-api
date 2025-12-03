@@ -4,7 +4,6 @@ import queue
 import threading
 import time as ttime
 
-import websockets
 from bluesky_queueserver import ReceiveSystemInfo, ReceiveSystemInfoAsync
 
 from .comm_base import RequestTimeoutError
@@ -157,14 +156,14 @@ _doc_SystemInfoMonitor_next_msg = """
     ``RequestTimeoutError``.
 
     The returned message is a dictionary with two keys: ``"time"`` (timestamp indicating time
-    when the message was sent by RE Manager) and ``"msg"`` (dictionary with one key, the key 
+    when the message was sent by RE Manager) and ``"msg"`` (dictionary with one key, the key
     indicates the message type, e.g. ``"status"``, and the value is the information itself).
     For example:
 
     .. code-block:: python
 
         {"time": 1764605683.1407075, "msg": {"status": {<status info of RE Manager>}}}
-    
+
     Parameters
     ----------
     timeout: float or None
@@ -222,6 +221,7 @@ _doc_SystemInfoMonitor_next_msg = """
         RM.system_info_monitor.disable()
         await RM.close()
 """
+
 
 def _websocket_uri(uri, endpoint):
     """
@@ -385,6 +385,7 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
             websocket_uri = _websocket_uri(self._parent._http_server_uri, _system_info_monitor_endpoint)
             try:
                 from websockets.sync.client import connect
+
                 with connect(websocket_uri) as websocket:
                     while self._monitor_enabled:
                         try:
@@ -392,7 +393,7 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
                             try:
                                 msg = json.loads(msg_json)
                                 self._add_msg_to_queue(msg)
-                            except json.JSONDecodeError as e:
+                            except json.JSONDecodeError:
                                 pass
                             except queue.Full:
                                 # Queue is full, ignore the new messages
@@ -524,6 +525,7 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
             websocket_uri = _websocket_uri(self._parent._http_server_uri, _system_info_monitor_endpoint)
             try:
                 from websockets.asyncio.client import connect
+
                 async with connect(websocket_uri) as websocket:
                     while self._monitor_enabled:
                         try:
@@ -533,7 +535,7 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
                             try:
                                 msg = json.loads(msg_json)
                                 self._add_msg_to_queue(msg)
-                            except json.JSONDecodeError as e:
+                            except json.JSONDecodeError:
                                 pass
                             except asyncio.QueueFull:
                                 # Queue is full, ignore the new messages

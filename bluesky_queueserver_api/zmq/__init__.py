@@ -5,10 +5,10 @@ from .._defaults import (
     default_console_monitor_poll_timeout,
     default_status_expiration_period,
     default_status_polling_period,
+    default_system_info_monitor_max_msgs,
+    default_system_info_monitor_poll_timeout,
     default_zmq_request_timeout_recv,
     default_zmq_request_timeout_send,
-    default_system_info_monitor_poll_timeout,
-    default_system_info_monitor_max_msgs,
 )
 from ..api_docstrings import _doc_REManagerAPI_ZMQ
 from ..api_threads import API_Threads_Mixin

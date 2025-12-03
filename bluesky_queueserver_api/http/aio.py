@@ -9,8 +9,8 @@ from .._defaults import (
     default_http_request_timeout,
     default_status_expiration_period,
     default_status_polling_period,
-    default_system_info_monitor_poll_period,
     default_system_info_monitor_max_msgs,
+    default_system_info_monitor_poll_period,
 )
 from ..api_async import API_Async_Mixin
 from ..api_docstrings import _doc_REManagerAPI_HTTP
