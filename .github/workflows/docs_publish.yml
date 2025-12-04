@@ -22,9 +22,12 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    - uses: shogo82148/actions-setup-redis@v1
+      with:
+        redis-version: "7.x"
     - name: Install dependencies
       run: |
-        sudo apt install redis
+        # sudo apt install redis
 
         # Versioneer uses the most recent git tag to generate __version__, which appears
         # in the published documentation.
@@ -34,6 +37,25 @@ jobs:
         # versions. Explicitly upgrade them because they often create
         # installation problems if out of date.
         python -m pip install --upgrade pip setuptools numpy
+
+        mkdir ~/repos
+        pushd ~/repos
+        echo $PWD
+
+        git clone https://github.com/bluesky/bluesky-queueserver.git
+        pushd bluesky-queueserver
+        pip install .
+        popd
+        echo $PWD
+
+        git clone https://github.com/bluesky/bluesky-httpserver.git
+        pushd bluesky-httpserver
+        pip install .
+        popd
+        echo $PWD
+
+        popd
+        echo $PWD
 
         pip install .
         pip install -r requirements-dev.txt

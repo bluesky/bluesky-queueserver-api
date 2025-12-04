@@ -4235,8 +4235,9 @@ def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library,
         RM = instantiate_re_api_class(rm_api_class)
         assert RM.system_info_monitor.enabled is False
 
-        def _get_last_status():
+        def _get_last_status(timeout=10):
             st = None
+            t0 = ttime.time()
             while True:
                 try:
                     msg = RM.system_info_monitor.next_msg(timeout=0.1)
@@ -4244,6 +4245,8 @@ def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library,
                 except RM.RequestTimeoutError:
                     if st is not None:
                         break
+                    if ttime.time() >= t0 + timeout:
+                        raise TimeoutError()
             return st
 
         if option == "single_enable":
@@ -4294,8 +4297,9 @@ def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library,
             RM = instantiate_re_api_class(rm_api_class)
             assert RM.system_info_monitor.enabled is False
 
-            async def _get_last_status():
+            async def _get_last_status(timeout=10):
                 st = None
+                t0 = ttime.time()
                 while True:
                     try:
                         msg = await RM.system_info_monitor.next_msg(timeout=0.1)
@@ -4303,6 +4307,8 @@ def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library,
                     except RM.RequestTimeoutError:
                         if st is not None:
                             break
+                        if ttime.time() >= t0 + timeout:
+                            raise TimeoutError()
                 return st
 
             if option == "single_enable":
