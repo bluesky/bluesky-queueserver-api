@@ -486,10 +486,10 @@ class API_Threads_Mixin(API_Base):
             response = self._generate_response_history_get()
         return response
 
-    def history_clear(self, *, lock_key=None):
+    def history_clear(self, *, size=None, item_uid=None, lock_key=None):
         # Docstring is maintained separately
         self._clear_status_timestamp()
-        request_params = self._prepare_history_clear(lock_key=lock_key)
+        request_params = self._prepare_history_clear(size=size, item_uid=item_uid, lock_key=lock_key)
         return self.send_request(method="history_clear", params=request_params)
 
     def plans_allowed(self, *, reload=False, user_group=None):

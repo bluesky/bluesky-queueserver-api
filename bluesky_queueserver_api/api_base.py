@@ -404,12 +404,16 @@ class API_Base:
         self._add_lock_key(request_params, lock_key)
         return request_params
 
-    def _prepare_history_clear(self, *, lock_key):
+    def _prepare_history_clear(self, *, size, item_uid, lock_key):
         """
         Prepare parameters for ``history_clear``
         """
         request_params = {}
         self._add_lock_key(request_params, lock_key)
+        if size is not None:
+            request_params["size"] = size
+        if item_uid is not None:
+            request_params["item_uid"] = item_uid
         return request_params
 
     def _prepare_queue_clear(self, *, lock_key):
