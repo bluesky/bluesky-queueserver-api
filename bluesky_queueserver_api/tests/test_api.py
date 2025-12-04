@@ -4245,7 +4245,7 @@ def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library,
                 except RM.RequestTimeoutError:
                     if st is not None:
                         break
-                    if ttime.time() < t0 + timeout:
+                    if ttime.time() >= t0 + timeout:
                         raise TimeoutError()
             return st
 
@@ -4307,7 +4307,7 @@ def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library,
                     except RM.RequestTimeoutError:
                         if st is not None:
                             break
-                        if ttime.time() < t0 + timeout:
+                        if ttime.time() >= t0 + timeout:
                             raise TimeoutError()
                 return st
 
