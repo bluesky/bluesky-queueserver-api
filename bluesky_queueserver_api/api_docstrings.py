@@ -1530,6 +1530,15 @@ _doc_api_history_clear = """
 
     Parameters
     ----------
+    size: int (optional)
+        The new size of the history. If the size is 0 or less, then the history is
+        cleared. If the size is greater than or equal to size of the queue, then the queue is
+        not modified and ``plan_history_uid`` remains unchanged. Otherwise the history is
+        trimmed to the desired size. Default: ``None``.
+    item_uid: str (optional)
+        If the history contains an item with **item_uid**, then the history is trimmed by
+        removing this item and all older items. If the item with **item_uid** is not found
+        then the history and **plan_history_uid** remain unchanged. Default: ``None``.
     lock_key: str or None (optional)
         The lock key enables access to the API when RE Manager queue is locked.
         If the parameter is not ``None``, the key overrides the current lock key set by
