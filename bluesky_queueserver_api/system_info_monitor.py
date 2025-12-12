@@ -386,7 +386,11 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
             try:
                 from websockets.sync.client import connect
 
-                with connect(websocket_uri) as websocket:
+                additional_headers = {}
+                if self._parent._auth_method == self._parent.AuthorizationMethods.API_KEY:
+                    additional_headers = {"Authorization": f"ApiKey {self._parent._auth_key}"}
+
+                with connect(websocket_uri, additional_headers=additional_headers) as websocket:
                     while self._monitor_enabled:
                         try:
                             msg_json = websocket.recv(timeout=self._monitor_poll_period, decode=False)
@@ -526,7 +530,11 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
             try:
                 from websockets.asyncio.client import connect
 
-                async with connect(websocket_uri) as websocket:
+                additional_headers = {}
+                if self._parent._auth_method == self._parent.AuthorizationMethods.API_KEY:
+                    additional_headers = {"Authorization": f"ApiKey {self._parent._auth_key}"}
+
+                async with connect(websocket_uri, additional_headers=additional_headers) as websocket:
                     while self._monitor_enabled:
                         try:
                             msg_json = await asyncio.wait_for(
