@@ -1453,3 +1453,153 @@ def test_principal_info_1(
             await RM.close()
 
         asyncio.run(testing())
+
+
+# fmt: off
+@pytest.mark.parametrize("option", ["APIKEY", "TOKEN"])
+@pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
+# fmt: on
+def test_system_info_monitor_auth_01(
+    tmpdir, monkeypatch, re_manager_cmd, fastapi_server_fs, option, library  # noqa: F811  # noqa: F811
+):
+    """
+    Test authentication for system info monitor.
+    """
+    protocol = "HTTP"
+
+    params = ["--zmq-publish-console", "ON"]
+    re_manager_cmd(params)
+
+    setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
+    fastapi_server_fs()
+
+    rm_api_class = _select_re_manager_api(protocol, library)
+
+    def check_status(status, manager_state, worker_environment_exists):
+        assert status["manager_state"] == manager_state
+        assert status["worker_environment_exists"] == worker_environment_exists
+
+    if not _is_async(library):
+        RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+        resp = RM.login("bob", password="bob_password")
+        assert "access_token" in resp, pprint.pformat(resp)
+        assert "refresh_token" in resp, pprint.pformat(resp)
+
+        if option == "APIKEY":
+            # Set authentication with API key. The test will be completed with the API key.
+            resp = RM.apikey_new(expires_in=600)
+            api_key = resp["secret"]
+            RM.set_authorization_key(api_key=api_key)
+        elif option == "TOKEN":
+            # Authentication with token is already configured. Do nothing
+            pass
+        else:
+            assert False, f"Unknown option {option!r}"
+
+        assert RM.system_info_monitor.enabled is False
+
+        def _get_last_status(timeout=10):
+            st = None
+            t0 = ttime.time()
+            while True:
+                try:
+                    msg = RM.system_info_monitor.next_msg(timeout=0.1)
+                    st = msg["msg"]["status"]
+                except RM.RequestTimeoutError:
+                    if st is not None:
+                        break
+                    if ttime.time() >= t0 + timeout:
+                        raise TimeoutError()
+            return st
+
+        RM.system_info_monitor.enable()
+        assert RM.system_info_monitor.enabled is True
+
+        status_last = _get_last_status()
+        assert status_last["manager_state"] == "idle"
+        assert status_last["worker_environment_exists"] is False
+
+        RM.environment_open()
+        RM.wait_for_idle(timeout=10)
+        check_status(RM.status(), "idle", True)
+
+        status_last = _get_last_status()
+        assert status_last["manager_state"] == "idle"
+        assert status_last["worker_environment_exists"] is True
+
+        RM.environment_close()
+        RM.wait_for_idle(timeout=10)
+
+        status_last = _get_last_status()
+        assert status_last["manager_state"] == "idle"
+        assert status_last["worker_environment_exists"] is False
+
+        RM.system_info_monitor.disable()
+        assert RM.system_info_monitor.enabled is False
+
+        RM.close()
+
+    else:
+
+        async def testing():
+
+            RM = instantiate_re_api_class(rm_api_class, http_auth_provider="/toy/token")
+
+            resp = await RM.login("bob", password="bob_password")
+            assert "access_token" in resp, pprint.pformat(resp)
+            assert "refresh_token" in resp, pprint.pformat(resp)
+
+            if option == "APIKEY":
+                # Set authentication with API key. The test will be completed with the API key.
+                resp = await RM.apikey_new(expires_in=600)
+                api_key = resp["secret"]
+                RM.set_authorization_key(api_key=api_key)
+            elif option == "TOKEN":
+                # Authentication with token is already configured. Do nothing
+                pass
+            else:
+                assert False, f"Unknown option {option!r}"
+
+            async def _get_last_status(timeout=10):
+                st = None
+                t0 = ttime.time()
+                while True:
+                    try:
+                        msg = await RM.system_info_monitor.next_msg(timeout=0.1)
+                        st = msg["msg"]["status"]
+                    except RM.RequestTimeoutError:
+                        if st is not None:
+                            break
+                        if ttime.time() >= t0 + timeout:
+                            raise TimeoutError()
+                return st
+
+            RM.system_info_monitor.enable()
+            assert RM.system_info_monitor.enabled is True
+
+            status_last = await _get_last_status()
+            assert status_last["manager_state"] == "idle"
+            assert status_last["worker_environment_exists"] is False
+
+            await RM.environment_open()
+            await RM.wait_for_idle(timeout=10)
+            check_status(await RM.status(), "idle", True)
+
+            status_last = await _get_last_status()
+            assert status_last["manager_state"] == "idle"
+            assert status_last["worker_environment_exists"] is True
+
+            await RM.environment_close()
+            await RM.wait_for_idle(timeout=10)
+
+            status_last = await _get_last_status()
+            assert status_last["manager_state"] == "idle"
+            assert status_last["worker_environment_exists"] is False
+
+            RM.system_info_monitor.disable()
+            assert RM.system_info_monitor.enabled is False
+
+            await RM.close()
+
+        asyncio.run(testing())

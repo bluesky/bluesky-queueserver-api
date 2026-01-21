@@ -382,11 +382,44 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
                     self._monitor_thread_running.set()
                     break
 
+            auth_method = self._parent._auth_method
+            auth_key = self._parent._auth_key
+            api_key_first_eight = None
+            use_apikey = auth_method == self._parent.AuthorizationMethods.API_KEY
+            use_token = auth_method == self._parent.AuthorizationMethods.TOKEN
+
+            def delete_api_key(use_token, api_key_first_eight):
+                # Send request to delete temporary API key if it exists
+                if use_token and api_key_first_eight:
+                    try:
+                        self._parent.send_request(
+                            method="apikey_delete", url_params={"first_eight": api_key_first_eight}
+                        )
+                    except Exception:
+                        pass
+
             websocket_uri = _websocket_uri(self._parent._http_server_uri, _system_info_monitor_endpoint)
             try:
                 from websockets.sync.client import connect
 
-                with connect(websocket_uri) as websocket:
+                _api_key = None
+
+                # Request temporary API key
+                if use_apikey:
+                    _api_key = auth_key
+                elif use_token:
+                    response = self._parent.send_request(method="apikey_new", params={"expires_in": 60})
+                    _api_key = response["secret"]
+                    api_key_first_eight = response["first_eight"]
+
+                additional_headers = {}
+                if _api_key:
+                    additional_headers = {"Authorization": f"ApiKey {_api_key}"}
+
+                with connect(websocket_uri, additional_headers=additional_headers) as websocket:
+                    delete_api_key(use_token, api_key_first_eight)
+                    api_key_first_eight = None
+
                     while self._monitor_enabled:
                         try:
                             msg_json = websocket.recv(timeout=self._monitor_poll_period, decode=False)
@@ -403,6 +436,9 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
             except Exception:
                 # Ignore communication errors. More detailed processing may be added later.
                 pass
+            finally:
+                delete_api_key(use_token, api_key_first_eight)
+
             ttime.sleep(self._monitor_poll_period)
 
     def _clear(self):
@@ -522,11 +558,44 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
                     self._monitor_task_running.set()
                     break
 
+            auth_method = self._parent._auth_method
+            auth_key = self._parent._auth_key
+            api_key_first_eight = None
+            use_apikey = auth_method == self._parent.AuthorizationMethods.API_KEY
+            use_token = auth_method == self._parent.AuthorizationMethods.TOKEN
+
+            async def delete_api_key(use_token, api_key_first_eight):
+                # Send request to delete temporary API key if it exists
+                if use_token and api_key_first_eight:
+                    try:
+                        await self._parent.send_request(
+                            method="apikey_delete", url_params={"first_eight": api_key_first_eight}
+                        )
+                    except Exception:
+                        pass
+
             websocket_uri = _websocket_uri(self._parent._http_server_uri, _system_info_monitor_endpoint)
             try:
                 from websockets.asyncio.client import connect
 
-                async with connect(websocket_uri) as websocket:
+                _api_key = None
+
+                # Request temporary API key
+                if use_apikey:
+                    _api_key = auth_key
+                elif use_token:
+                    response = await self._parent.send_request(method="apikey_new", params={"expires_in": 60})
+                    _api_key = response["secret"]
+                    api_key_first_eight = response["first_eight"]
+
+                additional_headers = {}
+                if _api_key:
+                    additional_headers = {"Authorization": f"ApiKey {_api_key}"}
+
+                async with connect(websocket_uri, additional_headers=additional_headers) as websocket:
+                    await delete_api_key(use_token, api_key_first_eight)
+                    api_key_first_eight = None
+
                     while self._monitor_enabled:
                         try:
                             msg_json = await asyncio.wait_for(
@@ -545,6 +614,8 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
             except Exception:
                 # Ignore communication errors. More detailed processing may be added later.
                 pass
+            finally:
+                await delete_api_key(use_token, api_key_first_eight)
             await asyncio.sleep(self._monitor_poll_period)
 
     def _clear(self):
