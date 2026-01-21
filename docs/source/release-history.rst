@@ -2,6 +2,21 @@
 Release History
 ===============
 
+
+v0.0.13 (2026-01-21)
+====================
+
+Added
+-----
+
+- Support for streaming of RE Manager System Info (including RE Manager status) using
+  ``REManager.system_info_monitor``.
+
+- Support for 'size' and 'item_uid' parameters of ``REManagerAPI.history_clear()`` API.
+
+- Support for secured access to System Info Monitor websocket (HTTP server).
+
+
 v0.0.12 (2025-05-18)
 ====================
 
