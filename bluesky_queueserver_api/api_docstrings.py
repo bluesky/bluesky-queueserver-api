@@ -2708,6 +2708,28 @@ _doc_api_re_halt = """
 
     Raises
     ------
+        RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
+            All exceptions raised by ``send_request`` API.
+"""
+
+_doc_api_re_metadata = """
+    Request Run Engine metadata. The API returns the metadata dictionary of the RE Worker Run Engine instance,
+    provided the environment is open.
+
+
+    Returns
+    -------
+    dict
+        Dictionary keys:
+
+        - ``re_metadata``: *dict* - metadata dictionary of the RE Worker Run Engine instance.
+
+        - ``success``: *boolean* - success of the request.
+
+        - ``msg``: *str* - error message in case the request is rejected by RE Manager.
+
+    Raises
+    ------
     RequestTimeoutError, RequestFailedError, HTTPRequestError, HTTPClientError, HTTPServerError
         All exceptions raised by ``send_request`` API.
 """

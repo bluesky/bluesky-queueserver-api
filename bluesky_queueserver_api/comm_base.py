@@ -54,6 +54,7 @@ rest_api_method_map = {
     "re_abort": ("POST", "/api/re/abort"),
     "re_halt": ("POST", "/api/re/halt"),
     "re_runs": ("POST", "/api/re/runs"),
+    "re_metadata": ("GET", "/api/re/metadata"),
     "plans_allowed": ("GET", "/api/plans/allowed"),
     "devices_allowed": ("GET", "/api/devices/allowed"),
     "plans_existing": ("GET", "/api/plans/existing"),

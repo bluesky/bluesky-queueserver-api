@@ -45,6 +45,7 @@ from .api_docstrings import (
     _doc_api_queue_stop_cancel,
     _doc_api_re_abort,
     _doc_api_re_halt,
+    _doc_api_re_metadata,
     _doc_api_re_pause,
     _doc_api_re_resume,
     _doc_api_re_runs,
@@ -694,6 +695,10 @@ class API_Threads_Mixin(API_Base):
         request_params = self._prepare_environment_control(lock_key=lock_key)
         return self.send_request(method="re_halt", params=request_params)
 
+    def re_metadata(self):
+        # Docstring is maintained separately
+        return self.send_request(method="re_metadata")
+
     def lock(self, lock_key=None, *, environment=None, queue=None, note=None, user=None):
         # Docstring is maintained separately
         request_params = self._prepare_lock(
@@ -790,6 +795,7 @@ API_Threads_Mixin.wait_for_completed_task.__doc__ = _doc_api_wait_for_completed_
 API_Threads_Mixin.re_runs.__doc__ = _doc_api_re_runs
 API_Threads_Mixin.re_pause.__doc__ = _doc_api_re_pause
 API_Threads_Mixin.re_resume.__doc__ = _doc_api_re_resume
+API_Threads_Mixin.re_metadata.__doc__ = _doc_api_re_metadata
 API_Threads_Mixin.re_stop.__doc__ = _doc_api_re_stop
 API_Threads_Mixin.re_abort.__doc__ = _doc_api_re_abort
 API_Threads_Mixin.re_halt.__doc__ = _doc_api_re_halt
