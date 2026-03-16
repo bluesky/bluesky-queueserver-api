@@ -353,7 +353,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         ``token`` or ``api_key`` passed as parameters override the default security keys set in the class.
         """
         if (token is not None) and (api_key is not None):
-            raise self._RequestParameterError("The request contains both token and API key.")
+            raise self.RequestParameterError("The request contains both token and API key.")
 
         auth_method = self.AuthorizationMethods.NONE
         key_in_params = False
@@ -508,7 +508,25 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
             self._auth_key = None
 
     def _prepare_login(self, *, username, password, provider):
-        # Interactively ask for username and password if they were not passed as parameters
+        endpoint = self._prepare_login_endpoint(provider)
+        if self._is_external_auth(endpoint):
+            data = {}
+        else:
+            data = self._prepare_login_data(username=username, password=password)
+        return endpoint, data
+
+    def _prepare_login_endpoint(self, provider):
+        provider = self._preprocess_endpoint_name(provider, msg="Authentication provider path")
+
+        selected_provider = provider or self._http_auth_provider
+        if not selected_provider:
+            raise self.RequestParameterError(
+                "Authentication provider is not specified: set default authentication provider "
+                "or pass the provider endpoint as a parameter"
+            )
+        return f"/api/auth/provider{selected_provider}"
+
+    def _prepare_login_data(self, username, password):
         if username is None:
             username = input("Username: ")
         if password is None:
@@ -524,20 +542,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         password = password.strip()
         if not password:
             raise self.RequestParameterError("'password' is an empty string")
-
-        provider = self._preprocess_endpoint_name(provider, msg="Authentication provider path")
-
-        selected_provider = provider or self._http_auth_provider
-        if not selected_provider:
-            raise self.RequestParameterError(
-                "Authentication provider is not specified: set default authentication provider "
-                "or pass the provider endpoint as a parameter"
-            )
-
-        data = {"username": username, "password": password}
-
-        endpoint = f"/api/auth/provider{selected_provider}"
-        return endpoint, data
+        return {"username": username, "password": password}
 
     def _process_login_response(self, response):
         """
@@ -548,6 +553,51 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         refresh_token = response.get("refresh_token", None)
         self.set_authorization_key(token=access_token, refresh_token=refresh_token)
         return response
+
+    def _is_external_auth(self, endpoint):
+        return "authorize" in endpoint
+
+    def _oidc_prompt_user_for_auth(self, device_params):
+        """Display authentication instructions to the user."""
+        print(f"Opening browser for authentication: {device_params['authorization_uri']}")
+        if device_params["user_code"]:
+            print(f"Enter this code when prompted: {device_params['user_code']}  (Do not enter the dash)")
+
+    def _oicd_handle_initial_response(self, device_response):
+        authorization_uri = device_response.get("authorization_uri") or device_response.get("verification_uri")
+        device_code = device_response.get("device_code")
+
+        if not all([authorization_uri, device_code]):
+            raise self.RequestParameterError(
+                "OIDC device code flow response missing required fields (authorization_uri, device_code)"
+            )
+
+        return {
+            "authorization_uri": authorization_uri,
+            "user_code": device_response.get("user_code"),
+            "device_code": device_code,
+            "interval": device_response.get("interval", 5),
+            "expires_in": device_response.get("expires_in", 300),
+        }
+
+    def _oidc_handle_token_polling_response(self, token_response):
+        """
+        Handle non-success token polling responses.
+        Returns (None, new_interval) to continue polling, or raises on error.
+        """
+        error = token_response.get("error")
+
+        if error == "authorization_pending":
+            return None, None
+        elif error == "slow_down":
+            return None, 5  # Signal to increase interval by 5 seconds
+        elif error:
+            raise self.RequestFailedError(
+                request={"method": "OIDC device code login"},
+                response={"msg": f"OIDC authentication failed: {error}"},
+            )
+
+        return None, None
 
     def _prepare_refresh_session(self, *, refresh_token):
         """

@@ -1,4 +1,5 @@
 name: Check Code Style - FLAKE8
+run-name: Flake8 Check • ${{ github.ref_name }} • @${{ github.actor }}
 
 on: [push, pull_request]
 

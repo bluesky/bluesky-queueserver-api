@@ -1,4 +1,5 @@
 name: Check Code Style - ISORT
+run-name: isort Check • ${{ github.ref_name }} • @${{ github.actor }}
 
 on: [push, pull_request]
 

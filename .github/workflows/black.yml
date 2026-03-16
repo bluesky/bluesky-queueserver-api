@@ -1,4 +1,5 @@
 name: Check Code Style - BLACK
+run-name: Black Check • ${{ github.ref_name }} • @${{ github.actor }}
 
 on: [push, pull_request]
 

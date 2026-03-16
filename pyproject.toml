@@ -1,3 +1,77 @@
+[build-system]
+requires = ["setuptools>=64", "wheel", "versioneer"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bluesky-queueserver-api"
+description = "Python API for Bluesky Queue Server"
+readme = "README.rst"
+requires-python = ">=3.7"
+license = "BSD-3-Clause"
+authors = [{ name = "Brookhaven National Laboratory" }]
+dynamic = ["version"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "bluesky-queueserver",
+    "websockets",
+    "httpx",
+]
+
+[project.urls]
+Homepage = "https://github.com/bluesky/bluesky-queueserver-api"
+
+[project.optional-dependencies]
+dev = [
+    "codecov",
+    "coverage",
+    "flake8",
+    "pre-commit",
+    "pytest",
+    "pytest-cov",
+    "pytest-xprocess",
+    "pytest-split",
+    "py",
+    "sphinx",
+    "twine",
+    "black",
+    "isort",
+    "nbstripout",
+    "ipython",
+    "matplotlib",
+    "numpydoc",
+    "pandas",
+    "sphinx-copybutton",
+    "sphinx_rtd_theme",
+    "bluesky-httpserver",
+]
+
+[tool.setuptools.packages.find]
+exclude = ["docs", "tests"]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64", "win-64"]
+
+[tool.pixi.pypi-dependencies]
+bluesky-queueserver-api = { path = ".", editable = true }
+
+[tool.pixi.feature.dev.pypi-dependencies]
+bluesky-queueserver-api = { path = ".", editable = true, extras = ["dev"] }
+
+[tool.pixi.environments]
+default = { features = ["dev"] }
+
+[tool.versioneer]
+VCS = "git"
+style = "pep440-post"
+versionfile_source = "bluesky_queueserver_api/_version.py"
+versionfile_build = "bluesky_queueserver_api/_version.py"
+tag_prefix = "v"
+
 [tool.black]
 line-length = 115
 target-version = ['py310']

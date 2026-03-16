@@ -124,6 +124,59 @@ of the repository to run the test locally::
   $ pytest -vvv
 
 
+Run tests in parallel with Docker
+---------------------------------
+
+Use isolated containers to run test shards in parallel and avoid local port/process
+interference. This reduces the total execution time of the test suite dramatically and allows
+running tests on multiple Python versions locally with ease.
+
+.. code-block:: bash
+
+        cd bluesky-queueserver-api
+        chmod +x scripts/run_ci_docker_parallel.sh scripts/docker/run_shard_in_container.sh
+        ./scripts/run_ci_docker_parallel.sh
+
+By default, the script runs with dynamic dispatch using ``3`` workers and
+``9`` chunks (``CHUNK_COUNT=WORKER_COUNT*3``). As workers finish, the next
+chunk is started automatically to keep utilization high.
+
+By default, tests run on the latest supported Python version
+(``--python-versions latest``, currently ``3.13``).
+
+To run all supported CI Python versions (``3.10``, ``3.11``, ``3.12``, ``3.13``):
+
+.. code-block:: bash
+
+        ./scripts/run_ci_docker_parallel.sh --python-versions all --workers 8 --chunks 24
+
+To run a specific version or list of versions:
+
+.. code-block:: bash
+
+        ./scripts/run_ci_docker_parallel.sh --python-versions 3.12
+        ./scripts/run_ci_docker_parallel.sh --python-versions 3.11,3.13 --workers 6 --chunks 18
+
+You can tune workers/chunks and pass extra pytest arguments:
+
+.. code-block:: bash
+
+        ./scripts/run_ci_docker_parallel.sh --workers 4 --chunks 16 --pytest-args "-k api --maxfail=1"
+
+Backward compatibility: ``SHARD_COUNT`` still works as an alias for
+``WORKER_COUNT``.
+
+When filtering to a small subset (for example with ``-k``), some chunks may
+have no selected tests. Those chunks are treated as successful by default.
+
+Artifacts are written to ``.docker-test-artifacts/``:
+
+* ``shard.<N>.log``: per-shard container output
+* ``junit.<N>.xml``: per-shard JUnit reports
+* ``coverage.txt`` and ``coverage.xml``: merged coverage outputs
+
+The script also copies merged ``coverage.xml`` to the repository root.
+
 Running Unit Tests on GitHub
 ----------------------------
 
