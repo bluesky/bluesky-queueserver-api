@@ -93,6 +93,7 @@ API for controlling RE Manager
     zmq.REManagerAPI.status
     zmq.REManagerAPI.ping
     zmq.REManagerAPI.config_get
+    zmq.REManagerAPI.re_metadata
     zmq.REManagerAPI.wait_for_idle
     zmq.REManagerAPI.wait_for_idle_or_paused
     zmq.REManagerAPI.wait_for_idle_or_running
