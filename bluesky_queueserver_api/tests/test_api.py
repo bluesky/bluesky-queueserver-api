@@ -23,6 +23,7 @@ from .common import (  # noqa: F401
     ip_kernel_simple_client,
     re_manager,
     re_manager_cmd,
+    re_manager_factory,
 )
 
 _user, _user_group = "Test User", default_user_group
