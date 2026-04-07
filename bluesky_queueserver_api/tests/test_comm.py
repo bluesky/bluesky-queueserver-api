@@ -14,6 +14,7 @@ from .common import (  # noqa: F401
     API_KEY_FOR_TESTS,
     re_manager,
     re_manager_cmd,
+    re_manager_factory,
     set_qserver_zmq_address,
     set_qserver_zmq_encoding,
     set_qserver_zmq_public_key,
