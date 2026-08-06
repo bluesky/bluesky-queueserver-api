@@ -15,6 +15,9 @@ from ._defaults import (
     default_http_login_timeout,
     default_http_request_timeout,
     default_http_server_uri,
+    default_progress_monitor_max_msgs,
+    default_progress_monitor_poll_period,
+    default_progress_monitor_poll_timeout,
     default_system_info_monitor_max_msgs,
     default_system_info_monitor_poll_period,
     default_system_info_monitor_poll_timeout,
@@ -139,6 +142,7 @@ class ReManagerAPI_Base:
         self._request_fail_exceptions = request_fail_exceptions
         self._console_monitor = None
         self._system_info_monitor = None
+        self._progress_monitor = None
 
         self._protocol = None
         self._pass_user_info = True
@@ -193,10 +197,22 @@ class ReManagerAPI_Base:
         """
         return self._system_info_monitor
 
+    @property
+    def progress_monitor(self):
+        """
+        Reference to a ``progress_monitor``. Progress monitor is an instance of
+        a matching ``ProgressMonitor_...`` class. See documentation for the respective
+        class for more details.
+        """
+        return self._progress_monitor
+
     def _init_console_monitor(self):
         raise NotImplementedError()
 
     def _init_system_info_monitor(self):
+        raise NotImplementedError()
+
+    def _init_progress_monitor(self):
         raise NotImplementedError()
 
     @property
@@ -224,6 +240,8 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         console_monitor_max_lines=default_console_monitor_max_lines,
         system_info_monitor_poll_timeout=default_system_info_monitor_poll_timeout,
         system_info_monitor_max_msgs=default_system_info_monitor_max_msgs,
+        progress_monitor_poll_timeout=default_progress_monitor_poll_timeout,
+        progress_monitor_max_msgs=default_progress_monitor_max_msgs,
         zmq_public_key=None,
         request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
@@ -242,6 +260,8 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
         self._console_monitor_max_lines = console_monitor_max_lines
         self._system_info_monitor_poll_timeout = system_info_monitor_poll_timeout
         self._system_info_monitor_max_msgs = system_info_monitor_max_msgs
+        self._progress_monitor_poll_timeout = progress_monitor_poll_timeout
+        self._progress_monitor_max_msgs = progress_monitor_max_msgs
 
         self._client = self._create_client(
             zmq_control_addr=zmq_control_addr,
@@ -253,6 +273,7 @@ class ReManagerAPI_ZMQ_Base(ReManagerAPI_Base):
 
         self._init_console_monitor()
         self._init_system_info_monitor()
+        self._init_progress_monitor()
 
     def _create_client(
         self,
@@ -284,6 +305,8 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         console_monitor_max_lines=default_console_monitor_max_lines,
         system_info_monitor_poll_period=default_system_info_monitor_poll_period,
         system_info_monitor_max_msgs=default_system_info_monitor_max_msgs,
+        progress_monitor_poll_period=default_progress_monitor_poll_period,
+        progress_monitor_max_msgs=default_progress_monitor_max_msgs,
         request_fail_exceptions=default_allow_request_fail_exceptions,
     ):
         super().__init__(request_fail_exceptions=request_fail_exceptions)
@@ -311,6 +334,8 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         self._console_monitor_max_lines = console_monitor_max_lines
         self._system_info_monitor_poll_period = system_info_monitor_poll_period
         self._system_info_monitor_max_msgs = system_info_monitor_max_msgs
+        self._progress_monitor_poll_period = progress_monitor_poll_period
+        self._progress_monitor_max_msgs = progress_monitor_max_msgs
 
         self._rest_api_method_map = rest_api_method_map
 
@@ -322,6 +347,7 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
         self._init_console_monitor()
         self._init_system_info_monitor()
+        self._init_progress_monitor()
 
     def _create_client(self, http_server_uri, timeout):
         raise NotImplementedError()

@@ -17,6 +17,7 @@ from .api_docstrings import (
 )
 from .comm_base import ReManagerAPI_HTTP_Base, ReManagerAPI_ZMQ_Base
 from .console_monitor import ConsoleMonitor_HTTP_Async, ConsoleMonitor_ZMQ_Async
+from .progress_monitor import ProgressMonitor_HTTP_Async, ProgressMonitor_ZMQ_Async
 from .system_info_monitor import SystemInfoMonitor_HTTP_Async, SystemInfoMonitor_ZMQ_Async
 
 
@@ -36,6 +37,14 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
             zmq_encoding=self._zmq_encoding,
             poll_timeout=self._system_info_monitor_poll_timeout,
             max_msgs=self._system_info_monitor_max_msgs,
+        )
+
+    def _init_progress_monitor(self):
+        self._progress_monitor = ProgressMonitor_ZMQ_Async(
+            zmq_info_addr=self._zmq_info_addr,
+            zmq_encoding=self._zmq_encoding,
+            poll_timeout=self._progress_monitor_poll_timeout,
+            max_msgs=self._progress_monitor_max_msgs,
         )
 
     def _create_client(
@@ -69,6 +78,7 @@ class ReManagerComm_ZMQ_Async(ReManagerAPI_ZMQ_Base):
         self._is_closing = True
         await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_timeout * 10)
         await self._system_info_monitor.disable_wait(timeout=self._system_info_monitor_poll_timeout * 10)
+        await self._progress_monitor.disable_wait(timeout=self._progress_monitor_poll_timeout * 10)
         self._client.close()
 
     def __del__(self):
@@ -89,6 +99,13 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
             parent=self,
             poll_period=self._system_info_monitor_poll_period,
             max_msgs=self._system_info_monitor_max_msgs,
+        )
+
+    def _init_progress_monitor(self):
+        self._progress_monitor = ProgressMonitor_HTTP_Async(
+            parent=self,
+            poll_period=self._progress_monitor_poll_period,
+            max_msgs=self._progress_monitor_max_msgs,
         )
 
     def _create_client(self, http_server_uri, timeout):
@@ -242,6 +259,7 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
     async def close(self):
         self._is_closing = True
         await self._console_monitor.disable_wait(timeout=self._console_monitor_poll_period * 10)
+        await self._progress_monitor.disable_wait(timeout=self._progress_monitor_poll_period * 10)
         await self._client.aclose()
 
     def __del__(self):

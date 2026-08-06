@@ -12,6 +12,10 @@ default_system_info_monitor_poll_timeout = 1.0  # s, 0MQ
 default_system_info_monitor_poll_period = 0.5  # s, HTTP
 default_system_info_monitor_max_msgs = 10000
 
+default_progress_monitor_poll_timeout = 1.0  # s, 0MQ
+default_progress_monitor_poll_period = 0.5  # s, HTTP
+default_progress_monitor_max_msgs = 10000
+
 default_zmq_request_timeout_recv = 2.0  # s
 default_zmq_request_timeout_send = 0.5  # s
 
