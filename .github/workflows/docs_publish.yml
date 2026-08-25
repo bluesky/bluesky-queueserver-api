@@ -1,4 +1,5 @@
 name: Documentation
+run-name: Publish Docs • ${{ github.ref_name }} • @${{ github.actor }}
 
 on:
   push:

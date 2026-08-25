@@ -1,3 +1,6 @@
+import asyncio
+import webbrowser
+
 import httpx
 from bluesky_queueserver import ZMQCommSendAsync
 
@@ -174,9 +177,89 @@ class ReManagerComm_HTTP_Async(ReManagerAPI_HTTP_Base):
     async def login(self, username=None, *, password=None, provider=None):
         # Docstring is maintained separately
         endpoint, data = self._prepare_login(username=username, password=password, provider=provider)
-        response = await self.send_request(method=("POST", endpoint), data=data, timeout=self._timeout_login)
-        response = self._process_login_response(response=response)
+
+        if self._is_external_auth(endpoint):
+            response = await self._oidc_device_code_login(endpoint=endpoint)
+        else:
+            response = await self._password_login(endpoint=endpoint, data=data)
+
         return response
+
+    async def _password_login(self, endpoint, data):
+        """Perform standard password-based login."""
+        response = await self.send_request(
+            method=("POST", endpoint), data=data, timeout=self._timeout_login, auto_refresh_session=False
+        )
+        return self._process_login_response(response=response)
+
+    async def _oidc_device_code_login(self, endpoint):
+        """
+        Perform OIDC login using the device code flow.
+        Opens a browser for user authentication and polls for completion.
+        """
+        device_params = await self._initiate_device_code_flow(endpoint)
+
+        self._oidc_prompt_user_for_auth(device_params)
+        webbrowser.open(device_params["authorization_uri"])
+
+        token_endpoint = endpoint.replace("/authorize", "/token")
+        return await self._poll_for_token(
+            token_endpoint=token_endpoint,
+            device_code=device_params["device_code"],
+            interval=device_params["interval"],
+            expires_in=device_params["expires_in"],
+        )
+
+    async def _initiate_device_code_flow(self, endpoint):
+        """Initiate OIDC device code flow and return device parameters."""
+        device_response = await self.send_request(
+            method=("POST", endpoint), timeout=self._timeout_login, auto_refresh_session=False
+        )
+        return self._oicd_handle_initial_response(device_response)
+
+    async def _poll_for_token(self, token_endpoint, device_code, interval, expires_in):
+        """Poll the token endpoint until authentication completes or times out."""
+
+        elapsed = 0
+
+        while elapsed < expires_in:
+            await asyncio.sleep(interval)
+            elapsed += interval
+
+            result, new_interval = await self._attempt_token_request(token_endpoint, device_code)
+            if result is not None:
+                return result
+            if new_interval is not None:
+                interval = new_interval
+
+        raise self.RequestTimeoutError(
+            "OIDC authentication timed out waiting for user authorization",
+            request={"method": "OIDC device code login", "endpoint": token_endpoint},
+        )
+
+    async def _attempt_token_request(self, token_endpoint, device_code):
+        """
+        Attempt a single token request.
+        Returns (response, None) on success, (None, new_interval) to continue polling,
+        or raises an exception on error.
+        """
+        try:
+            token_response = await self.send_request(
+                method=("POST", token_endpoint),
+                params={"device_code": device_code},
+                timeout=self._timeout_login,
+                auto_refresh_session=False,
+            )
+
+            if token_response.get("access_token"):
+                return self._process_login_response(response=token_response), None
+
+            return self._oidc_handle_token_polling_response(token_response)
+
+        except self.HTTPClientError as ex:
+            if "authorization_pending" in str(ex).lower():
+                return None, None
+            raise
 
     async def session_refresh(self, *, refresh_token=None):
         # Docstring is maintained separately

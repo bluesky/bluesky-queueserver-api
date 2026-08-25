@@ -3946,6 +3946,23 @@ sys.stdout.write(f"Six {pattern_up_one_line}six\n\n")
 _script_special_1_text_expected = "One six three four five\nSix two three four five\n"
 
 
+def _normalize_console_monitor_text(text):
+    """
+    Remove interleaved RE Manager log records from console monitor text.
+    """
+    pattern_mgr_log = r"\[(?:D|I|W|E)\s+\d{4}-\d{2}-\d{2}\s+[^\n]*"
+    text = re.sub(pattern_mgr_log, "", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text
+
+
+def _assert_console_monitor_text(text, text_expected):
+    text = _normalize_console_monitor_text(text)
+    expected_lines = [line for line in text_expected.splitlines() if line]
+    pattern = r"\n+".join(re.escape(_) for _ in expected_lines)
+    assert re.search(pattern, text), f"Expected pattern {pattern!r} in text: {text!r}"
+
+
 # fmt: off
 @pytest.mark.parametrize("script, text_expected", [(_script_special_1, _script_special_1_text_expected)])
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
@@ -3979,7 +3996,7 @@ def test_console_monitor_05(
 
         text = RM.console_monitor.text()
         print(f"===== text={text}")
-        assert text_expected in text
+        _assert_console_monitor_text(text, text_expected)
 
         RM.console_monitor.disable()
         assert RM.console_monitor.enabled is False
@@ -4007,7 +4024,7 @@ def test_console_monitor_05(
 
             text = await RM.console_monitor.text()
             print(f"===== text={text}")
-            assert text_expected in text
+            _assert_console_monitor_text(text, text_expected)
 
             RM.console_monitor.disable()
             assert RM.console_monitor.enabled is False
