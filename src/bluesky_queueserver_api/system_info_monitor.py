@@ -181,7 +181,7 @@ _doc_SystemInfoMonitor_next_msg = """
 
     .. code-block:: python
 
-        # Make sure RE Manager is started with option '--zmq-publish-console=ON'
+        # Make sure RE Manager is started with option '--zmq-publish-info=ON'
 
         RM = REManagerAPI()
         RM.system_info_monitor.enable()
@@ -203,7 +203,7 @@ _doc_SystemInfoMonitor_next_msg = """
 
     .. code-block:: python
 
-        # Make sure RE Manager is started with option '--zmq-publish-console=ON'
+        # Make sure RE Manager is started with option '--zmq-publish-info=ON'
 
         RM = REManagerAPI()
         RM.system_info_monitor.enable()
