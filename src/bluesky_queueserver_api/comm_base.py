@@ -3,7 +3,7 @@ import getpass
 import os
 from collections.abc import Iterable, Mapping
 
-import httpx
+import httpx2
 from bluesky_queueserver import CommTimeoutError
 
 from ._defaults import (
@@ -86,13 +86,13 @@ rest_api_method_map = {
 class RequestParameterError(Exception): ...
 
 
-class HTTPRequestError(httpx.RequestError): ...
+class HTTPRequestError(httpx2.RequestError): ...
 
 
-class HTTPClientError(httpx.HTTPStatusError): ...
+class HTTPClientError(httpx2.HTTPStatusError): ...
 
 
-class HTTPServerError(httpx.HTTPStatusError): ...
+class HTTPServerError(httpx2.HTTPStatusError): ...
 
 
 class RequestTimeoutError(TimeoutError):
@@ -328,10 +328,10 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
 
     def _adjust_timeout(self, timeout):
         """
-        Adjust timeout value. In ``httpx``, the timeout is disabled if timeout is None.
+        Adjust timeout value. In ``httpx2``, the timeout is disabled if timeout is None.
         We are using 0 (or negative value) to disable timeout and None to use
         the default timeout. So the timeout value needs to be adjusted before it is
-        passed to ``httpx``.
+        passed to ``httpx2``.
         """
         return timeout if (timeout > 0) else None
 
@@ -412,16 +412,16 @@ class ReManagerAPI_HTTP_Base(ReManagerAPI_Base):
         try:
             raise
 
-        except httpx.TimeoutException as ex:
+        except httpx2.TimeoutException as ex:
             raise self.RequestTimeoutError(ex, {"method": method, "params": params}) from ex
 
-        except httpx.RequestError as ex:
+        except httpx2.RequestError as ex:
             raise self.HTTPRequestError(f"HTTP request error: {ex}") from ex
 
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             common_params = {"request": exc.request, "response": exc.response}
             if client_response and (client_response.status_code < 500):
-                # Include more detail that httpx does by default.
+                # Include more detail than httpx2 does by default.
                 message = (
                     f"{exc.response.status_code}: "
                     f"{exc.response.json()['detail'] if client_response.content else ''} "

@@ -24,6 +24,12 @@ from .common import (  # noqa: F401
     re_manager,
     re_manager_cmd,
     re_manager_factory,
+    wait_for_console_ready,
+    wait_for_console_ready_async,
+    wait_for_console_text,
+    wait_for_console_text_async,
+    wait_for_monitor_status,
+    wait_for_monitor_status_async,
 )
 
 _user, _user_group = "Test User", default_user_group
@@ -3223,10 +3229,12 @@ def test_re_pause_01(re_manager, fastapi_server, protocol, library, pause_option
 @pytest.mark.parametrize("library", ["THREADS", "ASYNC"])
 @pytest.mark.parametrize("protocol", ["ZMQ", "HTTP"])
 # fmt: on
-def test_re_metadata_01(re_manager, fastapi_server, protocol, library):  # noqa: F811
+def test_re_metadata_01(re_manager_cmd, fastapi_server, protocol, library):  # noqa: F811
     """
     ``re_metadata``: basic test
     """
+    re_manager_cmd(["--permitted-re-metadata-keys", "/versions", "/metadata_key"])
+    script = "RE.md['metadata_key'] = 'metadata_value'"
     rm_api_class = _select_re_manager_api(protocol, library)
 
     def check_resp(resp):
@@ -3240,6 +3248,8 @@ def test_re_metadata_01(re_manager, fastapi_server, protocol, library):  # noqa:
         check_resp(RM.environment_open())
         RM.wait_for_idle()
 
+        task = check_resp(RM.script_upload(script))
+        RM.wait_for_completed_task(task["task_uid"], timeout=10)
         resp = check_resp(RM.re_metadata())
         assert "re_metadata" in resp
         assert "versions" in resp["re_metadata"]
@@ -3256,6 +3266,8 @@ def test_re_metadata_01(re_manager, fastapi_server, protocol, library):  # noqa:
             check_resp(await RM.environment_open())
             await RM.wait_for_idle()
 
+            task = check_resp(await RM.script_upload(script))
+            await RM.wait_for_completed_task(task["task_uid"], timeout=10)
             resp = check_resp(await RM.re_metadata())
             assert "re_metadata" in resp
             assert "versions" in resp["re_metadata"]
@@ -3943,7 +3955,9 @@ sys.stdout.write(pattern_cr)
 sys.stdout.write(f"Six {pattern_up_one_line}six\n\n")
 """
 
-_script_special_1_text_expected = "One six three four five\nSix two three four five\n"
+# text() omits the final empty line; do not rely on a subsequent log record
+# to supply a trailing newline.
+_script_special_1_text_expected = "One six three four five\nSix two three four five"
 
 
 # fmt: off
@@ -3960,7 +3974,9 @@ def test_console_monitor_05(
 
     rm_api_class = _select_re_manager_api(protocol, library)
 
-    params = ["--zmq-publish-console", "ON"]
+    # Log records change cursor positions before text rendering. Removing them
+    # afterward cannot repair the output of carriage returns/cursor-up escapes.
+    params = ["--zmq-publish-console", "ON", "--silent"]
     re_manager_cmd(params)
 
     if not _is_async(library):
@@ -3968,16 +3984,15 @@ def test_console_monitor_05(
 
         RM.console_monitor.enable()
         assert RM.console_monitor.enabled is True
-        ttime.sleep(1)
-
         RM.environment_open()
         RM.wait_for_idle(timeout=10)
+        wait_for_console_ready(RM)
 
-        RM.script_upload(script)
-        ttime.sleep(2)
+        task = RM.script_upload(script)
+        RM.wait_for_completed_task(task["task_uid"], timeout=10)
         RM.wait_for_idle(timeout=10)
 
-        text = RM.console_monitor.text()
+        text = wait_for_console_text(RM, text_expected)
         print(f"===== text={text}")
         assert text_expected in text
 
@@ -3996,16 +4011,15 @@ def test_console_monitor_05(
 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
-            await asyncio.sleep(1)
-
             await RM.environment_open()
             await RM.wait_for_idle(timeout=10)
+            await wait_for_console_ready_async(RM)
 
-            await RM.script_upload(script)
-            await asyncio.sleep(2)
+            task = await RM.script_upload(script)
+            await RM.wait_for_completed_task(task["task_uid"], timeout=10)
             await RM.wait_for_idle(timeout=10)
 
-            text = await RM.console_monitor.text()
+            text = await wait_for_console_text_async(RM, text_expected)
             print(f"===== text={text}")
             assert text_expected in text
 
@@ -4033,7 +4047,8 @@ def test_console_monitor_06(re_manager_cmd, fastapi_server, library, protocol, n
 
     rm_api_class = _select_re_manager_api(protocol, library)
 
-    params = ["--zmq-publish-console", "ON"]
+    # Keep unrelated log output from moving the progress-bar cursor.
+    params = ["--zmq-publish-console", "ON", "--silent"]
     re_manager_cmd(params)
 
     def check_status(status, manager_state, items_in_queue):
@@ -4052,7 +4067,7 @@ def test_console_monitor_06(re_manager_cmd, fastapi_server, library, protocol, n
 
         RM.console_monitor.enable()
         assert RM.console_monitor.enabled is True
-        ttime.sleep(1)
+        wait_for_console_ready(RM)
 
         check_resp(RM.item_add(BPlan("plan_test_progress_bars", n_progress_bars)))
         check_status(RM.status(), "idle", 1)
@@ -4061,7 +4076,7 @@ def test_console_monitor_06(re_manager_cmd, fastapi_server, library, protocol, n
         RM.wait_for_idle(timeout=30)
         check_status(RM.status(), "idle", 0)
 
-        text = RM.console_monitor.text()
+        text = wait_for_console_text(RM, "TEST COMPLETED")
         print(f"===== text={text}")
 
         s_start = f"TESTING {n_progress_bars} PROGRESS BARS"
@@ -4094,7 +4109,7 @@ def test_console_monitor_06(re_manager_cmd, fastapi_server, library, protocol, n
 
             RM.console_monitor.enable()
             assert RM.console_monitor.enabled is True
-            await asyncio.sleep(1)
+            await wait_for_console_ready_async(RM)
 
             check_resp(await RM.item_add(BPlan("plan_test_progress_bars", n_progress_bars)))
             check_status(await RM.status(), "idle", 1)
@@ -4103,7 +4118,7 @@ def test_console_monitor_06(re_manager_cmd, fastapi_server, library, protocol, n
             await RM.wait_for_idle(timeout=30)
             check_status(await RM.status(), "idle", 0)
 
-            text = await RM.console_monitor.text()
+            text = await wait_for_console_text_async(RM, "TEST COMPLETED")
             print(f"===== text={text}")
 
             s_start = f"TESTING {n_progress_bars} PROGRESS BARS"
@@ -4370,7 +4385,7 @@ def test_console_monitor_08(re_manager_cmd, fastapi_server, library, protocol): 
 # fmt: on
 def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library, protocol):  # noqa: F811
 
-    params = ["--zmq-publish-console", "ON"]
+    params = ["--zmq-publish-info", "ON"]
     re_manager_cmd(params)
 
     rm_api_class = _select_re_manager_api(protocol, library)
@@ -4384,18 +4399,7 @@ def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library,
         assert RM.system_info_monitor.enabled is False
 
         def _get_last_status(timeout=10):
-            st = None
-            t0 = ttime.time()
-            while True:
-                try:
-                    msg = RM.system_info_monitor.next_msg(timeout=0.1)
-                    st = msg["msg"]["status"]
-                except RM.RequestTimeoutError:
-                    if st is not None:
-                        break
-                    if ttime.time() >= t0 + timeout:
-                        raise TimeoutError()
-            return st
+            return wait_for_monitor_status(RM, timeout=timeout, status_uid=RM.status()["status_uid"])
 
         if option == "single_enable":
             pass
@@ -4446,18 +4450,8 @@ def test_system_info_monitor_01(re_manager_cmd, fastapi_server, option, library,
             assert RM.system_info_monitor.enabled is False
 
             async def _get_last_status(timeout=10):
-                st = None
-                t0 = ttime.time()
-                while True:
-                    try:
-                        msg = await RM.system_info_monitor.next_msg(timeout=0.1)
-                        st = msg["msg"]["status"]
-                    except RM.RequestTimeoutError:
-                        if st is not None:
-                            break
-                        if ttime.time() >= t0 + timeout:
-                            raise TimeoutError()
-                return st
+                status = await RM.status()
+                return await wait_for_monitor_status_async(RM, timeout=timeout, status_uid=status["status_uid"])
 
             if option == "single_enable":
                 pass
@@ -4675,7 +4669,7 @@ def test_system_info_monitor_05(re_manager_cmd, fastapi_server, library, protoco
     """
     rm_api_class = _select_re_manager_api(protocol, library)
 
-    params = ["--zmq-publish-console", "ON"]
+    params = ["--zmq-publish-info", "ON"]
     re_manager_cmd(params)
 
     def check_resp(resp):
@@ -4702,7 +4696,7 @@ def test_system_info_monitor_05(re_manager_cmd, fastapi_server, library, protoco
             with pytest.raises(RM.RequestTimeoutError):
                 RM.system_info_monitor.next_msg()
         else:
-            RM.system_info_monitor.next_msg()
+            RM.system_info_monitor.next_msg(timeout=10)
 
         RM.close()
 
@@ -4724,7 +4718,7 @@ def test_system_info_monitor_05(re_manager_cmd, fastapi_server, library, protoco
                 with pytest.raises(RM.RequestTimeoutError):
                     await RM.system_info_monitor.next_msg()
             else:
-                await RM.system_info_monitor.next_msg()
+                await RM.system_info_monitor.next_msg(timeout=10)
 
             await RM.close()
 

@@ -16,12 +16,12 @@ description = "HTTP Server for communicating with Bluesky Queue Server."
 dependencies = [
     "bluesky-queueserver",
     "websockets",
-    "httpx",
+    "httpx2",
 ]
 dynamic = ["version"]
 license = { file = "LICENSE" }
 readme = "README.rst"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 [project.optional-dependencies]
 dev = [

@@ -1,4 +1,4 @@
-import httpx
+import httpx2
 from bluesky_queueserver import ZMQCommSendThreads
 
 from .api_docstrings import (
@@ -93,7 +93,7 @@ class ReManagerComm_HTTP_Threads(ReManagerAPI_HTTP_Base):
 
     def _create_client(self, http_server_uri, timeout):
         timeout = self._adjust_timeout(timeout)
-        return httpx.Client(base_url=http_server_uri, timeout=timeout)
+        return httpx2.Client(base_url=http_server_uri, timeout=timeout)
 
     def _simple_request(self, *, method, params=None, url_params=None, headers=None, data=None, timeout=None):
         """
