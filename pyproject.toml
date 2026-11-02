@@ -16,7 +16,7 @@ description = "HTTP Server for communicating with Bluesky Queue Server."
 dependencies = [
     "bluesky-queueserver",
     "websockets",
-    "httpx2>=2.1,<2.15",
+    "httpx2",
 ]
 dynamic = ["version"]
 license = { file = "LICENSE" }
