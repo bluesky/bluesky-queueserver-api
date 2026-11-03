@@ -18,6 +18,8 @@ from .common import (  # noqa: F401
     set_qserver_zmq_address,
     set_qserver_zmq_public_key,
     setup_server_with_config_file,
+    wait_for_monitor_status,
+    wait_for_monitor_status_async,
 )
 
 
@@ -1468,7 +1470,7 @@ def test_system_info_monitor_auth_01(
     """
     protocol = "HTTP"
 
-    params = ["--zmq-publish-console", "ON"]
+    params = ["--zmq-publish-info", "ON"]
     re_manager_cmd(params)
 
     setup_server_with_config_file(config_file_str=config_toy_yml, tmpdir=tmpdir, monkeypatch=monkeypatch)
@@ -1501,18 +1503,7 @@ def test_system_info_monitor_auth_01(
         assert RM.system_info_monitor.enabled is False
 
         def _get_last_status(timeout=10):
-            st = None
-            t0 = ttime.time()
-            while True:
-                try:
-                    msg = RM.system_info_monitor.next_msg(timeout=0.1)
-                    st = msg["msg"]["status"]
-                except RM.RequestTimeoutError:
-                    if st is not None:
-                        break
-                    if ttime.time() >= t0 + timeout:
-                        raise TimeoutError()
-            return st
+            return wait_for_monitor_status(RM, timeout=timeout, status_uid=RM.status()["status_uid"])
 
         RM.system_info_monitor.enable()
         assert RM.system_info_monitor.enabled is True
@@ -1563,18 +1554,8 @@ def test_system_info_monitor_auth_01(
                 assert False, f"Unknown option {option!r}"
 
             async def _get_last_status(timeout=10):
-                st = None
-                t0 = ttime.time()
-                while True:
-                    try:
-                        msg = await RM.system_info_monitor.next_msg(timeout=0.1)
-                        st = msg["msg"]["status"]
-                    except RM.RequestTimeoutError:
-                        if st is not None:
-                            break
-                        if ttime.time() >= t0 + timeout:
-                            raise TimeoutError()
-                return st
+                status = await RM.status()
+                return await wait_for_monitor_status_async(RM, timeout=timeout, status_uid=status["status_uid"])
 
             RM.system_info_monitor.enable()
             assert RM.system_info_monitor.enabled is True

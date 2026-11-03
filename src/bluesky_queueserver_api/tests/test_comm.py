@@ -1,5 +1,6 @@
 import asyncio
 import re
+import socket
 
 import pytest
 from bluesky_queueserver import generate_zmq_keys
@@ -91,8 +92,14 @@ def test_ReManagerComm_ZMQ_02(monkeypatch, re_manager_cmd):  # noqa: F811
     ReManagerComm_ZMQ_Threads, ReManagerComm_ZMQ_Async: Test if the setting
     ``zmq_server_address`` and ``server_public_address`` work as expected.
     """
-    zmq_manager_addr = r"tcp://*:60650"
-    zmq_server_addr = r"tcp://localhost:60650"
+    # A shared port may be occupied by another process on a CI worker. Reserve
+    # one only long enough to obtain an available port, then immediately start
+    # the manager before any client connects.
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        zmq_port = sock.getsockname()[1]
+    zmq_manager_addr = f"tcp://*:{zmq_port}"
+    zmq_server_addr = f"tcp://127.0.0.1:{zmq_port}"
     params = {"item": _plan1, "user": _user, "user_group": _user_group}
 
     public_key, private_key = generate_zmq_keys()

@@ -99,7 +99,7 @@ class API_Async_Mixin(API_Base):
         try:
             await asyncio.wait_for(event.wait(), timeout)
             return True
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return False
 
     async def _task_status_get_func(self):

@@ -40,7 +40,7 @@ _doc_SystemInfoMonitor_HTTP = """
     ----------
     parent: class
         Reference to the parent class (or any class). The class must expose the attribute
-        ``_client`` that references configured ``httpx`` client.
+        ``_client`` that references configured ``httpx2`` client.
     poll_period: float
         Period between consecutive retries to connect to the websocket at the server.
         The value is also used as a timeout for websocket receive operation. It may take
@@ -181,7 +181,7 @@ _doc_SystemInfoMonitor_next_msg = """
 
     .. code-block:: python
 
-        # Make sure RE Manager is started with option '--zmq-publish-console=ON'
+        # Make sure RE Manager is started with option '--zmq-publish-info=ON'
 
         RM = REManagerAPI()
         RM.system_info_monitor.enable()
@@ -203,7 +203,7 @@ _doc_SystemInfoMonitor_next_msg = """
 
     .. code-block:: python
 
-        # Make sure RE Manager is started with option '--zmq-publish-console=ON'
+        # Make sure RE Manager is started with option '--zmq-publish-info=ON'
 
         RM = REManagerAPI()
         RM.system_info_monitor.enable()
@@ -362,7 +362,7 @@ class SystemInfoMonitor_HTTP_Threads(_SystemInfoMonitor_Threads):
 
     def __init__(self, *, parent, poll_period, max_msgs):
         # The parent class is must have ``_client`` attribute with
-        #   active httpx client.
+        #   active httpx2 client.
         self._parent = parent  # Reference to the parent class
         self._monitor_poll_period = poll_period
         super().__init__(max_msgs=max_msgs)
@@ -478,7 +478,7 @@ class _SystemInfoMonitor_Async(_SystemInfoMonitor):
                 return await asyncio.wait_for(self._msg_queue.get(), timeout=timeout)
             else:
                 return self._msg_queue.get_nowait()
-        except (asyncio.QueueEmpty, asyncio.TimeoutError):
+        except (TimeoutError, asyncio.QueueEmpty):
             raise RequestTimeoutError(f"No message was received (timeout={timeout})", request={})
 
 
@@ -538,7 +538,7 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
 
     def __init__(self, *, parent, poll_period, max_msgs):
         # The parent class is must have ``_client`` attribute with
-        #   active httpx client.
+        #   active httpx2 client.
         self._parent = parent  # Reference to the parent class
         self._monitor_poll_period = poll_period
         super().__init__(max_msgs=max_msgs)
@@ -609,7 +609,7 @@ class SystemInfoMonitor_HTTP_Async(_SystemInfoMonitor_Async):
                             except asyncio.QueueFull:
                                 # Queue is full, ignore the new messages
                                 pass
-                        except asyncio.TimeoutError:
+                        except TimeoutError:
                             pass
             except Exception:
                 # Ignore communication errors. More detailed processing may be added later.
