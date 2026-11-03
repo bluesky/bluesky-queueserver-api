@@ -1,4 +1,5 @@
 name: Unit Tests
+run-name: Unit Tests • ${{ github.ref_name }} • @${{ github.actor }}
 
 on: [push, pull_request]
 

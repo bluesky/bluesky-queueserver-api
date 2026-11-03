@@ -1,4 +1,5 @@
 name: pre-commit
+run-name: Pre-commit Hooks • ${{ github.ref_name }} • @${{ github.actor }}
 
 on:
   push:
