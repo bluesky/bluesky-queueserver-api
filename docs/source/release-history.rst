@@ -2,8 +2,14 @@
 Release History
 ===============
 
-Unreleased
-==========
+v0.0.14 (2026-11-05)
+====================
+
+Added
+-----
+
+- New endpoints for ``re_metadata`` in both the async and threaded protocols.
+
 
 Removed
 -------
